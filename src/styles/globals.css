@@ -32,8 +32,9 @@ body{ margin:0; font-family:'Nunito',system-ui,-apple-system,Segoe UI,Roboto,Ubu
 .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; padding:24px 12px }
 .modal{ width:360px; background:#fff; border-radius:16px; padding:16px; border:1px solid #ddd; box-shadow:0 12px 36px rgba(0,0,0,0.25); max-height:80vh; overflow-y:auto }
 
-.input{ width:100%; padding:8px; border-radius:8px; border:1px solid #ddd }
+.input{ width:100%; padding:8px; border-radius:8px; border:1px solid #ddd; font-size:16px }
 select.input{ appearance:none }
+input, select, textarea{ font-size:16px !important }
 
 .badge{ display:inline-block; padding:2px 8px; border-radius:999px; font-size:12px; font-weight:800 }
 .badge.ok{ background:#E6F4EA; color:#1e7e34; border:1px solid #c9e7cf }

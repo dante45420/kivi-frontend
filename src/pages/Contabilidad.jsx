@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { listCharges, listPayments, createPayment, listLots, processLot, ordersSummary, customersSummary } from '../api/accounting'
+import { listCharges, listPayments, createPayment, listLots, processLot, ordersSummary, customersSummary, updateChargePrice, assignLotToCustomer } from '../api/accounting'
 import { getOrderDetail } from '../api/orders'
 import { listCustomers } from '../api/customers'
 import '../styles/globals.css'
@@ -13,12 +13,14 @@ export default function Contabilidad(){
   const [lots, setLots] = useState([])
   const [payForm, setPayForm] = useState({ amount:'', method:'', reference:'', order_id:'' })
   const [processForm, setProcessForm] = useState({ from_lot:'', to_product:'', input_kg:'', output_qty:'', unit:'unit' })
+  const [assignForm, setAssignForm] = useState({ lot_id:'', customer_id:'', order_id:'', unit_price:'' })
   const [orderCards, setOrderCards] = useState([])
   const [customerCards, setCustomerCards] = useState([])
   const [orderDetail, setOrderDetail] = useState(null)
   const [orderModalOpen, setOrderModalOpen] = useState(false)
   const [customerDetail, setCustomerDetail] = useState(null)
   const [customerModalOpen, setCustomerModalOpen] = useState(false)
+  const [editingPrice, setEditingPrice] = useState(null) // { chargeId, value }
 
   useEffect(()=>{ listCustomers().then(setCustomers).catch(()=>{}) },[])
   useEffect(()=>{
@@ -60,6 +62,30 @@ export default function Contabilidad(){
     })
     setProcessForm({ from_lot:'', to_product:'', input_kg:'', output_qty:'', unit:'unit' })
     setLots(await listLots())
+  }
+
+  async function savePrice() {
+    if (!editingPrice) return
+    await updateChargePrice(editingPrice.chargeId, Number(editingPrice.value))
+    setEditingPrice(null)
+    // Recargar datos del cliente
+    const rows = await customersSummary(true)
+    const row = rows.find(r=> r.customer.id === customerDetail.customer.id)
+    setCustomerDetail(row || customerDetail)
+  }
+
+  async function assignExcess() {
+    if (!assignForm.lot_id || !assignForm.customer_id) return
+    await assignLotToCustomer(Number(assignForm.lot_id), {
+      customer_id: Number(assignForm.customer_id),
+      order_id: assignForm.order_id ? Number(assignForm.order_id) : null,
+      unit_price: assignForm.unit_price ? Number(assignForm.unit_price) : null
+    })
+    setAssignForm({ lot_id:'', customer_id:'', order_id:'', unit_price:'' })
+    setLots(await listLots())
+    // Recargar datos
+    ordersSummary().then(setOrderCards).catch(()=>{})
+    customersSummary(false).then(setCustomerCards).catch(()=>{})
   }
 
   return (
@@ -316,11 +342,75 @@ export default function Contabilidad(){
       <div style={{ marginBottom:24 }}>
         <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
           <div style={{ height:1, background:'#ddd', flex:1 }} />
-          <h3 style={{ margin:0, fontSize:18, fontWeight:700 }}>🔄 Procesar Excedentes</h3>
+          <h3 style={{ margin:0, fontSize:18, fontWeight:700 }}>🔄 Gestionar Excedentes</h3>
           <div style={{ height:1, background:'#ddd', flex:1 }} />
+      </div>
+
+        {/* Asignar a Cliente */}
+        <div style={{ background:'white', borderRadius:16, border:'1px solid #e0e0e0', padding:16, marginBottom:16 }}>
+          <div style={{ fontSize:15, fontWeight:600, marginBottom:12 }}>📤 Asignar a Cliente (Venta)</div>
+          <div style={{ display:'grid', gap:12 }}>
+            <select 
+              className="input" 
+              value={assignForm.lot_id} 
+              onChange={e=>setAssignForm(v=>({ ...v, lot_id:e.target.value }))} 
+              style={{ width:'100%', padding:'12px 16px', borderRadius:12 }}
+            >
+              <option value="">Seleccionar excedente...</option>
+              {lots.filter(l=> (l.status||'')==='unassigned').map(l=> (
+                <option key={l.id} value={l.id}>
+                  #{l.id} — P{l.product_id} — {l.qty_kg||l.qty_unit} {(l.qty_kg?'kg':'unid')}
+                </option>
+              ))}
+            </select>
+
+            {assignForm.lot_id && (
+              <>
+                <select 
+                  className="input" 
+                  value={assignForm.customer_id} 
+                  onChange={e=>setAssignForm(v=>({ ...v, customer_id:e.target.value }))} 
+                  style={{ width:'100%', padding:'12px 16px', borderRadius:12 }}
+                >
+                  <option value="">Seleccionar cliente...</option>
+            {customers.map(c=> <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                  <input 
+                    className="input" 
+                    type="number"
+                    placeholder="ID Pedido (opcional)" 
+                    value={assignForm.order_id} 
+                    onChange={e=>setAssignForm(v=>({ ...v, order_id:e.target.value }))} 
+                    style={{ padding:'12px 16px', borderRadius:12 }}
+                  />
+                  <input 
+                    className="input" 
+                    type="number"
+                    placeholder="Precio (opcional)" 
+                    value={assignForm.unit_price} 
+                    onChange={e=>setAssignForm(v=>({ ...v, unit_price:e.target.value }))} 
+                    style={{ padding:'12px 16px', borderRadius:12 }}
+                  />
+                </div>
+
+                <button 
+                  className="button" 
+                  onClick={assignExcess} 
+                  disabled={!assignForm.lot_id || !assignForm.customer_id}
+                  style={{ width:'100%', padding:'12px', borderRadius:12, fontWeight:600 }}
+                >
+                  ✓ Asignar como Venta
+                </button>
+              </>
+            )}
+          </div>
         </div>
 
+        {/* Procesar (transformar) */}
         <div style={{ background:'white', borderRadius:16, border:'1px solid #e0e0e0', padding:16 }}>
+          <div style={{ fontSize:15, fontWeight:600, marginBottom:12 }}>🔄 Procesar (Transformar)</div>
           <div style={{ display:'grid', gap:12 }}>
             <select 
               className="input" 
@@ -501,26 +591,63 @@ export default function Contabilidad(){
             
             <div style={{ marginBottom:12 }}>
               <div style={{ fontSize:13, fontWeight:600, marginBottom:8, opacity:0.7 }}>Pedidos:</div>
-              <div style={{ maxHeight:280, overflow:'auto' }}>
+              <div style={{ maxHeight:320, overflow:'auto' }}>
               {(customerDetail?.orders||[]).map((o,i)=> (
                   <div 
                     key={i} 
                     style={{ 
-                      display:'flex', 
-                      justifyContent:'space-between', 
-                      alignItems:'center',
                       background: i%2===0 ? '#f8f9fa' : 'white',
                       borderRadius:8,
-                      padding:'10px 12px',
-                      marginBottom:4,
-                      fontSize:13
+                      padding:12,
+                      marginBottom:8,
+                      border:'1px solid #e8e8e8'
                     }}
                   >
-                    <div style={{ fontWeight:600 }}>Pedido #{o.order_id||'-'}</div>
-                    <div style={{ display:'flex', gap:12, fontSize:12 }}>
-                      <span>Facturado: <strong>${Number(o.billed||0).toLocaleString('es-CL')}</strong></span>
-                      <span>Pagado: <strong>${Number(o.paid||0).toLocaleString('es-CL')}</strong></span>
+                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
+                      <div style={{ fontWeight:600, fontSize:14 }}>Pedido #{o.order_id||'-'}</div>
+                      <div style={{ display:'flex', gap:8, fontSize:12 }}>
+                        <span>💰 ${Number(o.billed||0).toLocaleString('es-CL')}</span>
+                        <span>✓ ${Number(o.paid||0).toLocaleString('es-CL')}</span>
+                      </div>
                     </div>
+                    
+                    {/* Productos del pedido */}
+                    {(o.products||[]).length > 0 && (
+                      <div style={{ borderTop:'1px solid #e8e8e8', paddingTop:8, marginTop:8 }}>
+                        {o.products.map((p,idx)=> (
+                          <div key={idx} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:12, padding:'6px 0', gap:8 }}>
+                            <span style={{ opacity:0.8, flex:1 }}>{p.product_name}</span>
+                            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                              {editingPrice?.chargeId === p.charge_id ? (
+                                <>
+                                  <input 
+                                    type="number"
+                                    value={editingPrice.value}
+                                    onChange={e=> setEditingPrice({...editingPrice, value:e.target.value})}
+                                    style={{ width:80, padding:'4px 8px', borderRadius:6, border:'1px solid #ddd', fontSize:12 }}
+                                    autoFocus
+                                  />
+                                  <button onClick={savePrice} style={{ padding:'4px 8px', borderRadius:6, background:'#2e7d32', color:'white', border:'none', cursor:'pointer', fontSize:11 }}>✓</button>
+                                  <button onClick={()=>setEditingPrice(null)} style={{ padding:'4px 8px', borderRadius:6, background:'#d32f2f', color:'white', border:'none', cursor:'pointer', fontSize:11 }}>✕</button>
+                                </>
+                              ) : (
+                                <>
+                                  <span style={{ fontWeight:600 }}>
+                                    {p.charged_qty ?? p.qty} {p.unit} × ${Number(p.unit_price||0).toLocaleString('es-CL')}
+                                  </span>
+                                  <button 
+                                    onClick={()=>setEditingPrice({chargeId:p.charge_id, value:p.unit_price})} 
+                                    style={{ padding:'2px 6px', borderRadius:4, background:'#f0f0f0', border:'none', cursor:'pointer', fontSize:11 }}
+                                  >
+                                    ✏️
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                 </div>
               ))}
             </div>

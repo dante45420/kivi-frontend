@@ -41,4 +41,16 @@ export function customersSummary(includeOrders){
   return apiFetch(`/accounting/customers?${usp.toString()}`)
 }
 
+export function updateChargePrice(chargeId, unitPrice) {
+  return apiFetch(`/charges/${chargeId}/price`, {
+    method: 'PATCH',
+    body: { unit_price: unitPrice }
+  })
+}
 
+export function assignLotToCustomer(lotId, data) {
+  return apiFetch(`/inventory/lots/${lotId}/assign`, {
+    method: 'POST',
+    body: data
+  })
+}

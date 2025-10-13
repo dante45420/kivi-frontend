@@ -14,6 +14,14 @@ export async function apiFetch(path, { method = 'GET', body } = {}) {
   })
   const contentType = res.headers.get('content-type') || ''
   const data = contentType.includes('application/json') ? await res.json() : await res.text()
+  
+  // Manejar sesión expirada
+  if (res.status === 401) {
+    localStorage.removeItem('kivi_token')
+    window.location.href = '/login'
+    throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.')
+  }
+  
   if (!res.ok) throw new Error(typeof data === 'string' ? data : (data.error || 'Error'))
   return data
 }
