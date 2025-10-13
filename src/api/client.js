@@ -1,9 +1,12 @@
 const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
-const token = import.meta.env.VITE_AUTH_TOKEN || ''
 
 export async function apiFetch(path, { method = 'GET', body } = {}) {
   const headers = { 'Content-Type': 'application/json' }
+  
+  // Obtener token del localStorage
+  const token = localStorage.getItem('kivi_token')
   if (token) headers['Authorization'] = `Bearer ${token}`
+  
   const res = await fetch(`${baseUrl}${path}`, {
     method,
     headers,

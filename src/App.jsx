@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import Navbar from './components/Navbar'
 import Productos from './pages/Productos'
 import Pedidos from './pages/Pedidos'
@@ -9,22 +10,45 @@ import Precios from './pages/Precios'
 import PreciosCompetidores from './pages/PreciosCompetidores'
 import Contabilidad from './pages/Contabilidad'
 import Login from './pages/Login'
+import Landing from './pages/Landing'
+import { getToken } from './api/auth'
+
+// Componente para rutas protegidas
+function ProtectedRoute({ children }) {
+  const token = getToken()
+  if (!token) {
+    return <Navigate to="/login" replace />
+  }
+  return children
+}
 
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+
+  useEffect(() => {
+    setIsAuthenticated(!!getToken())
+  }, [])
+
   return (
-    <div style={{ fontFamily: 'sans-serif', padding: 12 }}>
-      <Navbar />
+    <div style={{ fontFamily: 'sans-serif', padding: isAuthenticated ? 12 : 0 }}>
+      {isAuthenticated && <Navbar />}
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/productos" element={<Productos />} />
-        <Route path="/pedidos" element={<Pedidos />} />
-        <Route path="/compras" element={<Compras />} />
-        <Route path="/despachos" element={<Despachos />} />
-        <Route path="/kpis" element={<Kpis />} />
-        <Route path="/precios" element={<Precios />} />
-        <Route path="/precios/competidores" element={<PreciosCompetidores />} />
-        <Route path="/contabilidad" element={<Contabilidad />} />
-        <Route path="*" element={<Navigate to="/productos" replace />} />
+        {/* Rutas públicas */}
+        <Route path="/" element={isAuthenticated ? <Navigate to="/productos" replace /> : <Landing />} />
+        <Route path="/login" element={isAuthenticated ? <Navigate to="/productos" replace /> : <Login />} />
+        
+        {/* Rutas protegidas */}
+        <Route path="/productos" element={<ProtectedRoute><Productos /></ProtectedRoute>} />
+        <Route path="/pedidos" element={<ProtectedRoute><Pedidos /></ProtectedRoute>} />
+        <Route path="/compras" element={<ProtectedRoute><Compras /></ProtectedRoute>} />
+        <Route path="/despachos" element={<ProtectedRoute><Despachos /></ProtectedRoute>} />
+        <Route path="/kpis" element={<ProtectedRoute><Kpis /></ProtectedRoute>} />
+        <Route path="/precios" element={<ProtectedRoute><Precios /></ProtectedRoute>} />
+        <Route path="/precios/competidores" element={<ProtectedRoute><PreciosCompetidores /></ProtectedRoute>} />
+        <Route path="/contabilidad" element={<ProtectedRoute><Contabilidad /></ProtectedRoute>} />
+        
+        {/* Redirección por defecto */}
+        <Route path="*" element={<Navigate to={isAuthenticated ? "/productos" : "/"} replace />} />
       </Routes>
     </div>
   )
