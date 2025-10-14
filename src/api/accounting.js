@@ -82,3 +82,15 @@ export function markLotAsWaste(lotId) {
     method: 'POST'
   })
 }
+
+export function registerPayment(data) {
+  return apiFetch('/payments', {
+    method: 'POST',
+    body: data
+  })
+}
+
+export function listPayments(customerId) {
+  const params = customerId ? `?customer_id=${customerId}` : ''
+  return apiFetch(`/payments${params}`)
+}

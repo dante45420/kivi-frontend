@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, changeChargeOrder, returnChargeToExcess, listLots, assignLotToCustomer, markLotAsWaste } from '../api/accounting'
+import { ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, changeChargeOrder, returnChargeToExcess, listLots, assignLotToCustomer, markLotAsWaste, registerPayment } from '../api/accounting'
 import { listCustomers } from '../api/customers'
 import { listProducts } from '../api/products'
 import { listOrders } from '../api/orders'
@@ -24,6 +24,15 @@ export default function ContabilidadNew(){
   // Estados de edición
   const [editingCharge, setEditingCharge] = useState(null)
   const [changingOrderCharge, setChangingOrderCharge] = useState(null)
+  
+  // Filtros
+  const [orderFilter, setOrderFilter] = useState('')
+  const [orderStatusFilter, setOrderStatusFilter] = useState('all')
+  const [customerFilter, setCustomerFilter] = useState('')
+  
+  // Módulo de pagos
+  const [showPayments, setShowPayments] = useState(true)
+  const [paymentForm, setPaymentForm] = useState({ customer_id:'', order_id:'', amount:'', date:'' })
   
   // Formulario de asignación de excedentes
   const [assignForm, setAssignForm] = useState({ lot_id:'', customer_id:'', order_id:'', unit_price:'', qty:'' })
@@ -75,6 +84,21 @@ export default function ContabilidadNew(){
     const key = `${customerId}-${orderId}-${productId}`
     setExpandedCustomerProducts(prev => ({ ...prev, [key]: !prev[key] }))
   }
+
+  // Funciones de filtrado
+  const filteredOrderCards = orderCards.filter(o => {
+    const matchesText = !orderFilter || 
+      (o.order.title && o.order.title.toLowerCase().includes(orderFilter.toLowerCase())) ||
+      o.order.id.toString().includes(orderFilter)
+    const matchesStatus = orderStatusFilter === 'all' || o.purchase_status === orderStatusFilter
+    return matchesText && matchesStatus
+  })
+
+  const filteredCustomerCards = customerCards.filter(c => {
+    return !customerFilter || 
+      (c.customer.name && c.customer.name.toLowerCase().includes(customerFilter.toLowerCase())) ||
+      c.customer.id.toString().includes(customerFilter)
+  })
 
   async function saveChargeEdit() {
     if (!editingCharge) return
@@ -129,20 +153,228 @@ export default function ContabilidadNew(){
     }
   }
 
+  async function handleRegisterPayment() {
+    if (!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount) {
+      alert('Falta completar: cliente, pedido y monto')
+      return
+    }
+    try {
+      await registerPayment({
+        customer_id: Number(paymentForm.customer_id),
+        order_id: Number(paymentForm.order_id),
+        amount: Number(paymentForm.amount),
+        method: 'efectivo',
+        reference: paymentForm.date || null
+      })
+      setPaymentForm({ customer_id:'', order_id:'', amount:'', date:'' })
+      await loadAll()
+      alert('✓ Pago registrado correctamente')
+    } catch(err) {
+      alert('Error: ' + (err.message || 'No se pudo registrar el pago'))
+    }
+  }
+
+  function fillFullAmount(customerId) {
+    const customer = customerCards.find(c=> c.customer.id === Number(customerId))
+    if (customer && customer.due > 0) {
+      setPaymentForm(f=> ({ ...f, amount: customer.due.toString() }))
+    }
+  }
+
+  // Obtener los pedidos del cliente seleccionado
+  function getCustomerOrders(customerId) {
+    if (!customerId) return []
+    const customer = customerCards.find(c=> c.customer.id === Number(customerId))
+    return customer?.orders || []
+  }
+
   return (
-    <div className="center" style={{ padding:'0 16px', maxWidth:1200, margin:'0 auto' }}>
+    <div className="center" style={{ padding:'0 16px', maxWidth:1400, margin:'0 auto' }}>
       {/* Header */}
       <div style={{ textAlign:'center', margin:'24px 0' }}>
         <h2 style={{ margin:'0 0 8px 0', fontSize:32, fontWeight:800 }}>📊 Contabilidad</h2>
         <p style={{ margin:0, opacity:0.7, fontSize:16 }}>Gestión financiera detallada</p>
       </div>
 
+      {/* Módulo de Pagos */}
+      <div style={{ marginBottom:40 }}>
+        <button
+          onClick={() => setShowPayments(!showPayments)}
+          style={{
+            width:'100%',
+            padding:'20px',
+            background:'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            border:'none',
+            borderRadius:20,
+            color:'white',
+            fontSize:20,
+            fontWeight:700,
+            cursor:'pointer',
+            display:'flex',
+            justifyContent:'space-between',
+            alignItems:'center',
+            boxShadow:'0 4px 12px rgba(102, 126, 234, 0.3)',
+            transition:'all 0.2s'
+          }}
+        >
+          <span>💰 Registrar Pago</span>
+          <span style={{ fontSize:16 }}>{showPayments ? '▲' : '▼'}</span>
+        </button>
+
+        {showPayments && (
+          <div style={{ 
+            marginTop:16, 
+            background:'white', 
+            borderRadius:20, 
+            padding:24, 
+            border:'1px solid #e0e0e0',
+            boxShadow:'0 2px 8px rgba(0,0,0,0.08)'
+          }}>
+            <div style={{ display:'grid', gap:16 }}>
+              {/* Cliente */}
+              <div>
+                <label style={{ display:'block', marginBottom:8, fontSize:14, fontWeight:600 }}>
+                  Cliente
+                </label>
+                <select
+                  className="input"
+                  value={paymentForm.customer_id}
+                  onChange={e=> {
+                    setPaymentForm(f=> ({ ...f, customer_id: e.target.value, order_id:'', amount:'' }))
+                  }}
+                  style={{ width:'100%', padding:'12px 16px', borderRadius:12, fontSize:15 }}
+                >
+                  <option value="">Seleccionar cliente...</option>
+                  {customerCards.map(c=> (
+                    <option key={c.customer.id} value={c.customer.id}>
+                      {c.customer.name} {c.due > 0 ? `— Deuda: $${c.due.toLocaleString('es-CL')}` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Pedido */}
+              {paymentForm.customer_id && (
+                <div>
+                  <label style={{ display:'block', marginBottom:8, fontSize:14, fontWeight:600 }}>
+                    Pedido
+                  </label>
+                  <select
+                    className="input"
+                    value={paymentForm.order_id}
+                    onChange={e=> setPaymentForm(f=> ({ ...f, order_id: e.target.value }))}
+                    style={{ width:'100%', padding:'12px 16px', borderRadius:12, fontSize:15 }}
+                  >
+                    <option value="">Seleccionar pedido...</option>
+                    {getCustomerOrders(paymentForm.customer_id).map(ord=> (
+                      <option key={ord.order_id} value={ord.order_id}>
+                        Pedido #{ord.order_id} — ${ord.billed.toLocaleString('es-CL')}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {/* Monto */}
+              <div>
+                <label style={{ display:'block', marginBottom:8, fontSize:14, fontWeight:600 }}>
+                  Monto
+                </label>
+                <div style={{ display:'flex', gap:8 }}>
+                  <input
+                    type="number"
+                    className="input"
+                    placeholder="Monto a pagar"
+                    value={paymentForm.amount}
+                    onChange={e=> setPaymentForm(f=> ({ ...f, amount: e.target.value }))}
+                    style={{ flex:1, padding:'12px 16px', borderRadius:12, fontSize:15 }}
+                  />
+                  {paymentForm.customer_id && (
+                    <button
+                      onClick={() => fillFullAmount(paymentForm.customer_id)}
+                      className="button"
+                      style={{ 
+                        padding:'12px 20px', 
+                        borderRadius:12, 
+                        background:'#e8f5e9', 
+                        color:'#2e7d32',
+                        border:'1px solid #2e7d32',
+                        fontWeight:600,
+                        fontSize:14,
+                        whiteSpace:'nowrap'
+                      }}
+                    >
+                      💯 Pagar Todo
+                    </button>
+                  )}
+                </div>
+                {paymentForm.customer_id && (() => {
+                  const customer = customerCards.find(c=> c.customer.id === Number(paymentForm.customer_id))
+                  return customer && customer.due > 0 ? (
+                    <div style={{ marginTop:6, fontSize:13, opacity:0.7 }}>
+                      Deuda total: ${customer.due.toLocaleString('es-CL')}
+                    </div>
+                  ) : null
+                })()}
+              </div>
+
+              {/* Botón */}
+              <button
+                onClick={handleRegisterPayment}
+                className="button"
+                disabled={!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount}
+                style={{
+                  width:'100%',
+                  padding:'14px',
+                  borderRadius:12,
+                  background: (!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount) ? '#e0e0e0' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color:'white',
+                  border:'none',
+                  fontSize:16,
+                  fontWeight:700,
+                  cursor: (!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount) ? 'not-allowed' : 'pointer',
+                  boxShadow: (!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount) ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)'
+                }}
+              >
+                ✓ Registrar Pago
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Resumen por Pedido */}
-      <div style={{ marginBottom:32 }}>
-        <h3 style={{ fontSize:22, fontWeight:700, marginBottom:16 }}>📦 Por Pedido</h3>
+      <div style={{ marginBottom:40 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:12 }}>
+          <h3 style={{ fontSize:24, fontWeight:700, margin:0 }}>📦 Por Pedido</h3>
+          
+          {/* Filtros */}
+          <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
+            <input 
+              type="text"
+              className="input"
+              placeholder="Buscar pedido..."
+              value={orderFilter}
+              onChange={e=> setOrderFilter(e.target.value)}
+              style={{ width:200, padding:'8px 14px' }}
+            />
+            <select 
+              className="input"
+              value={orderStatusFilter}
+              onChange={e=> setOrderStatusFilter(e.target.value)}
+              style={{ width:150, padding:'8px 14px' }}
+            >
+              <option value="all">Todos</option>
+              <option value="complete">✓ Completos</option>
+              <option value="incomplete">⏳ Incompletos</option>
+              <option value="over">⚠ Exceso</option>
+            </select>
+          </div>
+        </div>
         
-        <div style={{ display:'grid', gap:12 }}>
-          {orderCards.map((o)=> {
+        {/* Cards con scroll horizontal */}
+        <div style={{ display:'flex', gap:16, overflowX:'auto', paddingBottom:16 }}>
+          {filteredOrderCards.map((o)=> {
             const orderId = o.order.id
             const isExpanded = expandedOrders[orderId]
             
@@ -150,10 +382,14 @@ export default function ContabilidadNew(){
               <div 
                 key={orderId}
                 style={{ 
+                  minWidth:320,
+                  maxWidth:320,
                   background:'white', 
-                  borderRadius:16, 
+                  borderRadius:20, 
                   border:'1px solid #e0e0e0',
-                  overflow:'hidden'
+                  overflow:'hidden',
+                  boxShadow:'0 2px 8px rgba(0,0,0,0.08)',
+                  transition:'all 0.2s'
                 }}
               >
                 {/* Nivel 1: Resumen del pedido */}
@@ -161,38 +397,58 @@ export default function ContabilidadNew(){
                   onClick={() => toggleOrder(orderId)}
                   style={{ 
                     width:'100%', 
-                    padding:'20px', 
+                    padding:'24px', 
                     background:'none', 
                     border:'none', 
                     textAlign:'left', 
                     cursor:'pointer',
-                    display:'flex',
-                    justifyContent:'space-between',
-                    alignItems:'center'
+                    display:'block'
                   }}
                 >
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:20, fontWeight:700, marginBottom:8 }}>
-                      {isExpanded ? '▼' : '▶'} {o.order.title || `Pedido #${orderId}`}
+                  <div style={{ marginBottom:16 }}>
+                    <div style={{ fontSize:20, fontWeight:700, marginBottom:12 }}>
+                      {o.order.title || `Pedido #${orderId}`}
                     </div>
-                    <div style={{ display:'flex', gap:20, fontSize:15, opacity:0.8 }}>
-                      <span>💰 ${o.billed.toLocaleString('es-CL')}</span>
-                      <span>💵 ${o.cost.toLocaleString('es-CL')}</span>
-                      <span style={{ color:'#2e7d32', fontWeight:600 }}>
-                        📈 ${o.profit_amount.toLocaleString('es-CL')} ({o.profit_pct.toFixed(1)}%)
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <span style={{ 
+                        padding:'6px 14px', 
+                        borderRadius:12, 
+                        fontSize:13, 
+                        fontWeight:600,
+                        background: o.purchase_status==='complete'?'#e8f5e9':(o.purchase_status==='over'?'#fff3e0':'#ffebee'),
+                        color: o.purchase_status==='complete'?'#2e7d32':(o.purchase_status==='over'?'#f57c00':'#d32f2f')
+                      }}>
+                        {o.purchase_status==='complete'?'✓ Completo':(o.purchase_status==='over'?'⚠ Exceso':'⏳ Incompleto')}
                       </span>
                     </div>
                   </div>
-                  <span style={{ 
-                    padding:'8px 16px', 
-                    borderRadius:12, 
-                    fontSize:14, 
-                    fontWeight:600,
-                    background: o.purchase_status==='complete'?'#e8f5e9':(o.purchase_status==='over'?'#fff3e0':'#ffebee'),
-                    color: o.purchase_status==='complete'?'#2e7d32':(o.purchase_status==='over'?'#f57c00':'#d32f2f')
-                  }}>
-                    {o.purchase_status==='complete'?'✓ Completo':(o.purchase_status==='over'?'⚠ Exceso':'⏳ Incompleto')}
-                  </span>
+
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+                    <div>
+                      <div style={{ fontSize:12, opacity:0.6, marginBottom:4 }}>Facturado</div>
+                      <div style={{ fontSize:18, fontWeight:700 }}>${o.billed.toLocaleString('es-CL')}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize:12, opacity:0.6, marginBottom:4 }}>Costo</div>
+                      <div style={{ fontSize:18, fontWeight:700 }}>${o.cost.toLocaleString('es-CL')}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop:'1px solid #f0f0f0', paddingTop:16 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <div>
+                        <div style={{ fontSize:12, opacity:0.6, marginBottom:4 }}>Deuda</div>
+                        <div style={{ fontSize:18, fontWeight:700, color:'#d32f2f' }}>${o.due.toLocaleString('es-CL')}</div>
+                      </div>
+                      <div style={{ textAlign:'right' }}>
+                        <div style={{ fontSize:12, opacity:0.6, marginBottom:4 }}>Utilidad</div>
+                        <div style={{ fontSize:18, fontWeight:700, color:'#2e7d32' }}>
+                          ${o.profit_amount.toLocaleString('es-CL')}
+                        </div>
+                        <div style={{ fontSize:11, opacity:0.6 }}>{o.profit_pct.toFixed(1)}%</div>
+                      </div>
+                    </div>
+                  </div>
                 </button>
 
                 {/* Nivel 2: Clientes */}
@@ -221,7 +477,7 @@ export default function ContabilidadNew(){
                             }}
                           >
                             <span style={{ fontWeight:600 }}>
-                              {isCustExpanded ? '▼' : '▶'} {cust.customer_name}
+                              {cust.customer_name}
                             </span>
                             <span style={{ fontWeight:700, color:'#2e7d32' }}>
                               ${cust.billed.toLocaleString('es-CL')}
@@ -254,7 +510,7 @@ export default function ContabilidadNew(){
                                       }}
                                     >
                                       <span>
-                                        {isProdExpanded ? '▼' : '▶'} {prod.product_name}
+                                        {prod.product_name}
                                         <span style={{ marginLeft:8, opacity:0.7, fontSize:14 }}>
                                           ({prod.qty.toFixed(1)} {prod.unit === 'kg' ? 'kg' : 'U.'})
                                         </span>
@@ -341,11 +597,24 @@ export default function ContabilidadNew(){
       </div>
 
       {/* Resumen por Cliente */}
-      <div style={{ marginBottom:32 }}>
-        <h3 style={{ fontSize:22, fontWeight:700, marginBottom:16 }}>👤 Por Cliente</h3>
+      <div style={{ marginBottom:40 }}>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:12 }}>
+          <h3 style={{ fontSize:24, fontWeight:700, margin:0 }}>👤 Por Cliente</h3>
+          
+          {/* Filtro */}
+          <input 
+            type="text"
+            className="input"
+            placeholder="Buscar cliente..."
+            value={customerFilter}
+            onChange={e=> setCustomerFilter(e.target.value)}
+            style={{ width:200, padding:'8px 14px' }}
+          />
+        </div>
         
-        <div style={{ display:'grid', gap:12 }}>
-          {customerCards.map((c)=> {
+        {/* Cards con scroll horizontal */}
+        <div style={{ display:'flex', gap:16, overflowX:'auto', paddingBottom:16 }}>
+          {filteredCustomerCards.map((c)=> {
             const customerId = c.customer.id
             const isExpanded = expandedCustomers[customerId]
             
@@ -353,10 +622,14 @@ export default function ContabilidadNew(){
               <div 
                 key={customerId}
                 style={{ 
+                  minWidth:320,
+                  maxWidth:320,
                   background:'white', 
-                  borderRadius:16, 
+                  borderRadius:20, 
                   border:'1px solid #e0e0e0',
-                  overflow:'hidden'
+                  overflow:'hidden',
+                  boxShadow:'0 2px 8px rgba(0,0,0,0.08)',
+                  transition:'all 0.2s'
                 }}
               >
                 {/* Nivel 1: Resumen del cliente */}
@@ -364,29 +637,37 @@ export default function ContabilidadNew(){
                   onClick={() => toggleCustomer(customerId)}
                   style={{ 
                     width:'100%', 
-                    padding:'20px', 
+                    padding:'24px', 
                     background:'none', 
                     border:'none', 
                     textAlign:'left', 
                     cursor:'pointer',
-                    display:'flex',
-                    justifyContent:'space-between',
-                    alignItems:'center'
+                    display:'block'
                   }}
                 >
-                  <div>
-                    <div style={{ fontSize:20, fontWeight:700, marginBottom:8 }}>
-                      {isExpanded ? '▼' : '▶'} {c.customer.name}
-                    </div>
-                    <div style={{ display:'flex', gap:20, fontSize:15, opacity:0.8 }}>
-                      <span>💰 ${c.billed.toLocaleString('es-CL')}</span>
-                      <span>✓ ${c.paid.toLocaleString('es-CL')}</span>
+                  <div style={{ marginBottom:16 }}>
+                    <div style={{ fontSize:20, fontWeight:700, marginBottom:12 }}>
+                      {c.customer.name}
                     </div>
                   </div>
-                  <div style={{ textAlign:'right' }}>
-                    <div style={{ fontSize:13, opacity:0.7, marginBottom:4 }}>Deuda</div>
-                    <div style={{ fontSize:22, fontWeight:700, color:'#d32f2f' }}>
-                      ${c.due.toLocaleString('es-CL')}
+
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginBottom:16 }}>
+                    <div>
+                      <div style={{ fontSize:12, opacity:0.6, marginBottom:4 }}>Facturado</div>
+                      <div style={{ fontSize:18, fontWeight:700 }}>${c.billed.toLocaleString('es-CL')}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize:12, opacity:0.6, marginBottom:4 }}>Pagado</div>
+                      <div style={{ fontSize:18, fontWeight:700 }}>${c.paid.toLocaleString('es-CL')}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ borderTop:'1px solid #f0f0f0', paddingTop:16 }}>
+                    <div>
+                      <div style={{ fontSize:12, opacity:0.6, marginBottom:4 }}>Deuda</div>
+                      <div style={{ fontSize:22, fontWeight:700, color:'#d32f2f' }}>
+                        ${c.due.toLocaleString('es-CL')}
+                      </div>
                     </div>
                   </div>
                 </button>
@@ -417,7 +698,7 @@ export default function ContabilidadNew(){
                             }}
                           >
                             <span style={{ fontWeight:600 }}>
-                              {isOrdExpanded ? '▼' : '▶'} Pedido #{ord.order_id}
+                              Pedido #{ord.order_id}
                             </span>
                             <span style={{ fontWeight:700 }}>
                               ${ord.billed.toLocaleString('es-CL')}
@@ -450,7 +731,7 @@ export default function ContabilidadNew(){
                                       }}
                                     >
                                       <span>
-                                        {isProdExpanded ? '▼' : '▶'} {prod.product_name}
+                                        {prod.product_name}
                                         <span style={{ marginLeft:8, opacity:0.7, fontSize:14 }}>
                                           ({(prod.charged_qty ?? prod.qty).toFixed(1)} {prod.unit === 'kg' ? 'kg' : 'U.'})
                                         </span>
