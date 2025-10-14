@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, changeChargeOrder, returnChargeToExcess, listLots, assignLotToCustomer, markLotAsWaste, registerPayment } from '../api/accounting'
+import { ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, changeChargeOrder, returnChargeToExcess, listLots, assignLotToCustomer, markLotAsWaste, createPayment } from '../api/accounting'
 import { listCustomers } from '../api/customers'
 import { listProducts } from '../api/products'
 import { listOrders } from '../api/orders'
@@ -159,7 +159,7 @@ export default function ContabilidadNew(){
       return
     }
     try {
-      await registerPayment({
+      await createPayment({
         customer_id: Number(paymentForm.customer_id),
         order_id: Number(paymentForm.order_id),
         amount: Number(paymentForm.amount),
