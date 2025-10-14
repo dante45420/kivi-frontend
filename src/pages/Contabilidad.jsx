@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { listCharges, listPayments, createPayment, listLots, processLot, ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, assignLotToCustomer, returnChargeToExcess } from '../api/accounting'
+import { listCharges, listPayments, createPayment, listLots, processLot, ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, assignLotToCustomer, returnChargeToExcess, changeChargeOrder, markLotAsWaste } from '../api/accounting'
 import { getOrderDetail } from '../api/orders'
 import { listCustomers } from '../api/customers'
 import { listProducts } from '../api/products'
@@ -136,68 +136,53 @@ export default function Contabilidad(){
                 minWidth:280, 
                 textAlign:'left', 
                 background:'white', 
-                borderRadius:16, 
+                borderRadius:20, 
                 border:'1px solid #e0e0e0', 
-                padding:16,
+                padding:20,
                 boxShadow:'0 2px 8px rgba(0,0,0,0.06)',
                 transition:'all 0.2s',
               }}
               onMouseOver={e=> e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'}
               onMouseOut={e=> e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.06)'}
             >
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'start', marginBottom:8 }}>
-                <div style={{ fontWeight:700, fontSize:16 }}>{o.order.title || `Pedido #${o.order.id}`}</div>
-                <span className={`badge ${o.purchase_status==='complete'?'ok':(o.purchase_status==='over'?'warn':'danger')}`} style={{ fontSize:11 }}>
-                  {o.purchase_status==='complete'?'✓ Listo':(o.purchase_status==='over'?'⚠ Exceso':'⏳ Faltante')}
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+                <div style={{ fontWeight:700, fontSize:18 }}>{o.order.title || `Pedido #${o.order.id}`}</div>
+                <span style={{ 
+                  padding:'6px 14px', 
+                  borderRadius:12, 
+                  fontSize:13, 
+                  fontWeight:600,
+                  background: o.purchase_status==='complete'?'#e8f5e9':(o.purchase_status==='over'?'#fff3e0':'#ffebee'),
+                  color: o.purchase_status==='complete'?'#2e7d32':(o.purchase_status==='over'?'#f57c00':'#d32f2f')
+                }}>
+                  {o.purchase_status==='complete'?'✓ Completo':(o.purchase_status==='over'?'⚠ Exceso':'⏳ Incompleto')}
                 </span>
               </div>
               
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:12, fontSize:13 }}>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16, marginTop:16, fontSize:15 }}>
                 <div>
-                  <div style={{ opacity:0.6, fontSize:11 }}>Comprado</div>
-                  <div style={{ fontWeight:600 }}>${Number(o.bought_money||0).toLocaleString('es-CL')}</div>
+                  <div style={{ opacity:0.6, fontSize:13, marginBottom:4 }}>Costo</div>
+                  <div style={{ fontWeight:700, fontSize:17 }}>${Number(o.cost||0).toLocaleString('es-CL')}</div>
                 </div>
                 <div>
-                  <div style={{ opacity:0.6, fontSize:11 }}>Falta</div>
-                  <div style={{ fontWeight:600 }}>${Number(o.missing_money||0).toLocaleString('es-CL')}</div>
-                </div>
-                <div>
-                  <div style={{ opacity:0.6, fontSize:11 }}>Costo</div>
-                  <div style={{ fontWeight:600 }}>${Number(o.cost||0).toLocaleString('es-CL')}</div>
-                </div>
-                <div>
-                  <div style={{ opacity:0.6, fontSize:11 }}>Facturado</div>
-                  <div style={{ fontWeight:600 }}>${o.billed.toLocaleString('es-CL')}</div>
+                  <div style={{ opacity:0.6, fontSize:13, marginBottom:4 }}>Facturado</div>
+                  <div style={{ fontWeight:700, fontSize:17 }}>${o.billed.toLocaleString('es-CL')}</div>
                 </div>
               </div>
 
-              {(o.bought_tags?.length||0)>0 || (o.missing_tags?.length||0)>0 ? (
-                <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginTop:10 }}>
-                  {(o.bought_tags||[]).slice(0,4).map((t,idx)=> (
-                    <span key={`b${idx}`} className="badge ok" style={{ fontSize:10 }}>
-                      {t.kg>0?`${t.kg}kg`:''}{t.kg>0&&t.unit>0?' · ':''}{t.unit>0?`${t.unit}u`:''}
-                    </span>
-                  ))}
-                  {(o.missing_tags||[]).slice(0,4).map((t,idx)=> (
-                    <span key={`m${idx}`} className="badge danger" style={{ fontSize:10 }}>
-                      {t.kg>0?`${t.kg}kg`:''}{t.kg>0&&t.unit>0?' · ':''}{t.unit>0?`${t.unit}u`:''}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-
-              <div style={{ height:1, background:'#f0f0f0', margin:'12px 0' }} />
+              <div style={{ height:1, background:'#f0f0f0', margin:'16px 0' }} />
               
-              <div style={{ display:'flex', justifyContent:'space-between', fontSize:13 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', fontSize:15 }}>
                 <div>
-                  <div style={{ opacity:0.6, fontSize:11 }}>Deuda</div>
-                  <div style={{ fontWeight:700, color:'#d32f2f' }}>${o.due.toLocaleString('es-CL')}</div>
+                  <div style={{ opacity:0.6, fontSize:13, marginBottom:4 }}>Deuda</div>
+                  <div style={{ fontWeight:700, fontSize:17, color:'#d32f2f' }}>${o.due.toLocaleString('es-CL')}</div>
                 </div>
                 <div style={{ textAlign:'right' }}>
-                  <div style={{ opacity:0.6, fontSize:11 }}>Utilidad</div>
-                  <div style={{ fontWeight:700, color:'#2e7d32' }}>
-                    ${Number(o.profit_amount||0).toLocaleString('es-CL')} ({Number(o.profit_pct||0).toFixed(1)}%)
+                  <div style={{ opacity:0.6, fontSize:13, marginBottom:4 }}>Utilidad</div>
+                  <div style={{ fontWeight:700, fontSize:17, color:'#2e7d32' }}>
+                    ${Number(o.profit_amount||0).toLocaleString('es-CL')}
                   </div>
+                  <div style={{ fontSize:13, opacity:0.7 }}>{Number(o.profit_pct||0).toFixed(1)}%</div>
                 </div>
               </div>
             </button>
@@ -430,6 +415,49 @@ export default function Contabilidad(){
                 </button>
               </>
             )}
+          </div>
+        </div>
+
+        {/* Marcar como Merma */}
+        <div style={{ background:'white', borderRadius:16, border:'1px solid #e0e0e0', padding:16, marginBottom:16 }}>
+          <div style={{ fontSize:15, fontWeight:600, marginBottom:12 }}>🗑️ Marcar como Merma</div>
+          <div style={{ display:'grid', gap:12 }}>
+            <select 
+              className="input" 
+              id="waste-lot-select"
+              style={{ width:'100%', padding:'12px 16px', borderRadius:12 }}
+            >
+              <option value="">Seleccionar excedente para merma...</option>
+              {lots.filter(l=> (l.status||'')==='unassigned').map(l=> {
+                const product = products.find(p=> p.id === l.product_id)
+                const productName = product ? product.name : `Producto #${l.product_id}`
+                return (
+                  <option key={l.id} value={l.id}>
+                    {productName} — {l.qty_kg||l.qty_unit} {(l.qty_kg?'kg':'unid')}
+                  </option>
+                )
+              })}
+            </select>
+            <button 
+              className="button" 
+              onClick={async()=>{
+                const select = document.getElementById('waste-lot-select')
+                const lotId = select.value
+                if (!lotId) return
+                if (!confirm('¿Marcar este excedente como merma (pérdida)?')) return
+                try {
+                  await markLotAsWaste(Number(lotId))
+                  setLots(await listLots())
+                  select.value = ''
+                  alert('✓ Excedente marcado como merma')
+                } catch(err) {
+                  alert('Error: ' + (err.message || 'No se pudo marcar como merma'))
+                }
+              }}
+              style={{ width:'100%', padding:'12px', borderRadius:12, fontWeight:600, background:'#d32f2f', color:'white' }}
+            >
+              🗑️ Marcar como Merma
+            </button>
           </div>
         </div>
 

@@ -68,3 +68,16 @@ export function returnChargeToExcess(chargeId, data) {
     body: data
   })
 }
+
+export function changeChargeOrder(chargeId, orderId) {
+  return apiFetch(`/charges/${chargeId}/order`, {
+    method: 'PATCH',
+    body: { order_id: orderId }
+  })
+}
+
+export function markLotAsWaste(lotId) {
+  return apiFetch(`/inventory/lots/${lotId}/waste`, {
+    method: 'POST'
+  })
+}
