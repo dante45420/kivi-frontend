@@ -8,7 +8,7 @@ export default function Productos() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [editOpen, setEditOpen] = useState(false)
-  const [editValues, setEditValues] = useState({ id: null, name: '', default_unit: 'kg', sale_price:'', quality_notes: '', quality_photo_url: '' })
+  const [editValues, setEditValues] = useState({ id: null, name: '', default_unit: 'kg', category:'', purchase_type:'detalle', sale_price:'', quality_notes: '', quality_photo_url: '' })
   const [editVariants, setEditVariants] = useState([])
   const [editTiers, setEditTiers] = useState([])
   const [editingVariantId, setEditingVariantId] = useState(null)
@@ -35,7 +35,9 @@ export default function Productos() {
     setEditValues({ 
       id: p.id, 
       name: p.name,
-      default_unit: p.default_unit || 'kg', 
+      default_unit: p.default_unit || 'kg',
+      category: p.category || '',
+      purchase_type: p.purchase_type || 'detalle',
       sale_price: currentPrice, 
       quality_notes: p.quality_notes || '', 
       quality_photo_url: p.quality_photo_url || '' 
@@ -52,7 +54,9 @@ export default function Productos() {
   
   async function saveBasic() {
     const payload = { 
-      default_unit: editValues.default_unit, 
+      default_unit: editValues.default_unit,
+      category: editValues.category || null,
+      purchase_type: editValues.purchase_type || 'detalle',
       quality_notes: editValues.quality_notes, 
       quality_photo_url: editValues.quality_photo_url 
     }
@@ -117,6 +121,23 @@ export default function Productos() {
                 <select className="input" value={editValues.default_unit} onChange={e => setEditValues(v => ({ ...v, default_unit: e.target.value }))} style={{ width:'100%' }}>
                   <option value="kg">Kilogramo (kg)</option>
                   <option value="unit">Unidad (unit)</option>
+                </select>
+              </label>
+
+              <label style={{ display:'block', marginBottom:12 }}>
+                <span style={{ display:'block', marginBottom:4, fontSize:14, opacity:0.8 }}>Categoría</span>
+                <select className="input" value={editValues.category} onChange={e => setEditValues(v => ({ ...v, category: e.target.value }))} style={{ width:'100%' }}>
+                  <option value="">Sin categoría</option>
+                  <option value="fruta">🍎 Fruta</option>
+                  <option value="verdura">🥬 Verdura</option>
+                </select>
+              </label>
+
+              <label style={{ display:'block', marginBottom:12 }}>
+                <span style={{ display:'block', marginBottom:4, fontSize:14, opacity:0.8 }}>Tipo de compra</span>
+                <select className="input" value={editValues.purchase_type} onChange={e => setEditValues(v => ({ ...v, purchase_type: e.target.value }))} style={{ width:'100%' }}>
+                  <option value="detalle">🛒 Al detalle (suelto)</option>
+                  <option value="cajon">📦 Por cajón</option>
                 </select>
               </label>
 

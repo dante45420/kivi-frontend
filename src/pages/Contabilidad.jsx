@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
-import { listCharges, listPayments, createPayment, listLots, processLot, ordersSummary, customersSummary, updateChargePrice, assignLotToCustomer } from '../api/accounting'
+import { listCharges, listPayments, createPayment, listLots, processLot, ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, assignLotToCustomer } from '../api/accounting'
 import { getOrderDetail } from '../api/orders'
 import { listCustomers } from '../api/customers'
+import { listProducts } from '../api/products'
 import '../styles/globals.css'
 
 export default function Contabilidad(){
   const [period, setPeriod] = useState('7 dias')
   const [customers, setCustomers] = useState([])
+  const [products, setProducts] = useState([])
   const [selectedCustomer, setSelectedCustomer] = useState('')
   const [charges, setCharges] = useState([])
   const [payments, setPayments] = useState([])
@@ -20,9 +22,12 @@ export default function Contabilidad(){
   const [orderModalOpen, setOrderModalOpen] = useState(false)
   const [customerDetail, setCustomerDetail] = useState(null)
   const [customerModalOpen, setCustomerModalOpen] = useState(false)
-  const [editingPrice, setEditingPrice] = useState(null) // { chargeId, value }
+  const [editingCharge, setEditingCharge] = useState(null) // { chargeId, price, qty }
 
-  useEffect(()=>{ listCustomers().then(setCustomers).catch(()=>{}) },[])
+  useEffect(()=>{ 
+    listCustomers().then(setCustomers).catch(()=>{}) 
+    listProducts().then(setProducts).catch(()=>{})
+  },[])
   useEffect(()=>{
     async function load(){
       if (selectedCustomer){
@@ -64,10 +69,11 @@ export default function Contabilidad(){
     setLots(await listLots())
   }
 
-  async function savePrice() {
-    if (!editingPrice) return
-    await updateChargePrice(editingPrice.chargeId, Number(editingPrice.value))
-    setEditingPrice(null)
+  async function saveCharge() {
+    if (!editingCharge) return
+    await updateChargePrice(editingCharge.chargeId, Number(editingCharge.price))
+    await updateChargeQuantity(editingCharge.chargeId, Number(editingCharge.qty))
+    setEditingCharge(null)
     // Recargar datos del cliente
     const rows = await customersSummary(true)
     const row = rows.find(r=> r.customer.id === customerDetail.customer.id)
@@ -357,11 +363,15 @@ export default function Contabilidad(){
               style={{ width:'100%', padding:'12px 16px', borderRadius:12 }}
             >
               <option value="">Seleccionar excedente...</option>
-              {lots.filter(l=> (l.status||'')==='unassigned').map(l=> (
-                <option key={l.id} value={l.id}>
-                  #{l.id} — P{l.product_id} — {l.qty_kg||l.qty_unit} {(l.qty_kg?'kg':'unid')}
-                </option>
-              ))}
+              {lots.filter(l=> (l.status||'')==='unassigned').map(l=> {
+                const product = products.find(p=> p.id === l.product_id)
+                const productName = product ? product.name : `Producto #${l.product_id}`
+                return (
+                  <option key={l.id} value={l.id}>
+                    {productName} — {l.qty_kg||l.qty_unit} {(l.qty_kg?'kg':'unid')}
+                  </option>
+                )
+              })}
             </select>
 
             {assignForm.lot_id && (
@@ -573,39 +583,39 @@ export default function Contabilidad(){
             <div style={{ borderBottom:'1px solid #f0f0f0', paddingBottom:16, marginBottom:16 }}>
               <h3 style={{ margin:'0 0 12px 0', fontSize:20, fontWeight:700 }}>👤 {customerDetail?.customer?.name || 'Cliente'}</h3>
               
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:12, textAlign:'center' }}>
-                <div style={{ background:'#f8f9fa', borderRadius:12, padding:10 }}>
-                  <div style={{ fontSize:11, opacity:0.6, marginBottom:4 }}>Facturado</div>
-                  <div style={{ fontWeight:700, fontSize:15 }}>${Number(customerDetail?.billed||0).toLocaleString('es-CL')}</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:16, textAlign:'center' }}>
+                <div style={{ background:'#f8f9fa', borderRadius:12, padding:16 }}>
+                  <div style={{ fontSize:13, opacity:0.6, marginBottom:6 }}>Facturado</div>
+                  <div style={{ fontWeight:700, fontSize:20 }}>${Number(customerDetail?.billed||0).toLocaleString('es-CL')}</div>
                 </div>
-                <div style={{ background:'#f8f9fa', borderRadius:12, padding:10 }}>
-                  <div style={{ fontSize:11, opacity:0.6, marginBottom:4 }}>Pagado</div>
-                  <div style={{ fontWeight:700, fontSize:15 }}>${Number(customerDetail?.paid||0).toLocaleString('es-CL')}</div>
+                <div style={{ background:'#f8f9fa', borderRadius:12, padding:16 }}>
+                  <div style={{ fontSize:13, opacity:0.6, marginBottom:6 }}>Pagado</div>
+                  <div style={{ fontWeight:700, fontSize:20 }}>${Number(customerDetail?.paid||0).toLocaleString('es-CL')}</div>
                 </div>
-                <div style={{ background:'#fff3e0', borderRadius:12, padding:10, border:'1px solid #ffe0b2' }}>
-                  <div style={{ fontSize:11, opacity:0.6, marginBottom:4 }}>Deuda</div>
-                  <div style={{ fontWeight:700, fontSize:15, color:'#d32f2f' }}>${Number(customerDetail?.due||0).toLocaleString('es-CL')}</div>
+                <div style={{ background:'#fff3e0', borderRadius:12, padding:16, border:'1px solid #ffe0b2' }}>
+                  <div style={{ fontSize:13, opacity:0.6, marginBottom:6 }}>Deuda</div>
+                  <div style={{ fontWeight:700, fontSize:20, color:'#d32f2f' }}>${Number(customerDetail?.due||0).toLocaleString('es-CL')}</div>
                 </div>
               </div>
             </div>
             
             <div style={{ marginBottom:12 }}>
-              <div style={{ fontSize:13, fontWeight:600, marginBottom:8, opacity:0.7 }}>Pedidos:</div>
-              <div style={{ maxHeight:320, overflow:'auto' }}>
+              <div style={{ fontSize:15, fontWeight:600, marginBottom:12, opacity:0.7 }}>Pedidos:</div>
+              <div style={{ maxHeight:400, overflow:'auto' }}>
               {(customerDetail?.orders||[]).map((o,i)=> (
                   <div 
                     key={i} 
                     style={{ 
                       background: i%2===0 ? '#f8f9fa' : 'white',
-                      borderRadius:8,
-                      padding:12,
-                      marginBottom:8,
+                      borderRadius:10,
+                      padding:16,
+                      marginBottom:12,
                       border:'1px solid #e8e8e8'
                     }}
                   >
-                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
-                      <div style={{ fontWeight:600, fontSize:14 }}>Pedido #{o.order_id||'-'}</div>
-                      <div style={{ display:'flex', gap:8, fontSize:12 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:12 }}>
+                      <div style={{ fontWeight:600, fontSize:16 }}>Pedido #{o.order_id||'-'}</div>
+                      <div style={{ display:'flex', gap:12, fontSize:14 }}>
                         <span>💰 ${Number(o.billed||0).toLocaleString('es-CL')}</span>
                         <span>✓ ${Number(o.paid||0).toLocaleString('es-CL')}</span>
                       </div>
@@ -613,31 +623,40 @@ export default function Contabilidad(){
                     
                     {/* Productos del pedido */}
                     {(o.products||[]).length > 0 && (
-                      <div style={{ borderTop:'1px solid #e8e8e8', paddingTop:8, marginTop:8 }}>
+                      <div style={{ borderTop:'1px solid #e8e8e8', paddingTop:12, marginTop:12 }}>
                         {o.products.map((p,idx)=> (
-                          <div key={idx} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:12, padding:'6px 0', gap:8 }}>
-                            <span style={{ opacity:0.8, flex:1 }}>{p.product_name}</span>
-                            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                              {editingPrice?.chargeId === p.charge_id ? (
+                          <div key={idx} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:14, padding:'10px 0', gap:12 }}>
+                            <span style={{ opacity:0.8, flex:1, fontWeight:500 }}>{p.product_name}</span>
+                            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                              {editingCharge?.chargeId === p.charge_id ? (
                                 <>
                                   <input 
                                     type="number"
-                                    value={editingPrice.value}
-                                    onChange={e=> setEditingPrice({...editingPrice, value:e.target.value})}
-                                    style={{ width:80, padding:'4px 8px', borderRadius:6, border:'1px solid #ddd', fontSize:12 }}
+                                    placeholder="Cant"
+                                    value={editingCharge.qty}
+                                    onChange={e=> setEditingCharge({...editingCharge, qty:e.target.value})}
+                                    style={{ width:70, padding:'6px 10px', borderRadius:6, border:'1px solid #ddd', fontSize:14 }}
+                                  />
+                                  <span style={{ fontSize:14 }}>{p.unit} ×</span>
+                                  <input 
+                                    type="number"
+                                    placeholder="Precio"
+                                    value={editingCharge.price}
+                                    onChange={e=> setEditingCharge({...editingCharge, price:e.target.value})}
+                                    style={{ width:90, padding:'6px 10px', borderRadius:6, border:'1px solid #ddd', fontSize:14 }}
                                     autoFocus
                                   />
-                                  <button onClick={savePrice} style={{ padding:'4px 8px', borderRadius:6, background:'#2e7d32', color:'white', border:'none', cursor:'pointer', fontSize:11 }}>✓</button>
-                                  <button onClick={()=>setEditingPrice(null)} style={{ padding:'4px 8px', borderRadius:6, background:'#d32f2f', color:'white', border:'none', cursor:'pointer', fontSize:11 }}>✕</button>
+                                  <button onClick={saveCharge} style={{ padding:'6px 10px', borderRadius:6, background:'#2e7d32', color:'white', border:'none', cursor:'pointer', fontSize:12 }}>✓</button>
+                                  <button onClick={()=>setEditingCharge(null)} style={{ padding:'6px 10px', borderRadius:6, background:'#d32f2f', color:'white', border:'none', cursor:'pointer', fontSize:12 }}>✕</button>
                                 </>
                               ) : (
                                 <>
-                                  <span style={{ fontWeight:600 }}>
+                                  <span style={{ fontWeight:600, fontSize:14 }}>
                                     {p.charged_qty ?? p.qty} {p.unit} × ${Number(p.unit_price||0).toLocaleString('es-CL')}
                                   </span>
                                   <button 
-                                    onClick={()=>setEditingPrice({chargeId:p.charge_id, value:p.unit_price})} 
-                                    style={{ padding:'2px 6px', borderRadius:4, background:'#f0f0f0', border:'none', cursor:'pointer', fontSize:11 }}
+                                    onClick={()=>setEditingCharge({chargeId:p.charge_id, price:p.unit_price, qty:p.charged_qty ?? p.qty})} 
+                                    style={{ padding:'4px 8px', borderRadius:6, background:'#f0f0f0', border:'none', cursor:'pointer', fontSize:12 }}
                                   >
                                     ✏️
                                   </button>

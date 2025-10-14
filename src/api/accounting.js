@@ -48,6 +48,13 @@ export function updateChargePrice(chargeId, unitPrice) {
   })
 }
 
+export function updateChargeQuantity(chargeId, chargedQty) {
+  return apiFetch(`/charges/${chargeId}/quantity`, {
+    method: 'PATCH',
+    body: { charged_qty: chargedQty }
+  })
+}
+
 export function assignLotToCustomer(lotId, data) {
   return apiFetch(`/inventory/lots/${lotId}/assign`, {
     method: 'POST',
