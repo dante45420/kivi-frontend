@@ -61,3 +61,10 @@ export function assignLotToCustomer(lotId, data) {
     body: data
   })
 }
+
+export function returnChargeToExcess(chargeId, data) {
+  return apiFetch(`/charges/${chargeId}/return`, {
+    method: 'POST',
+    body: data
+  })
+}

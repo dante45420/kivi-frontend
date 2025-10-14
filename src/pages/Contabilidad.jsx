@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { listCharges, listPayments, createPayment, listLots, processLot, ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, assignLotToCustomer } from '../api/accounting'
+import { listCharges, listPayments, createPayment, listLots, processLot, ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, assignLotToCustomer, returnChargeToExcess } from '../api/accounting'
 import { getOrderDetail } from '../api/orders'
 import { listCustomers } from '../api/customers'
 import { listProducts } from '../api/products'
@@ -15,7 +15,7 @@ export default function Contabilidad(){
   const [lots, setLots] = useState([])
   const [payForm, setPayForm] = useState({ amount:'', method:'', reference:'', order_id:'' })
   const [processForm, setProcessForm] = useState({ from_lot:'', to_product:'', input_kg:'', output_qty:'', unit:'unit' })
-  const [assignForm, setAssignForm] = useState({ lot_id:'', customer_id:'', order_id:'', unit_price:'' })
+  const [assignForm, setAssignForm] = useState({ lot_id:'', customer_id:'', order_id:'', unit_price:'', qty:'' })
   const [orderCards, setOrderCards] = useState([])
   const [customerCards, setCustomerCards] = useState([])
   const [orderDetail, setOrderDetail] = useState(null)
@@ -82,16 +82,22 @@ export default function Contabilidad(){
 
   async function assignExcess() {
     if (!assignForm.lot_id || !assignForm.customer_id) return
-    await assignLotToCustomer(Number(assignForm.lot_id), {
-      customer_id: Number(assignForm.customer_id),
-      order_id: assignForm.order_id ? Number(assignForm.order_id) : null,
-      unit_price: assignForm.unit_price ? Number(assignForm.unit_price) : null
-    })
-    setAssignForm({ lot_id:'', customer_id:'', order_id:'', unit_price:'' })
-    setLots(await listLots())
-    // Recargar datos
-    ordersSummary().then(setOrderCards).catch(()=>{})
-    customersSummary(false).then(setCustomerCards).catch(()=>{})
+    try {
+      await assignLotToCustomer(Number(assignForm.lot_id), {
+        customer_id: Number(assignForm.customer_id),
+        order_id: assignForm.order_id ? Number(assignForm.order_id) : null,
+        unit_price: assignForm.unit_price ? Number(assignForm.unit_price) : null,
+        qty: assignForm.qty ? Number(assignForm.qty) : null
+      })
+      setAssignForm({ lot_id:'', customer_id:'', order_id:'', unit_price:'', qty:'' })
+      setLots(await listLots())
+      // Recargar datos
+      ordersSummary().then(setOrderCards).catch(()=>{})
+      customersSummary(false).then(setCustomerCards).catch(()=>{})
+      alert('✓ Excedente asignado correctamente')
+    } catch(err) {
+      alert('Error: ' + (err.message || 'No se pudo asignar el excedente'))
+    }
   }
 
   return (
@@ -383,8 +389,17 @@ export default function Contabilidad(){
                   style={{ width:'100%', padding:'12px 16px', borderRadius:12 }}
                 >
                   <option value="">Seleccionar cliente...</option>
-            {customers.map(c=> <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+                  {customers.map(c=> <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+
+                <input 
+                  className="input" 
+                  type="number"
+                  placeholder="Cantidad (opcional, por defecto todo)" 
+                  value={assignForm.qty} 
+                  onChange={e=>setAssignForm(v=>({ ...v, qty:e.target.value }))} 
+                  style={{ width:'100%', padding:'12px 16px', borderRadius:12 }}
+                />
 
                 <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
                   <input 
@@ -659,6 +674,25 @@ export default function Contabilidad(){
                                     style={{ padding:'4px 8px', borderRadius:6, background:'#f0f0f0', border:'none', cursor:'pointer', fontSize:12 }}
                                   >
                                     ✏️
+                                  </button>
+                                  <button 
+                                    onClick={async()=>{
+                                      if(!confirm('¿Devolver este producto a excedentes?')) return
+                                      try {
+                                        await returnChargeToExcess(p.charge_id, {})
+                                        const rows = await customersSummary(true)
+                                        const row = rows.find(r=> r.customer.id === customerDetail.customer.id)
+                                        setCustomerDetail(row || customerDetail)
+                                        setLots(await listLots())
+                                        alert('✓ Producto devuelto a excedentes')
+                                      } catch(err) {
+                                        alert('Error: ' + (err.message || 'No se pudo devolver'))
+                                      }
+                                    }} 
+                                    style={{ padding:'4px 8px', borderRadius:6, background:'#fff3e0', border:'none', cursor:'pointer', fontSize:12 }}
+                                    title="Devolver a excedentes"
+                                  >
+                                    🔄
                                   </button>
                                 </>
                               )}
