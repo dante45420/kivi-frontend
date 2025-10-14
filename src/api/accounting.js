@@ -32,8 +32,9 @@ export function processLot(payload){
   return apiFetch('/inventory/process', { method:'POST', body: payload })
 }
 
-export function ordersSummary(){
-  return apiFetch('/accounting/orders')
+export function ordersSummary(includeDetails){
+  const usp = new URLSearchParams(); if (includeDetails) usp.set('include_details', '1')
+  return apiFetch(`/accounting/orders?${usp.toString()}`)
 }
 
 export function customersSummary(includeOrders){
