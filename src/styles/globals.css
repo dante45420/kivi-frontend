@@ -1,10 +1,15 @@
 :root{
-  --kivi-green:#3A6435;
-  --kivi-orange:#F5822E;
-  --kivi-cream:#FBF5E9;
-  --kivi-green-soft:#A3C9A8;
-  --kivi-blue-soft:#9FB7D1;
-  --kivi-text:#2C3E50;
+  --kivi-green:#A8D5BA;
+  --kivi-green-dark:#88C4A8;
+  --kivi-orange:#FFD4A3;
+  --kivi-cream:#FFF9F0;
+  --kivi-green-soft:#C8E6C9;
+  --kivi-blue-soft:#B3D9FF;
+  --kivi-peach:#FFCCBC;
+  --kivi-lavender:#E1BEE7;
+  --kivi-mint:#B2DFDB;
+  --kivi-text:#5D6D7E;
+  --kivi-text-dark:#34495E;
   --radius:12px;
   --radius-pill:999px;
   --space:8px;

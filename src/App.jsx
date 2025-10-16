@@ -10,7 +10,8 @@ import Precios from './pages/Precios'
 import PreciosCompetidores from './pages/PreciosCompetidores'
 import Contabilidad from './pages/ContabilidadNew'
 import Login from './pages/Login'
-import Landing from './pages/Landing'
+import Catalogo from './pages/Catalogo'
+import About from './pages/About'
 import { getToken } from './api/auth'
 
 // Componente para rutas protegidas
@@ -23,10 +24,21 @@ function ProtectedRoute({ children }) {
 }
 
 export default function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(!!getToken())
 
   useEffect(() => {
-    setIsAuthenticated(!!getToken())
+    // Función para actualizar el estado de autenticación
+    const checkAuth = () => {
+      setIsAuthenticated(!!getToken())
+    }
+
+    // Escuchar cambios en el estado de autenticación
+    window.addEventListener('auth-change', checkAuth)
+    
+    // Limpiar el listener al desmontar
+    return () => {
+      window.removeEventListener('auth-change', checkAuth)
+    }
   }, [])
 
   return (
@@ -34,7 +46,8 @@ export default function App() {
       {isAuthenticated && <Navbar />}
       <Routes>
         {/* Rutas públicas */}
-        <Route path="/" element={isAuthenticated ? <Navigate to="/productos" replace /> : <Landing />} />
+        <Route path="/" element={isAuthenticated ? <Navigate to="/productos" replace /> : <Catalogo />} />
+        <Route path="/about" element={<About />} />
         <Route path="/login" element={isAuthenticated ? <Navigate to="/productos" replace /> : <Login />} />
         
         {/* Rutas protegidas */}

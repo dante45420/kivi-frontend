@@ -10,8 +10,9 @@ export default function Navbar() {
 
   function handleLogout() {
     clearToken()
+    // Disparar evento para actualizar el estado de autenticación
+    window.dispatchEvent(new Event('auth-change'))
     navigate('/')
-    window.location.reload()
   }
 
   return (

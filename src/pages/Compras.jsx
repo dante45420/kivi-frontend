@@ -4,6 +4,7 @@ import { apiFetch } from '../api/client'
 import { listProducts } from '../api/products'
 import { listPrices } from '../api/prices'
 import QualityModal from '../components/QualityModal'
+import PurchaseEditModal from '../components/PurchaseEditModal'
 import '../styles/globals.css'
 
 const toCLP = (n) => {
@@ -27,6 +28,8 @@ export default function Compras() {
   const [specSeen, setSpecSeen] = useState(false)
   const [purchase, setPurchase] = useState({ product_id: '', qty_kg: '', qty_unit: '', charged_unit: 'kg', price_total: '', price_per_unit: '', vendor: '', notes: '', customers: '', units_kg_total: '', kg_units_total: '' })
   const [priceList, setPriceList] = useState([])
+  const [existingPurchases, setExistingPurchases] = useState([])
+  const [editingPurchase, setEditingPurchase] = useState(null)
 
   // Estados de filtros
   const [filterStatus, setFilterStatus] = useState('all') // all, complete, incomplete
@@ -53,9 +56,18 @@ export default function Compras() {
   }, [selectedOrder])
 
   useEffect(() => { 
-    if (!modalOpen || !purchase.product_id) { setPriceList([]); return } 
-    listPrices(Number(purchase.product_id)).then(setPriceList).catch(() => {}) 
-  }, [modalOpen, purchase.product_id])
+    if (!modalOpen || !purchase.product_id) { setPriceList([]); setExistingPurchases([]); return } 
+    listPrices(Number(purchase.product_id)).then(setPriceList).catch(() => {})
+    // Cargar compras existentes para este producto en este pedido
+    if (selectedOrder) {
+      apiFetch('/purchases').then(allPurchases => {
+        const filtered = allPurchases.filter(p => 
+          p.order_id === selectedOrder && p.product_id === Number(purchase.product_id)
+        )
+        setExistingPurchases(filtered)
+      }).catch(() => {})
+    }
+  }, [modalOpen, purchase.product_id, selectedOrder])
 
   function openQuality(pid){ const p=products.find(x=>x.id===Number(pid)); setQualityProduct(p||null); setShowQuality(true) }
   const parseNum = (v)=>{ const n=parseFloat(v); return isNaN(n)?0:n }
@@ -119,10 +131,27 @@ export default function Compras() {
       }
     }catch{}
     await apiFetch('/purchases',{method:'POST',body:payload}); 
-    const d=await getOrderDetail(selectedOrder); 
-    setDetail(d); 
+    await refreshOrderDetail()
     setModalOpen(false); 
     setShowPurchaseForm(false)
+  }
+
+  async function refreshOrderDetail() {
+    if (!selectedOrder) return
+    try {
+      const d = await getOrderDetail(selectedOrder)
+      setDetail(d)
+      // Recargar compras existentes si el modal está abierto
+      if (modalOpen && purchase.product_id) {
+        const allPurchases = await apiFetch('/purchases')
+        const filtered = allPurchases.filter(p => 
+          p.order_id === selectedOrder && p.product_id === Number(purchase.product_id)
+        )
+        setExistingPurchases(filtered)
+      }
+    } catch (err) {
+      console.error('Error recargando detalle:', err)
+    }
   }
 
   // Funciones de estado y formato
@@ -192,7 +221,7 @@ export default function Compras() {
     return (detail.items||[]).filter(it=>it.product_id===pid && (it.notes||'').trim()).map(it=>`${it.customer_name||'Cliente'}: ${it.notes}`) 
   }
 
-  function hasSpecs(){ return (specsForCurrentProduct().length>0) }
+function hasSpecs(){ return (specsForCurrentProduct().length>0) }
   function tryTogglePurchase(){ 
     if (hasSpecs() && !specSeen){ 
       setShowSpecsPopup(true); 
@@ -329,7 +358,7 @@ export default function Compras() {
                     <div style={{ flex:1, minWidth:180 }}>
                       <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>
                         {g.product_name}
-                      </div>
+                </div>
                       <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center', fontSize:14, opacity:0.7 }}>
                         {product?.category && (
                           <span style={{ background:'#f0f0f0', padding:'4px 10px', borderRadius:6, fontSize:12 }}>
@@ -341,15 +370,15 @@ export default function Compras() {
                             {product.purchase_type === 'cajon' ? '📦 Cajón' : '🛒 Detalle'}
                           </span>
                         )}
-                      </div>
-                    </div>
+                </div>
+              </div>
 
                     <div style={{ display:'flex', flexDirection:'column', gap:8, alignItems:'center' }}>
                       <div style={{ display:'flex', gap:12, fontSize:15 }}>
                         {qtySegments(g).map((t,i)=>(
                           <span key={i} style={{ fontWeight:600 }}>{t}</span>
-                        ))}
-                      </div>
+            ))}
+          </div>
                       {stateBadge(g)}
                     </div>
 
@@ -365,7 +394,7 @@ export default function Compras() {
                   </div>
                 )
               })}
-            </div>
+        </div>
           )}
         </>
       )}
@@ -378,7 +407,7 @@ export default function Compras() {
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
                 <h3 style={{ margin:0, fontSize:22, fontWeight:700 }}>{currentProduct.name}</h3>
                 <button onClick={()=>setModalOpen(false)} style={{ background:'none', border:'none', fontSize:24, cursor:'pointer', opacity:0.6 }}>✕</button>
-              </div>
+            </div>
               
               {(currentProduct.category || currentProduct.purchase_type) && (
                 <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
@@ -438,12 +467,56 @@ export default function Compras() {
                         <div style={{ fontWeight:600 }}>{it.customer_name}</div>
                         <div style={{ fontSize:13, opacity:0.7 }}>{it.qty} {it.unit}</div>
                         {it.notes && <div style={{ fontSize:12, opacity:0.6, marginTop:4 }}>📝 {it.notes}</div>}
-                      </div>
+                    </div>
                     ))}
                   </div>
                 </div>
               )
             })()}
+
+            {/* Compras existentes */}
+            {existingPurchases.length > 0 && (
+              <div style={{ background:'#e8f5e9', borderRadius:12, padding:16, marginBottom:16, border:'1px solid #c8e6c9' }}>
+                <div style={{ fontSize:14, fontWeight:700, marginBottom:12, color:'#2e7d32' }}>📦 Compras Registradas</div>
+                <div style={{ display:'grid', gap:8 }}>
+                  {existingPurchases.map((p,i)=>(
+                    <div key={i} style={{ fontSize:13, padding:'10px 12px', background:'white', borderRadius:8, border:'1px solid #e0e0e0' }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
+                        <div style={{ fontWeight:700, color:'var(--kivi-text-dark)' }}>
+                          {p.vendor || 'Sin proveedor'}
+                        </div>
+                        <button
+                          onClick={() => setEditingPurchase(p)}
+                          style={{
+                            background:'var(--kivi-green)',
+                            color:'white',
+                            border:'none',
+                            padding:'4px 12px',
+                            borderRadius:6,
+                            fontSize:12,
+                            fontWeight:600,
+                            cursor:'pointer'
+                          }}
+                        >
+                          Editar
+                        </button>
+                      </div>
+                      <div style={{ fontSize:12, opacity:0.7, marginBottom:4 }}>
+                        <strong>Cantidad:</strong> {p.qty_kg ? `${p.qty_kg} kg` : ''} {p.qty_unit ? `${p.qty_unit} unidades` : ''}
+                      </div>
+                      <div style={{ fontSize:12, opacity:0.7, marginBottom:4 }}>
+                        <strong>Precio:</strong> {toCLP(p.price_total)} ({toCLP(p.price_per_unit)} / {p.charged_unit})
+                    </div>
+                      {p.notes && (
+                        <div style={{ fontSize:12, opacity:0.6, marginTop:4 }}>
+                          📝 {p.notes}
+                        </div>
+                      )}
+                  </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Precios históricos */}
             {priceList.length > 0 && (
@@ -666,6 +739,15 @@ export default function Compras() {
       {/* Modal de calidad */}
       {showQuality && qualityProduct && (
         <QualityModal product={qualityProduct} onClose={()=>setShowQuality(false)} />
+      )}
+
+      {/* Modal de edición de compras */}
+      {editingPurchase && (
+        <PurchaseEditModal 
+          purchase={editingPurchase} 
+          onClose={() => setEditingPurchase(null)} 
+          onSaved={refreshOrderDetail}
+        />
       )}
     </div>
   )

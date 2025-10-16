@@ -18,8 +18,12 @@ export default function Login() {
     try {
       const response = await login(email, password)
       setToken(response.token)
-      navigate('/productos')
-      window.location.reload() // Recargar para actualizar el estado de autenticación
+      // Disparar evento para actualizar el estado de autenticación en App.jsx
+      window.dispatchEvent(new Event('auth-change'))
+      // Pequeño delay para asegurar que el token se guarde antes de navegar
+      setTimeout(() => {
+        navigate('/productos')
+      }, 100)
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión')
     } finally {
