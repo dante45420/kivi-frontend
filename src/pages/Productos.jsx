@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { listProducts, createProduct, updateProduct } from '../api/products'
-import { listVariants, createVariant, updateVariant, listVariantTiers, createVariantTier } from '../api/variants'
+import { listVariants, createVariant, updateVariant, deleteVariant, listVariantTiers, createVariantTier } from '../api/variants'
 import QualityModal from '../components/QualityModal'
 import '../styles/globals.css'
 
@@ -237,27 +237,49 @@ export default function Productos() {
                           <div style={{ fontWeight:600, fontSize:15 }}>
                             {v.label} {!v.active && <span style={{ opacity:0.5, fontSize:12 }}>(inactiva)</span>}
                           </div>
-                          <button 
-                            className="button ghost" 
-                            onClick={()=> {
-                              if(isEditing) {
-                                setEditingVariantId(null)
-                                setEditingVariant({ label:'', active:true, min_qty:'', sale_price:'' })
-                              } else {
-                                setEditingVariantId(v.id)
-                                const tier = tiers[0] || {}
-                                setEditingVariant({ 
-                                  label:v.label, 
-                                  active:v.active, 
-                                  min_qty: tier.min_qty || '', 
-                                  sale_price: tier.sale_price || '' 
-                                })
-                              }
-                            }}
-                            style={{ padding:'4px 12px', fontSize:13 }}
-                          >
-                            {isEditing ? 'Cancelar' : '✏️'}
-                          </button>
+                          <div style={{ display:'flex', gap:8 }}>
+                            <button 
+                              className="button ghost" 
+                              onClick={()=> {
+                                if(isEditing) {
+                                  setEditingVariantId(null)
+                                  setEditingVariant({ label:'', active:true, min_qty:'', sale_price:'' })
+                                } else {
+                                  setEditingVariantId(v.id)
+                                  const tier = tiers[0] || {}
+                                  setEditingVariant({ 
+                                    label:v.label, 
+                                    active:v.active, 
+                                    min_qty: tier.min_qty || '', 
+                                    sale_price: tier.sale_price || '' 
+                                  })
+                                }
+                              }}
+                              style={{ padding:'4px 12px', fontSize:13 }}
+                            >
+                              {isEditing ? 'Cancelar' : '✏️'}
+                            </button>
+                            <button 
+                              className="button ghost" 
+                              onClick={async ()=> {
+                                if(confirm(`¿Eliminar variante "${v.label}"?`)){
+                                  try {
+                                    await deleteVariant(v.id)
+                                    const newVars = await listVariants(editValues.id)
+                                    setEditVariants(newVars)
+                                    const newTiers = await listVariantTiers(editValues.id)
+                                    setEditTiers(newTiers)
+                                    alert('Variante eliminada')
+                                  } catch(e) {
+                                    alert('Error al eliminar variante')
+                                  }
+                                }
+                              }}
+                              style={{ padding:'4px 12px', fontSize:13, color:'#e74c3c' }}
+                            >
+                              🗑️
+                            </button>
+                          </div>
                         </div>
 
                         {!isEditing ? (

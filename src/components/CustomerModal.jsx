@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { returnChargeToExcess, changeChargeOrder } from '../api/accounting'
+import { generateInvoicePDF } from '../utils/pdfGenerator'
 
 export default function CustomerModal({ 
   customerData, 
@@ -139,35 +140,75 @@ export default function CustomerModal({
             
             return (
               <div key={ord.order_id} style={{ marginBottom:16 }}>
-                <button
-                  onClick={() => setExpandedOrders(prev => ({ ...prev, [ordKey]: !prev[ordKey] }))}
-                  style={{ 
-                    width:'100%', 
-                    padding:'16px 20px', 
-                    background:'#f8f9fa', 
-                    border:'none', 
-                    borderRadius:16,
-                    textAlign:'left',
-                    cursor:'pointer',
-                    display:'flex',
-                    justifyContent:'space-between',
-                    alignItems:'center',
-                    fontSize:16,
-                    transition:'all 0.2s'
-                  }}
-                  onMouseOver={e=> e.target.style.background='#e8eaed'}
-                  onMouseOut={e=> e.target.style.background='#f8f9fa'}
-                >
-                  <span style={{ fontWeight:600, fontSize:17 }}>
-                    Pedido #{ord.order_id}
-                  </span>
-                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                    <span style={{ fontWeight:700, fontSize:18 }}>
-                      ${ord.billed.toLocaleString('es-CL')}
+                <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                  <button
+                    onClick={() => setExpandedOrders(prev => ({ ...prev, [ordKey]: !prev[ordKey] }))}
+                    style={{ 
+                      flex:1,
+                      padding:'16px 20px', 
+                      background:'#f8f9fa', 
+                      border:'none', 
+                      borderRadius:16,
+                      textAlign:'left',
+                      cursor:'pointer',
+                      display:'flex',
+                      justifyContent:'space-between',
+                      alignItems:'center',
+                      fontSize:16,
+                      transition:'all 0.2s'
+                    }}
+                    onMouseOver={e=> e.target.style.background='#e8eaed'}
+                    onMouseOut={e=> e.target.style.background='#f8f9fa'}
+                  >
+                    <span style={{ fontWeight:600, fontSize:17 }}>
+                      Pedido #{ord.order_id}
                     </span>
-                    <span style={{ opacity:0.5, fontSize:14 }}>{isOrdExpanded ? '▼' : '▶'}</span>
-                  </div>
-                </button>
+                    <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                      <span style={{ fontWeight:700, fontSize:18 }}>
+                        ${ord.billed.toLocaleString('es-CL')}
+                      </span>
+                      <span style={{ opacity:0.5, fontSize:14 }}>{isOrdExpanded ? '▼' : '▶'}</span>
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      // Generar factura solo para este pedido y este cliente
+                      const orderInfo = orders?.find(o => o.id === ord.order_id) || { id: ord.order_id, name: `Pedido #${ord.order_id}` }
+                      const items = []
+                      
+                      if (ord.products) {
+                        ord.products.forEach(prod => {
+                          items.push({
+                            product_name: prod.product_name,
+                            qty: prod.charged_qty ?? prod.qty ?? 0,
+                            unit: prod.unit || 'kg',
+                            sale_unit_price: prod.unit_price || 0,
+                            notes: prod.notes
+                          })
+                        })
+                      }
+                      
+                      generateInvoicePDF(orderInfo, items, customerData.customer)
+                    }}
+                    style={{
+                      padding:'16px 20px',
+                      background:'var(--kivi-green)',
+                      border:'none',
+                      borderRadius:16,
+                      cursor:'pointer',
+                      fontSize:14,
+                      fontWeight:600,
+                      color:'white',
+                      whiteSpace:'nowrap',
+                      transition:'all 0.2s'
+                    }}
+                    onMouseOver={e=> e.target.style.background='var(--kivi-green-dark)'}
+                    onMouseOut={e=> e.target.style.background='var(--kivi-green)'}
+                  >
+                    📄 Factura
+                  </button>
+                </div>
 
                 {/* Productos del pedido */}
                 {isOrdExpanded && ord.products && (
