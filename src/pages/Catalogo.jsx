@@ -60,39 +60,63 @@ export default function Catalogo() {
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 20px 100px 20px' }}>
         {/* Header */}
-        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+        <div style={{ textAlign: 'center', marginBottom: 48 }}>
+          {/* Logo */}
+          <div style={{ marginBottom: 24 }}>
+            <img 
+              src="/kivi-logo.png" 
+              alt="Kivi Logo" 
+              style={{ 
+                maxWidth: 300, 
+                width: '100%',
+                height: 'auto'
+              }}
+              onError={(e) => {
+                // Fallback si no hay logo
+                e.target.style.display = 'none'
+                e.target.nextElementSibling.style.display = 'block'
+              }}
+            />
+            <div style={{ display: 'none', fontSize: 80, margin: '20px 0' }}>🥝</div>
+          </div>
+          
           <h1 style={{ 
-            fontSize: 42, 
+            fontSize: 48, 
             fontWeight: 800, 
-            margin: '0 0 8px 0',
-            color: 'var(--kivi-text-dark)',
-            background: 'linear-gradient(135deg, var(--kivi-green-dark) 0%, var(--kivi-green) 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent'
+            margin: '0 0 12px 0',
+            color: '#000',
+            letterSpacing: '-0.5px'
           }}>
             Frutas y Verduras Frescas
           </h1>
-          <p style={{ fontSize: 18, color: 'var(--kivi-text)', margin: '0 0 16px 0' }}>
+          <p style={{ fontSize: 18, color: 'var(--kivi-text)', margin: '0 0 24px 0' }}>
             Todo pedido es personalizable a tu manera
           </p>
           <button
             onClick={() => generateCatalogPDF(products)}
             style={{
-              padding: '12px 24px',
+              padding: '14px 28px',
               borderRadius: 'var(--radius-pill)',
               border: 'none',
-              background: 'var(--kivi-green)',
+              background: '#88C4A8',
               color: 'white',
               fontWeight: 700,
-              fontSize: 15,
+              fontSize: 16,
               cursor: 'pointer',
               transition: 'all 0.2s',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: 8
+              gap: 8,
+              boxShadow: '0 4px 12px rgba(136, 196, 168, 0.3)'
             }}
-            onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
-            onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+            onMouseOver={e => {
+              e.currentTarget.style.transform = 'scale(1.05)'
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(136, 196, 168, 0.4)'
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.transform = 'scale(1)'
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(136, 196, 168, 0.3)'
+            }}
           >
             <span style={{ fontSize: 18 }}>📄</span>
             Descargar Catálogo PDF
@@ -114,18 +138,25 @@ export default function Catalogo() {
             {sortBy === 'default' && (
               <>
                 {categoryFilter === 'all' || categoryFilter === 'fruta' ? (
-                  <div style={{ marginBottom: 32 }}>
+                  <div style={{ marginBottom: 48 }}>
                     <h2 style={{ 
                       fontSize: 32, 
                       fontWeight: 800, 
-                      marginBottom: 20,
-                      color: 'var(--kivi-text-dark)'
+                      marginBottom: 8,
+                      color: '#000'
                     }}>
-                      🍎 Frutas
+                      Frutas
                     </h2>
                     <div style={{ 
+                      height: 3, 
+                      width: 80,
+                      background: '#88C4A8',
+                      borderRadius: 2,
+                      marginBottom: 24
+                    }}></div>
+                    <div style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', 
                       gap: 20 
                     }}>
                       {filteredAndSortedProducts
@@ -138,18 +169,25 @@ export default function Catalogo() {
                 ) : null}
 
                 {categoryFilter === 'all' || categoryFilter === 'verdura' ? (
-                  <div style={{ marginBottom: 32 }}>
+                  <div style={{ marginBottom: 48 }}>
                     <h2 style={{ 
                       fontSize: 32, 
                       fontWeight: 800, 
-                      marginBottom: 20,
-                      color: 'var(--kivi-text-dark)'
+                      marginBottom: 8,
+                      color: '#000'
                     }}>
-                      🥬 Verduras
+                      Verduras
                     </h2>
                     <div style={{ 
+                      height: 3, 
+                      width: 80,
+                      background: '#88C4A8',
+                      borderRadius: 2,
+                      marginBottom: 24
+                    }}></div>
+                    <div style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', 
                       gap: 20 
                     }}>
                       {filteredAndSortedProducts
@@ -164,18 +202,25 @@ export default function Catalogo() {
                 {/* Otros productos (sin categoría) */}
                 {(categoryFilter === 'all' || categoryFilter === '') && 
                  filteredAndSortedProducts.filter(p => !p.category || (p.category !== 'fruta' && p.category !== 'verdura')).length > 0 ? (
-                  <div style={{ marginBottom: 32 }}>
+                  <div style={{ marginBottom: 48 }}>
                     <h2 style={{ 
                       fontSize: 32, 
                       fontWeight: 800, 
-                      marginBottom: 20,
-                      color: 'var(--kivi-text-dark)'
+                      marginBottom: 8,
+                      color: '#000'
                     }}>
-                      🛒 Otros
+                      Otros
                     </h2>
                     <div style={{ 
+                      height: 3, 
+                      width: 80,
+                      background: '#88C4A8',
+                      borderRadius: 2,
+                      marginBottom: 24
+                    }}></div>
+                    <div style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', 
                       gap: 20 
                     }}>
                       {filteredAndSortedProducts
@@ -193,7 +238,7 @@ export default function Catalogo() {
             {sortBy === 'alphabetical' && (
               <div style={{ 
                 display: 'grid', 
-                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', 
                 gap: 20 
               }}>
                 {filteredAndSortedProducts.map(product => (
@@ -488,102 +533,112 @@ export default function Catalogo() {
 
 function ProductCard({ product }) {
   const price = product.catalog?.[0]
-  const [showVariants, setShowVariants] = useState(false)
 
   return (
     <div style={{ 
       background: 'white', 
-      borderRadius: 16, 
-      padding: 20,
-      border: '1px solid #E8E8E8',
+      borderRadius: 12, 
+      padding: 0,
+      border: '1px solid #E0E0E0',
       transition: 'all 0.2s',
-      cursor: 'pointer'
+      overflow: 'hidden'
     }}
     onMouseOver={e => {
-      e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.12)'
-      e.currentTarget.style.transform = 'translateY(-4px)'
+      e.currentTarget.style.boxShadow = '0 4px 16px rgba(0,0,0,0.08)'
+      e.currentTarget.style.transform = 'translateY(-2px)'
     }}
     onMouseOut={e => {
       e.currentTarget.style.boxShadow = 'none'
       e.currentTarget.style.transform = 'translateY(0)'
     }}
-    onClick={() => setShowVariants(!showVariants)}
     >
-      {/* Product Name */}
-      <h3 style={{ 
-        fontSize: 20, 
-        fontWeight: 800, 
-        margin: '0 0 8px 0',
-        color: 'var(--kivi-text-dark)'
-      }}>
-        {product.name}
-      </h3>
-
-      {/* Default Price */}
-      {price && (
+      {/* Imagen del producto */}
+      {product.quality_photo_url && (
         <div style={{ 
-          fontSize: 24, 
-          fontWeight: 700, 
-          color: 'var(--kivi-green-dark)',
-          marginBottom: 8
+          width: '100%',
+          height: 200,
+          background: '#F5F5F5',
+          overflow: 'hidden'
         }}>
-          ${price.sale_price?.toLocaleString('es-CL')} / {price.unit}
+          <img 
+            src={product.quality_photo_url} 
+            alt={product.name}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+            onError={(e) => {
+              e.target.style.display = 'none'
+            }}
+          />
         </div>
       )}
 
-      {/* Category Badge */}
-      {product.category && (
-        <span style={{
-          display: 'inline-block',
-          padding: '4px 12px',
-          borderRadius: 'var(--radius-pill)',
-          fontSize: 12,
-          fontWeight: 700,
-          background: product.category === 'fruta' ? 'var(--kivi-peach)' : 'var(--kivi-mint)',
-          color: 'var(--kivi-text-dark)',
-          marginBottom: 12
-        }}>
-          {product.category === 'fruta' ? '🍎 Fruta' : '🥬 Verdura'}
-        </span>
-      )}
+      <div style={{ padding: 20 }}>
+        {/* Product Name & Price */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
+          <h3 style={{ 
+            fontSize: 18, 
+            fontWeight: 800, 
+            margin: 0,
+            color: '#000',
+            flex: 1
+          }}>
+            {product.name}
+          </h3>
+          {price && (
+            <div style={{ 
+              fontSize: 18, 
+              fontWeight: 700, 
+              color: '#88C4A8',
+              marginLeft: 12,
+              whiteSpace: 'nowrap'
+            }}>
+              ${price.sale_price?.toLocaleString('es-CL')}
+              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--kivi-text)' }}>
+                /{price.unit}
+              </span>
+            </div>
+          )}
+        </div>
 
-      {/* Variants */}
-      {showVariants && product.variants && product.variants.length > 0 && (
+      {/* Variantes - siempre mostradas */}
+      {product.variants && product.variants.length > 0 && (
         <div style={{ 
           marginTop: 16, 
           paddingTop: 16, 
           borderTop: '1px solid #E8E8E8'
         }}
-        onClick={e => e.stopPropagation()}
         >
           <div style={{ 
-            fontSize: 13, 
+            fontSize: 11, 
             fontWeight: 700, 
-            marginBottom: 12,
-            color: 'var(--kivi-text)',
+            marginBottom: 8,
+            color: '#888',
             textTransform: 'uppercase',
             letterSpacing: '0.5px'
           }}>
-            Opciones Disponibles
+            Opciones
           </div>
           {product.variants.filter(v => v.active).map(variant => (
             <div key={variant.id} style={{ 
-              background: 'var(--kivi-cream)', 
-              padding: '10px 12px', 
-              borderRadius: 8,
-              marginBottom: 8,
-              fontSize: 14
+              background: '#FAFAFA', 
+              padding: '8px 10px', 
+              borderRadius: 6,
+              marginBottom: 6,
+              fontSize: 13
             }}>
-              <div style={{ fontWeight: 700, color: 'var(--kivi-text-dark)', marginBottom: 4 }}>
+              <div style={{ fontWeight: 700, color: '#000', marginBottom: 2 }}>
                 {variant.label}
               </div>
               {variant.price_tiers && variant.price_tiers.length > 0 && (
-                <div style={{ fontSize: 13, color: 'var(--kivi-text)' }}>
+                <div style={{ fontSize: 12, color: '#666' }}>
                   {variant.price_tiers.map((tier, idx) => (
-                    <div key={idx}>
-                      {tier.min_qty > 1 ? `Desde ${tier.min_qty} ${tier.unit}` : ''}: 
-                      <span style={{ fontWeight: 700, color: 'var(--kivi-green-dark)', marginLeft: 4 }}>
-                        ${tier.sale_price?.toLocaleString('es-CL')} / {tier.unit}
+                    <div key={idx} style={{ marginTop: 2 }}>
+                      {tier.min_qty > 1 && <span>Desde {tier.min_qty} {tier.unit}: </span>}
+                      <span style={{ fontWeight: 700, color: '#88C4A8' }}>
+                        ${tier.sale_price?.toLocaleString('es-CL')}/{tier.unit}
                       </span>
                     </div>
                   ))}
@@ -591,18 +646,6 @@ function ProductCard({ product }) {
               )}
             </div>
           ))}
-        </div>
-      )}
-
-      {/* Click to see variants hint */}
-      {!showVariants && product.variants && product.variants.filter(v => v.active).length > 0 && (
-        <div style={{ 
-          fontSize: 12, 
-          color: 'var(--kivi-text)', 
-          marginTop: 12,
-          fontStyle: 'italic'
-        }}>
-          Toca para ver opciones →
         </div>
       )}
     </div>

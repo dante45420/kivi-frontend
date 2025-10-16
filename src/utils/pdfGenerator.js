@@ -25,26 +25,22 @@ export async function generateCatalogPDF(products) {
 
   // Función para agregar encabezado
   const addHeader = () => {
-    // Logo/Emoji
-    doc.setFontSize(40)
-    doc.text('🥝', pageWidth / 2, 25, { align: 'center' })
-
     // Título
     doc.setFontSize(24)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(COLORS.textDark)
-    doc.text('Kivi', pageWidth / 2, 40, { align: 'center' })
+    doc.text('Kivi', pageWidth / 2, 25, { align: 'center' })
 
     doc.setFontSize(16)
     doc.setFont('helvetica', 'normal')
-    doc.text('FRUTAS Y VERDURAS FRESCAS', pageWidth / 2, 50, { align: 'center' })
+    doc.text('FRUTAS Y VERDURAS FRESCAS', pageWidth / 2, 35, { align: 'center' })
 
     doc.setFontSize(10)
     doc.setFont('helvetica', 'italic')
     doc.setTextColor(COLORS.text)
-    doc.text('*Todo pedido es personalizable a tu manera*', pageWidth / 2, 58, { align: 'center' })
+    doc.text('*Todo pedido es personalizable a tu manera*', pageWidth / 2, 43, { align: 'center' })
 
-    return 65 // Retorna la posición Y donde termina el encabezado
+    return 50 // Retorna la posición Y donde termina el encabezado
   }
 
   // Función para agregar pie de página
@@ -80,7 +76,7 @@ export async function generateCatalogPDF(products) {
   let pageNum = 1
 
   // Función para agregar una categoría
-  const addCategory = (title, emoji, items) => {
+  const addCategory = (title, items) => {
     // Verificar si necesitamos una nueva página para el título
     if (currentY + 20 > pageHeight - 30) {
       addFooter(pageNum)
@@ -89,75 +85,102 @@ export async function generateCatalogPDF(products) {
       currentY = addHeader()
     }
 
-    // Título de categoría
-    doc.setFillColor(COLORS.primary)
-    doc.rect(margin, currentY, contentWidth, 10, 'F')
-    doc.setFontSize(14)
+    // Título de categoría - minimalista
+    doc.setFontSize(16)
     doc.setFont('helvetica', 'bold')
-    doc.setTextColor(255, 255, 255)
-    doc.text(`${emoji} ${title}`, margin + 3, currentY + 7)
-    currentY += 15
+    doc.setTextColor(COLORS.textDark)
+    doc.text(title, margin, currentY)
+    currentY += 3
+    
+    // Línea divisoria
+    doc.setDrawColor(168, 213, 186) // Color verde pastel
+    doc.setLineWidth(0.5)
+    doc.line(margin, currentY, pageWidth - margin, currentY)
+    currentY += 8
 
-    // Agregar productos
-    items.forEach(product => {
+    // Agregar productos en formato de 2 columnas
+    const columnWidth = (contentWidth - 8) / 2 // 8mm de espacio entre columnas
+    let column = 0
+    
+    items.forEach((product, index) => {
       const price = product.catalog && product.catalog[0]
+      const xPos = margin + (column * (columnWidth + 8))
       
       // Verificar si necesitamos una nueva página
-      if (currentY + 15 > pageHeight - 30) {
+      const estimatedHeight = 25 // Altura estimada por producto
+      if (currentY + estimatedHeight > pageHeight - 30) {
         addFooter(pageNum)
         doc.addPage()
         pageNum++
         currentY = addHeader()
+        column = 0
       }
 
-      // Fondo del producto
-      doc.setFillColor(255, 255, 255)
-      doc.setDrawColor(200, 200, 200)
-      doc.roundedRect(margin, currentY, contentWidth, 12, 2, 2, 'FD')
+      // Fondo del producto - más minimalista
+      doc.setFillColor(250, 250, 250)
+      doc.setDrawColor(230, 230, 230)
+      doc.roundedRect(xPos, currentY, columnWidth, 22, 1.5, 1.5, 'FD')
 
       // Nombre del producto
-      doc.setFontSize(11)
+      doc.setFontSize(10)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(COLORS.textDark)
-      doc.text(product.name, margin + 3, currentY + 5)
+      doc.text(product.name, xPos + 3, currentY + 5)
 
       // Precio
       if (price) {
-        doc.setFontSize(12)
+        doc.setFontSize(11)
         doc.setFont('helvetica', 'bold')
         doc.setTextColor(COLORS.textDark)
         const priceText = `$${price.sale_price?.toLocaleString('es-CL')} / ${price.unit}`
-        doc.text(priceText, pageWidth - margin - 3, currentY + 5, { align: 'right' })
+        doc.text(priceText, xPos + columnWidth - 3, currentY + 5, { align: 'right' })
       }
 
       // Variantes (si existen)
       if (product.variants && product.variants.filter(v => v.active).length > 0) {
-        currentY += 8
-        doc.setFontSize(8)
+        const activeVariants = product.variants.filter(v => v.active)
+        doc.setFontSize(7)
         doc.setFont('helvetica', 'italic')
         doc.setTextColor(COLORS.text)
-        const variantsText = `Opciones: ${product.variants.filter(v => v.active).map(v => v.label).join(', ')}`
-        doc.text(variantsText, margin + 3, currentY + 5)
-        currentY += 7
-      } else {
-        currentY += 14
+        
+        let varY = currentY + 11
+        activeVariants.slice(0, 2).forEach(variant => {
+          const variantLabel = variant.label.length > 15 ? variant.label.substring(0, 15) + '...' : variant.label
+          const variantPrice = variant.price_tiers && variant.price_tiers[0] 
+            ? `$${variant.price_tiers[0].sale_price?.toLocaleString('es-CL')}/${variant.price_tiers[0].unit}` 
+            : ''
+          doc.text(`• ${variantLabel}: ${variantPrice}`, xPos + 3, varY)
+          varY += 4
+        })
+      }
+
+      // Cambiar de columna
+      column++
+      if (column >= 2) {
+        column = 0
+        currentY += 26 // Altura del producto + espacio
       }
     })
+
+    // Si quedamos en la primera columna, avanzar
+    if (column === 1) {
+      currentY += 26
+    }
 
     currentY += 5 // Espacio después de la categoría
   }
 
   // Agregar cada categoría
   if (frutas.length > 0) {
-    addCategory('Frutas', '🍎', frutas)
+    addCategory('Frutas', frutas)
   }
 
   if (verduras.length > 0) {
-    addCategory('Verduras', '🥬', verduras)
+    addCategory('Verduras', verduras)
   }
 
   if (otros.length > 0) {
-    addCategory('Otros', '🛒', otros)
+    addCategory('Otros', otros)
   }
 
   // Agregar pie de página final
@@ -178,19 +201,16 @@ export async function generateInvoicePDF(order, items, customer) {
   })
 
   const pageWidth = doc.internal.pageSize.getWidth()
-  const margin = 15
+  const margin = 20
 
   // Encabezado
-  doc.setFontSize(32)
-  doc.text('🥝', pageWidth / 2, 25, { align: 'center' })
-
   doc.setFontSize(20)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(COLORS.textDark)
-  doc.text('Kivi - Frutas y Verduras Frescas', pageWidth / 2, 40, { align: 'center' })
+  doc.text('Kivi - Frutas y Verduras Frescas', pageWidth / 2, 25, { align: 'center' })
 
   // Información del pedido
-  let currentY = 55
+  let currentY = 40
   doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
   doc.text('DETALLE DE PEDIDO', margin, currentY)
@@ -209,38 +229,44 @@ export async function generateInvoicePDF(order, items, customer) {
 
   // Línea divisoria
   currentY += 10
-  doc.setDrawColor(COLORS.primary)
+  doc.setDrawColor(168, 213, 186)
   doc.setLineWidth(0.5)
   doc.line(margin, currentY, pageWidth - margin, currentY)
 
-  // Tabla de productos
+  // Tabla de productos - con mejor espaciado
   currentY += 10
-  doc.setFillColor(COLORS.primary)
+  doc.setFillColor(168, 213, 186) // Verde pastel
   doc.rect(margin, currentY, pageWidth - (margin * 2), 10, 'F')
   
   doc.setFontSize(10)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(255, 255, 255)
-  doc.text('Producto', margin + 3, currentY + 7)
-  doc.text('Cantidad', pageWidth - 80, currentY + 7)
-  doc.text('Precio Unit.', pageWidth - 50, currentY + 7)
-  doc.text('Total', pageWidth - margin - 3, currentY + 7, { align: 'right' })
+  doc.text('Producto', margin + 5, currentY + 7)
+  doc.text('Cantidad', pageWidth - 85, currentY + 7)
+  doc.text('P. Unit.', pageWidth - 55, currentY + 7)
+  doc.text('Total', pageWidth - margin - 5, currentY + 7, { align: 'right' })
 
-  currentY += 12
+  currentY += 14
   let total = 0
 
   items.forEach(item => {
+    // Verificar si necesitamos una nueva página
+    if (currentY > doc.internal.pageSize.getHeight() - 40) {
+      doc.addPage()
+      currentY = 30
+    }
+
     doc.setFontSize(9)
     doc.setFont('helvetica', 'normal')
     doc.setTextColor(COLORS.textDark)
     
-    doc.text(item.product_name || 'Producto', margin + 3, currentY)
-    doc.text(`${item.qty || 0} ${item.unit || 'kg'}`, pageWidth - 80, currentY)
-    doc.text(`$${(item.sale_unit_price || 0).toLocaleString('es-CL')}`, pageWidth - 50, currentY)
+    doc.text(item.product_name || 'Producto', margin + 5, currentY)
+    doc.text(`${item.qty || 0} ${item.unit || 'kg'}`, pageWidth - 85, currentY)
+    doc.text(`$${(item.sale_unit_price || 0).toLocaleString('es-CL')}`, pageWidth - 55, currentY)
     
     const itemTotal = (item.qty || 0) * (item.sale_unit_price || 0)
     total += itemTotal
-    doc.text(`$${itemTotal.toLocaleString('es-CL')}`, pageWidth - margin - 3, currentY, { align: 'right' })
+    doc.text(`$${itemTotal.toLocaleString('es-CL')}`, pageWidth - margin - 5, currentY, { align: 'right' })
     
     currentY += 7
     
@@ -248,23 +274,23 @@ export async function generateInvoicePDF(order, items, customer) {
       doc.setFontSize(8)
       doc.setFont('helvetica', 'italic')
       doc.setTextColor(COLORS.text)
-      doc.text(`  📝 ${item.notes}`, margin + 3, currentY)
+      doc.text(`  📝 ${item.notes}`, margin + 5, currentY)
       currentY += 6
     }
   })
 
   // Total
-  currentY += 5
+  currentY += 8
   doc.setDrawColor(COLORS.textDark)
   doc.setLineWidth(0.3)
-  doc.line(pageWidth - 60, currentY, pageWidth - margin, currentY)
+  doc.line(pageWidth - 65, currentY, pageWidth - margin, currentY)
   currentY += 7
 
   doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
   doc.setTextColor(COLORS.textDark)
-  doc.text('TOTAL:', pageWidth - 60, currentY)
-  doc.text(`$${total.toLocaleString('es-CL')}`, pageWidth - margin - 3, currentY, { align: 'right' })
+  doc.text('TOTAL:', pageWidth - 65, currentY)
+  doc.text(`$${total.toLocaleString('es-CL')}`, pageWidth - margin - 5, currentY, { align: 'right' })
 
   // Pie de página
   const footerY = doc.internal.pageSize.getHeight() - 20

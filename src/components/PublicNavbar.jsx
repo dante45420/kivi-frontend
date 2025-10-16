@@ -68,23 +68,6 @@ export default function PublicNavbar() {
           >
             Sobre Nosotros
           </NavLink>
-          <NavLink 
-            to="/login" 
-            style={{ 
-              textDecoration: 'none', 
-              padding: '10px 20px', 
-              borderRadius: 'var(--radius-pill)',
-              fontWeight: 700,
-              fontSize: 15,
-              background: 'var(--kivi-green)',
-              color: 'white',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.2s'
-            }}
-          >
-            Iniciar Sesión
-          </NavLink>
         </nav>
       </div>
 

@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { returnChargeToExcess, changeChargeOrder } from '../api/accounting'
-import { generateInvoicePDF } from '../utils/pdfGenerator'
 
 export default function CustomerModal({ 
   customerData, 
@@ -42,35 +41,6 @@ export default function CustomerModal({
     }
   }
 
-  function handleDownloadInvoice() {
-    // Preparar los items de todos los pedidos del cliente
-    const allItems = []
-    
-    if (customerData.orders) {
-      customerData.orders.forEach(ord => {
-        if (ord.products) {
-          ord.products.forEach(prod => {
-            allItems.push({
-              product_name: prod.product_name,
-              qty: prod.charged_qty || prod.qty || 0,
-              unit: prod.charged_unit || prod.unit || 'kg',
-              sale_unit_price: prod.unit_price || 0,
-              notes: prod.notes
-            })
-          })
-        }
-      })
-    }
-
-    // Crear un objeto de "pedido" consolidado
-    const consolidatedOrder = {
-      id: `Cliente_${customerId}`,
-      title: `Resumen - ${customerData.customer.name}`,
-      created_at: new Date().toISOString()
-    }
-
-    generateInvoicePDF(consolidatedOrder, allItems, customerData.customer.name)
-  }
 
   return (
     <div 
@@ -120,31 +90,6 @@ export default function CustomerModal({
             </div>
           </div>
           <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                handleDownloadInvoice()
-              }}
-              style={{
-                padding:'10px 20px',
-                borderRadius:999,
-                border:'none',
-                background:'var(--kivi-green)',
-                color:'white',
-                fontWeight:700,
-                fontSize:14,
-                cursor:'pointer',
-                display:'flex',
-                alignItems:'center',
-                gap:8,
-                transition:'all 0.2s'
-              }}
-              onMouseOver={e=> e.target.style.transform='scale(1.05)'}
-              onMouseOut={e=> e.target.style.transform='scale(1)'}
-            >
-              <span>📄</span>
-              Descargar Factura
-            </button>
             <button 
               onClick={onClose}
               style={{ 

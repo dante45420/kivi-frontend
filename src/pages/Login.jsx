@@ -37,22 +37,40 @@ export default function Login() {
       display: 'flex', 
       alignItems: 'center', 
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'var(--kivi-cream)',
       padding: '20px'
     }}>
       <div style={{ 
-        maxWidth: 400, 
+        maxWidth: 450, 
         width: '100%',
         background: 'white', 
-        borderRadius: 20, 
+        borderRadius: 16, 
         padding: '40px 32px',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+        boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+        border: '1px solid #E0E0E0'
       }}>
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{ fontSize: 48, marginBottom: 16 }}>🥝</div>
-          <h2 style={{ margin: 0, fontSize: 28, fontWeight: 800 }}>Iniciar Sesión</h2>
-          <p style={{ margin: '8px 0 0 0', color: '#888', fontSize: 14 }}>Accede a tu panel de gestión</p>
+          <img 
+            src="/kivi-logo.png" 
+            alt="Kivi Logo" 
+            style={{ 
+              maxWidth: 200, 
+              width: '100%',
+              height: 'auto',
+              marginBottom: 20
+            }}
+            onError={(e) => {
+              e.target.style.display = 'none'
+              e.target.nextElementSibling.style.display = 'block'
+            }}
+          />
+          <div style={{ display: 'none', fontSize: 48, marginBottom: 16 }}>🥝</div>
+          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#000' }}>Área de Trabajadores</h2>
+          <p style={{ margin: '12px 0 0 0', color: '#666', fontSize: 14, lineHeight: 1.6 }}>
+            Este es el panel de gestión interno de Kivi.<br/>
+            Solo personal autorizado puede acceder.
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 16 }}>
@@ -111,14 +129,17 @@ export default function Login() {
               width: '100%',
               padding: '14px',
               fontSize: 16,
-              fontWeight: 600,
+              fontWeight: 700,
               borderRadius: 12,
-              background: loading ? '#ccc' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              background: loading ? '#ccc' : '#88C4A8',
               color: 'white',
               border: 'none',
               cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'transform 0.2s'
+              transition: 'all 0.2s',
+              boxShadow: loading ? 'none' : '0 4px 12px rgba(136, 196, 168, 0.3)'
             }}
+            onMouseOver={e => !loading && (e.target.style.transform = 'scale(1.02)')}
+            onMouseOut={e => !loading && (e.target.style.transform = 'scale(1)')}
           >
             {loading ? 'Iniciando sesión...' : 'Ingresar'}
           </button>
@@ -130,13 +151,17 @@ export default function Login() {
             style={{
               background: 'none',
               border: 'none',
-              color: '#667eea',
+              color: '#88C4A8',
               cursor: 'pointer',
               fontSize: 14,
-              textDecoration: 'underline'
+              fontWeight: 600,
+              textDecoration: 'none',
+              transition: 'all 0.2s'
             }}
+            onMouseOver={e => e.target.style.textDecoration = 'underline'}
+            onMouseOut={e => e.target.style.textDecoration = 'none'}
           >
-            ← Volver al inicio
+            ← Volver al catálogo
           </button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { generateInvoicePDF } from '../utils/pdfGenerator'
 
 export default function OrderModal({ orderData, onClose, editingCharge, setEditingCharge, saveChargeEdit, products }) {
   const [expandedCustomers, setExpandedCustomers] = useState({})
@@ -7,6 +8,29 @@ export default function OrderModal({ orderData, onClose, editingCharge, setEditi
   if (!orderData) return null
 
   const orderId = orderData.order.id
+
+  function handleDownloadInvoice() {
+    // Preparar items del pedido
+    const items = []
+    
+    if (orderData.customers) {
+      orderData.customers.forEach(cust => {
+        if (cust.products) {
+          cust.products.forEach(prod => {
+            items.push({
+              product_name: prod.product_name,
+              qty: prod.charged_qty || prod.qty || 0,
+              unit: prod.charged_unit || prod.unit || 'kg',
+              sale_unit_price: prod.unit_price || 0,
+              notes: prod.notes
+            })
+          })
+        }
+      })
+    }
+
+    generateInvoicePDF(orderData.order, items, null)
+  }
 
   return (
     <div 
@@ -55,26 +79,53 @@ export default function OrderModal({ orderData, onClose, editingCharge, setEditi
               <span>Pedido #{orderId}</span>
             </div>
           </div>
-          <button 
-            onClick={onClose}
-            style={{ 
-              width:40, 
-              height:40, 
-              borderRadius:'50%', 
-              border:'none', 
-              background:'#f5f5f5',
-              cursor:'pointer',
-              fontSize:20,
-              display:'flex',
-              alignItems:'center',
-              justifyContent:'center',
-              transition:'all 0.2s'
-            }}
-            onMouseOver={e=> e.target.style.background='#e0e0e0'}
-            onMouseOut={e=> e.target.style.background='#f5f5f5'}
-          >
-            ✕
-          </button>
+          <div style={{ display:'flex', gap:12, alignItems:'center' }}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleDownloadInvoice()
+              }}
+              style={{
+                padding:'10px 20px',
+                borderRadius:999,
+                border:'none',
+                background:'var(--kivi-green)',
+                color:'white',
+                fontWeight:700,
+                fontSize:14,
+                cursor:'pointer',
+                display:'flex',
+                alignItems:'center',
+                gap:8,
+                transition:'all 0.2s'
+              }}
+              onMouseOver={e=> e.target.style.transform='scale(1.05)'}
+              onMouseOut={e=> e.target.style.transform='scale(1)'}
+            >
+              <span>📄</span>
+              Descargar Factura
+            </button>
+            <button 
+              onClick={onClose}
+              style={{ 
+                width:40, 
+                height:40, 
+                borderRadius:'50%', 
+                border:'none', 
+                background:'#f5f5f5',
+                cursor:'pointer',
+                fontSize:20,
+                display:'flex',
+                alignItems:'center',
+                justifyContent:'center',
+                transition:'all 0.2s'
+              }}
+              onMouseOver={e=> e.target.style.background='#e0e0e0'}
+              onMouseOut={e=> e.target.style.background='#f5f5f5'}
+            >
+              ✕
+            </button>
+          </div>
         </div>
 
         {/* Content */}
