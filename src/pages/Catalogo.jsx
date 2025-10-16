@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { listProducts } from '../api/products'
 import PublicNavbar from '../components/PublicNavbar'
+import { generateCatalogPDF } from '../utils/pdfGenerator'
 import '../styles/globals.css'
 
 export default function Catalogo() {
@@ -71,9 +72,31 @@ export default function Catalogo() {
           }}>
             Frutas y Verduras Frescas
           </h1>
-          <p style={{ fontSize: 18, color: 'var(--kivi-text)', margin: 0 }}>
+          <p style={{ fontSize: 18, color: 'var(--kivi-text)', margin: '0 0 16px 0' }}>
             Todo pedido es personalizable a tu manera
           </p>
+          <button
+            onClick={() => generateCatalogPDF(products)}
+            style={{
+              padding: '12px 24px',
+              borderRadius: 'var(--radius-pill)',
+              border: 'none',
+              background: 'var(--kivi-green)',
+              color: 'white',
+              fontWeight: 700,
+              fontSize: 15,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 8
+            }}
+            onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'}
+            onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            <span style={{ fontSize: 18 }}>📄</span>
+            Descargar Catálogo PDF
+          </button>
         </div>
 
         {/* Products Grid */}
