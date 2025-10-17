@@ -51,7 +51,7 @@ export default function Catalogo() {
     return result
   }, [products, categoryFilter, sortBy])
 
-  const whatsappNumber = '56696172764'
+  const whatsappNumber = '56969172764'
   const whatsappMessage = encodeURIComponent('¡Hola! Quiero hacer un pedido 🥝')
 
   return (
@@ -156,7 +156,7 @@ export default function Catalogo() {
                     }}></div>
                     <div style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', 
+                      gridTemplateColumns: 'repeat(2, 1fr)', 
                       gap: 20 
                     }}>
                       {filteredAndSortedProducts
@@ -187,7 +187,7 @@ export default function Catalogo() {
                     }}></div>
                     <div style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', 
+                      gridTemplateColumns: 'repeat(2, 1fr)', 
                       gap: 20 
                     }}>
                       {filteredAndSortedProducts
@@ -591,12 +591,12 @@ function ProductCard({ product }) {
             <div style={{ 
               fontSize: 18, 
               fontWeight: 700, 
-              color: '#88C4A8',
+              color: '#888',
               marginLeft: 12,
               whiteSpace: 'nowrap'
             }}>
               ${price.sale_price?.toLocaleString('es-CL')}
-              <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--kivi-text)' }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: '#888' }}>
                 /{price.unit}
               </span>
             </div>

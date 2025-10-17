@@ -60,7 +60,7 @@ export async function generateCatalogPDF(products) {
     doc.setFontSize(9)
     doc.setFont('helvetica', 'bold')
     doc.text('📞 +56 9 6917 2764', margin, footerY + 7)
-    doc.text('📷 @kivi.chile', pageWidth - margin, footerY + 7, { align: 'right' })
+    doc.text('📷 @kivi.chile', pageWidth / 2, footerY + 7, { align: 'center' })
 
     // Número de página
     doc.setFontSize(8)
@@ -116,58 +116,68 @@ export async function generateCatalogPDF(products) {
         column = 0
       }
 
-      // Fondo del producto - más minimalista
-      doc.setFillColor(250, 250, 250)
-      doc.setDrawColor(230, 230, 230)
-      doc.roundedRect(xPos, currentY, columnWidth, 22, 1.5, 1.5, 'FD')
-
-      // Nombre del producto
+      // Nombre del producto - minimalista sin bordes
       doc.setFontSize(10)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(COLORS.textDark)
-      doc.text(product.name, xPos + 3, currentY + 5)
+      
+      // Truncar nombre si es muy largo
+      const maxNameLength = 30
+      const displayName = product.name.length > maxNameLength 
+        ? product.name.substring(0, maxNameLength) + '...' 
+        : product.name
+      doc.text(displayName, xPos, currentY + 4)
 
-      // Precio
+      // Precio - mismo color gris
       if (price) {
-        doc.setFontSize(11)
+        doc.setFontSize(9)
         doc.setFont('helvetica', 'bold')
-        doc.setTextColor(COLORS.textDark)
-        const priceText = `$${price.sale_price?.toLocaleString('es-CL')} / ${price.unit}`
-        doc.text(priceText, xPos + columnWidth - 3, currentY + 5, { align: 'right' })
+        doc.setTextColor(136, 136, 136) // Gris #888
+        const priceText = `$${price.sale_price?.toLocaleString('es-CL')}/${price.unit}`
+        doc.text(priceText, xPos + columnWidth, currentY + 4, { align: 'right' })
       }
 
-      // Variantes (si existen)
+      let varY = currentY + 9
+
+      // Variantes (si existen) - mostrar todas las activas
       if (product.variants && product.variants.filter(v => v.active).length > 0) {
         const activeVariants = product.variants.filter(v => v.active)
-        doc.setFontSize(7)
-        doc.setFont('helvetica', 'italic')
-        doc.setTextColor(COLORS.text)
+        doc.setFontSize(7.5)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(120, 120, 120)
         
-        let varY = currentY + 11
-        activeVariants.slice(0, 2).forEach(variant => {
-          const variantLabel = variant.label.length > 15 ? variant.label.substring(0, 15) + '...' : variant.label
-          const variantPrice = variant.price_tiers && variant.price_tiers[0] 
-            ? `$${variant.price_tiers[0].sale_price?.toLocaleString('es-CL')}/${variant.price_tiers[0].unit}` 
-            : ''
-          doc.text(`• ${variantLabel}: ${variantPrice}`, xPos + 3, varY)
-          varY += 4
+        activeVariants.forEach(variant => {
+          if (variant.price_tiers && variant.price_tiers.length > 0) {
+            variant.price_tiers.forEach(tier => {
+              const tierText = tier.min_qty > 1 
+                ? `  ${variant.label} (${tier.min_qty}+): $${tier.sale_price?.toLocaleString('es-CL')}/${tier.unit}`
+                : `  ${variant.label}: $${tier.sale_price?.toLocaleString('es-CL')}/${tier.unit}`
+              doc.text(tierText, xPos, varY)
+              varY += 3.5
+            })
+          }
         })
       }
+
+      // Línea divisoria sutil entre productos
+      doc.setDrawColor(220, 220, 220)
+      doc.setLineWidth(0.2)
+      doc.line(xPos, currentY + (varY - currentY) + 2, xPos + columnWidth, currentY + (varY - currentY) + 2)
 
       // Cambiar de columna
       column++
       if (column >= 2) {
         column = 0
-        currentY += 26 // Altura del producto + espacio
+        currentY = Math.max(currentY + 18, varY + 4)
       }
     })
 
     // Si quedamos en la primera columna, avanzar
     if (column === 1) {
-      currentY += 26
+      currentY += 18
     }
 
-    currentY += 5 // Espacio después de la categoría
+    currentY += 3 // Espacio después de la categoría
   }
 
   // Agregar cada categoría
