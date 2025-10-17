@@ -308,16 +308,61 @@ export async function generateInvoicePDF(order, items, customer) {
   })
 
   const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
   const margin = 20
 
-  // Encabezado
-  doc.setFontSize(20)
-  doc.setFont('helvetica', 'bold')
-  doc.setTextColor(COLORS.textDark)
-  doc.text('Kivi - Frutas y Verduras Frescas', pageWidth / 2, 25, { align: 'center' })
+  // Cargar imágenes (igual que catálogo)
+  const loadImage = (src) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'Anonymous'
+      img.onload = () => resolve(img)
+      img.onerror = reject
+      img.src = src
+    })
+  }
+
+  let logoImg, whatsappImg, instagramImg
+  try {
+    logoImg = await loadImage('/kivi-logo.png')
+  } catch (e) {
+    console.log('No se pudo cargar el logo')
+  }
+  try {
+    whatsappImg = await loadImage('/whatsapp-icon.png')
+  } catch (e) {
+    console.log('No se pudo cargar icono WhatsApp')
+  }
+  try {
+    instagramImg = await loadImage('/instagram-icon.png')
+  } catch (e) {
+    console.log('No se pudo cargar icono Instagram')
+  }
+
+  // Encabezado - Logo
+  let currentY = 20
+  if (logoImg) {
+    try {
+      const logoWidth = 45
+      const logoHeight = (logoImg.height * logoWidth) / logoImg.width
+      doc.addImage(logoImg, 'PNG', (pageWidth - logoWidth) / 2, currentY, logoWidth, logoHeight)
+      currentY += logoHeight + 10
+    } catch (e) {
+      doc.setFontSize(20)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(COLORS.textDark)
+      doc.text('Kivi', pageWidth / 2, currentY, { align: 'center' })
+      currentY += 15
+    }
+  } else {
+    doc.setFontSize(20)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.textDark)
+    doc.text('Kivi', pageWidth / 2, currentY, { align: 'center' })
+    currentY += 15
+  }
 
   // Información del pedido
-  let currentY = 40
   doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
   doc.text('DETALLE DE PEDIDO', margin, currentY)
@@ -325,13 +370,15 @@ export async function generateInvoicePDF(order, items, customer) {
   currentY += 10
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
-  doc.text(`Pedido: ${order.title || `#${order.id}`}`, margin, currentY)
+  doc.text(`Pedido: ${order.title || order.name || `#${order.id}`}`, margin, currentY)
   currentY += 7
-  doc.text(`Fecha: ${new Date(order.created_at).toLocaleDateString('es-CL')}`, margin, currentY)
+  const orderDate = order.created_at || order.date
+  doc.text(`Fecha: ${new Date(orderDate).toLocaleDateString('es-CL')}`, margin, currentY)
 
   if (customer) {
     currentY += 7
-    doc.text(`Cliente: ${customer}`, margin, currentY)
+    const customerName = typeof customer === 'object' ? (customer.name || customer.full_name || 'Cliente') : customer
+    doc.text(`Cliente: ${customerName}`, margin, currentY)
   }
 
   // Línea divisoria
@@ -399,16 +446,72 @@ export async function generateInvoicePDF(order, items, customer) {
   doc.text('TOTAL:', pageWidth - 65, currentY)
   doc.text(`$${total.toLocaleString('es-CL')}`, pageWidth - margin - 5, currentY, { align: 'right' })
 
-  // Pie de página
-  const footerY = doc.internal.pageSize.getHeight() - 20
-  doc.setFontSize(9)
-  doc.setFont('helvetica', 'normal')
-  doc.setTextColor(COLORS.text)
+  // Pie de página - igual que catálogo
+  const footerY = pageHeight - 30
+  
+  doc.setFontSize(14)
+  doc.setFont('helvetica', 'bold')
+  doc.setTextColor(COLORS.primary)
   doc.text('¡Gracias por tu pedido!', pageWidth / 2, footerY, { align: 'center' })
-  doc.text('📞 +56 9 6917 2764  |  📷 @kivi.chile', pageWidth / 2, footerY + 7, { align: 'center' })
+  
+  // Iconos y texto - mismo diseño que catálogo (centrados y grandes)
+  const iconSize = 7
+  const iconY = footerY + 8
+  const fontSize = 10
+  
+  // Calcular ancho total para centrar
+  const gap = 15
+  const whatsappTextWidth = 32
+  const instagramTextWidth = 22
+  const totalWidth = iconSize + 2 + whatsappTextWidth + gap + iconSize + 2 + instagramTextWidth
+  const startX = (pageWidth - totalWidth) / 2
+  
+  // WhatsApp
+  if (whatsappImg) {
+    try {
+      doc.addImage(whatsappImg, 'PNG', startX, iconY, iconSize, iconSize)
+      doc.setFontSize(fontSize)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(COLORS.text)
+      doc.text('+56 9 6917 2764', startX + iconSize + 2, iconY + 5)
+    } catch (e) {
+      doc.setFontSize(fontSize)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(COLORS.text)
+      doc.text('WhatsApp: +56 9 6917 2764', startX, iconY + 5)
+    }
+  } else {
+    doc.setFontSize(fontSize)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.text)
+    doc.text('WhatsApp: +56 9 6917 2764', startX, iconY + 5)
+  }
+  
+  // Instagram
+  const instaX = startX + iconSize + 2 + whatsappTextWidth + gap
+  if (instagramImg) {
+    try {
+      doc.addImage(instagramImg, 'PNG', instaX, iconY, iconSize, iconSize)
+      doc.setFontSize(fontSize)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(COLORS.text)
+      doc.text('@kivi.chile', instaX + iconSize + 2, iconY + 5)
+    } catch (e) {
+      doc.setFontSize(fontSize)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(COLORS.text)
+      doc.text('Instagram: @kivi.chile', instaX, iconY + 5)
+    }
+  } else {
+    doc.setFontSize(fontSize)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.text)
+    doc.text('Instagram: @kivi.chile', instaX, iconY + 5)
+  }
 
   // Descargar
-  const filename = `Factura_${order.title || order.id}_${customer || 'Cliente'}.pdf`.replace(/ /g, '_')
+  const customerName = typeof customer === 'object' ? (customer.name || customer.full_name || 'Cliente') : (customer || 'Cliente')
+  const filename = `Factura_${order.title || order.name || order.id}_${customerName}.pdf`.replace(/ /g, '_')
   doc.save(filename)
 }
 
