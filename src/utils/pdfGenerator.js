@@ -23,29 +23,72 @@ export async function generateCatalogPDF(products) {
   const margin = 15
   const contentWidth = pageWidth - (margin * 2)
 
+  // Cargar imágenes
+  const loadImage = (src) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'Anonymous'
+      img.onload = () => resolve(img)
+      img.onerror = reject
+      img.src = src
+    })
+  }
+
+  let logoImg, whatsappImg, instagramImg
+  try {
+    logoImg = await loadImage('/kivi-logo.png')
+  } catch (e) {
+    console.log('No se pudo cargar el logo')
+  }
+  try {
+    whatsappImg = await loadImage('/whatsapp-icon.png')
+  } catch (e) {
+    console.log('No se pudo cargar icono WhatsApp')
+  }
+  try {
+    instagramImg = await loadImage('/instagram-icon.png')
+  } catch (e) {
+    console.log('No se pudo cargar icono Instagram')
+  }
+
   // Función para agregar encabezado
   const addHeader = () => {
-    // Título
+    // Logo
+    if (logoImg) {
+      try {
+        const logoWidth = 50
+        const logoHeight = (logoImg.height * logoWidth) / logoImg.width
+        doc.addImage(logoImg, 'PNG', (pageWidth - logoWidth) / 2, 15, logoWidth, logoHeight)
+        
+        // Slogan debajo del logo
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'italic')
+        doc.setTextColor(COLORS.text)
+        doc.text('*Todo pedido es personalizable a tu manera*', pageWidth / 2, 15 + logoHeight + 6, { align: 'center' })
+        
+        return 15 + logoHeight + 12
+      } catch (e) {
+        console.log('Error agregando logo:', e)
+      }
+    }
+    
+    // Fallback si no hay logo
     doc.setFontSize(24)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(COLORS.textDark)
     doc.text('Kivi', pageWidth / 2, 25, { align: 'center' })
-
-    doc.setFontSize(16)
-    doc.setFont('helvetica', 'normal')
-    doc.text('FRUTAS Y VERDURAS FRESCAS', pageWidth / 2, 35, { align: 'center' })
-
+    
     doc.setFontSize(10)
     doc.setFont('helvetica', 'italic')
     doc.setTextColor(COLORS.text)
-    doc.text('*Todo pedido es personalizable a tu manera*', pageWidth / 2, 43, { align: 'center' })
-
-    return 50 // Retorna la posición Y donde termina el encabezado
+    doc.text('*Todo pedido es personalizable a tu manera*', pageWidth / 2, 33, { align: 'center' })
+    
+    return 40
   }
 
   // Función para agregar pie de página
   const addFooter = (pageNum) => {
-    const footerY = pageHeight - 20
+    const footerY = pageHeight - 22
 
     doc.setFontSize(8)
     doc.setFont('helvetica', 'italic')
@@ -57,10 +100,40 @@ export async function generateCatalogPDF(products) {
       { align: 'center' }
     )
 
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'bold')
-    doc.text('WhatsApp: +56 9 6917 2764', margin, footerY + 7)
-    doc.text('Instagram: @kivi.chile', pageWidth / 2, footerY + 7, { align: 'center' })
+    // Iconos y texto
+    const iconSize = 5
+    const iconY = footerY + 6
+    
+    if (whatsappImg) {
+      try {
+        doc.addImage(whatsappImg, 'PNG', margin, iconY, iconSize, iconSize)
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'bold')
+        doc.text('+56 9 6917 2764', margin + iconSize + 2, iconY + 3.5)
+      } catch (e) {
+        doc.text('WhatsApp: +56 9 6917 2764', margin, iconY + 3.5)
+      }
+    } else {
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.text('WhatsApp: +56 9 6917 2764', margin, iconY + 3.5)
+    }
+    
+    if (instagramImg) {
+      try {
+        const instaX = pageWidth / 2 - iconSize / 2 - 15
+        doc.addImage(instagramImg, 'PNG', instaX, iconY, iconSize, iconSize)
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'bold')
+        doc.text('@kivi.chile', instaX + iconSize + 2, iconY + 3.5)
+      } catch (e) {
+        doc.text('Instagram: @kivi.chile', pageWidth / 2, iconY + 3.5, { align: 'center' })
+      }
+    } else {
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'bold')
+      doc.text('Instagram: @kivi.chile', pageWidth / 2, iconY + 3.5, { align: 'center' })
+    }
 
     // Número de página
     doc.setFontSize(8)
@@ -77,8 +150,8 @@ export async function generateCatalogPDF(products) {
 
   // Función para agregar una categoría
   const addCategory = (title, items) => {
-    // Verificar si necesitamos una nueva página para el título
-    if (currentY + 20 > pageHeight - 30) {
+    // SIEMPRE empezar categoría en nueva página (excepto la primera)
+    if (pageNum > 1) {
       addFooter(pageNum)
       doc.addPage()
       pageNum++
@@ -117,46 +190,49 @@ export async function generateCatalogPDF(products) {
       }
 
       // Nombre del producto - minimalista sin bordes
-      doc.setFontSize(10)
+      doc.setFontSize(11)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(COLORS.textDark)
       
       // Truncar nombre si es muy largo
-      const maxNameLength = 30
+      const maxNameLength = 28
       const displayName = product.name.length > maxNameLength 
         ? product.name.substring(0, maxNameLength) + '...' 
         : product.name
-      doc.text(displayName, xPos, currentY + 4)
+      doc.text(displayName, xPos, currentY + 5)
 
-      // Precio - mismo color gris
-      if (price) {
-        doc.setFontSize(9)
-        doc.setFont('helvetica', 'bold')
-        doc.setTextColor(136, 136, 136) // Gris #888
-        const priceText = `$${price.sale_price?.toLocaleString('es-CL')}/${price.unit}`
-        doc.text(priceText, xPos + columnWidth, currentY + 4, { align: 'right' })
-      }
+      let varY = currentY + 11
 
-      let varY = currentY + 9
-
-      // Variantes (si existen) - mostrar todas las activas
-      if (product.variants && product.variants.filter(v => v.active).length > 0) {
+      // Variantes (si existen) - mostrar SOLO las variantes (sin precio base)
+      const hasVariants = product.variants && product.variants.filter(v => v.active).length > 0
+      
+      if (hasVariants) {
         const activeVariants = product.variants.filter(v => v.active)
-        doc.setFontSize(7.5)
+        doc.setFontSize(9)
         doc.setFont('helvetica', 'normal')
-        doc.setTextColor(120, 120, 120)
+        doc.setTextColor(100, 100, 100)
         
         activeVariants.forEach(variant => {
           if (variant.price_tiers && variant.price_tiers.length > 0) {
             variant.price_tiers.forEach(tier => {
               const tierText = tier.min_qty > 1 
-                ? `  ${variant.label} (${tier.min_qty}+): $${tier.sale_price?.toLocaleString('es-CL')}/${tier.unit}`
-                : `  ${variant.label}: $${tier.sale_price?.toLocaleString('es-CL')}/${tier.unit}`
-              doc.text(tierText, xPos, varY)
-              varY += 3.5
+                ? `${variant.label} (${tier.min_qty}+): $${tier.sale_price?.toLocaleString('es-CL')}/${tier.unit}`
+                : `${variant.label}: $${tier.sale_price?.toLocaleString('es-CL')}/${tier.unit}`
+              doc.text(tierText, xPos + 2, varY)
+              varY += 4.5
             })
           }
         })
+      } else {
+        // Solo mostrar precio base si NO tiene variantes
+        if (price) {
+          doc.setFontSize(10)
+          doc.setFont('helvetica', 'bold')
+          doc.setTextColor(100, 100, 100)
+          const priceText = `$${price.sale_price?.toLocaleString('es-CL')}/${price.unit}`
+          doc.text(priceText, xPos + 2, varY)
+          varY += 5
+        }
       }
 
       // Línea divisoria sutil entre productos
