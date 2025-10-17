@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { listProducts, createProduct, updateProduct } from '../api/products'
-import { listVariants, createVariant, updateVariant, deleteVariant, listVariantTiers, createVariantTier } from '../api/variants'
+import { listVariants, createVariant, updateVariant, deleteVariant, deleteKiviVariants, listVariantTiers, createVariantTier } from '../api/variants'
 import ImageUploader from '../components/ImageUploader'
 import '../styles/globals.css'
 
