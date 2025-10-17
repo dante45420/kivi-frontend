@@ -76,14 +76,46 @@ export default function Productos() {
     return matchesSearch && matchesCategory
   })
 
+  async function handleDeleteKiviVariants() {
+    if(!confirm('¿Estás seguro de eliminar TODAS las variantes "kivi" de todos los productos? Esta acción no se puede deshacer.')) return
+    try {
+      const result = await deleteKiviVariants()
+      alert(result.message || '✓ Variantes eliminadas')
+      await load()
+    } catch(e) {
+      alert('Error al eliminar variantes: ' + (e.message || 'Error desconocido'))
+    }
+  }
+
   return (
     <div style={{ padding:'20px', maxWidth:1400, margin:'0 auto' }}>
       {/* Header */}
-      <div style={{ marginBottom:28 }}>
-        <h1 style={{ fontSize:32, fontWeight:800, margin:'0 0 8px 0', color:'var(--kivi-text-dark)' }}>
-          🛍️ Productos
-        </h1>
-        <p style={{ margin:0, opacity:0.7, fontSize:16 }}>Gestiona tu catálogo de productos</p>
+      <div style={{ marginBottom:28, display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:16 }}>
+        <div>
+          <h1 style={{ fontSize:32, fontWeight:800, margin:'0 0 8px 0', color:'var(--kivi-text-dark)' }}>
+            🛍️ Productos
+          </h1>
+          <p style={{ margin:0, opacity:0.7, fontSize:16 }}>Gestiona tu catálogo de productos</p>
+        </div>
+        <button
+          onClick={handleDeleteKiviVariants}
+          style={{
+            padding:'12px 20px',
+            background:'#e74c3c',
+            color:'white',
+            border:'none',
+            borderRadius:12,
+            fontWeight:600,
+            cursor:'pointer',
+            fontSize:14,
+            transition:'all 0.2s',
+            whiteSpace:'nowrap'
+          }}
+          onMouseOver={e => e.target.style.background='#c0392b'}
+          onMouseOut={e => e.target.style.background='#e74c3c'}
+        >
+          🗑️ Eliminar Variantes "Kivi"
+        </button>
       </div>
 
       {/* Crear Producto */}
@@ -228,7 +260,7 @@ export default function Productos() {
                       backdropFilter:'blur(8px)'
                     }}>
                       {p.category === 'fruta' ? '🍎 Fruta' : p.category === 'verdura' ? '🥬 Verdura' : ''}
-                    </div>
+            </div>
                   )}
                 </div>
 
@@ -278,7 +310,7 @@ export default function Productos() {
                       marginBottom:12
                     }}>
                       🏷️ {p.variants.length} variante{p.variants.length !== 1 ? 's' : ''}
-                    </div>
+                </div>
                   )}
 
                   <button 
@@ -379,8 +411,8 @@ export default function Productos() {
                   >
                     <option value="kg">⚖️ Kilogramo (kg)</option>
                     <option value="unit">📦 Unidad (U.)</option>
-                  </select>
-                </label>
+                </select>
+              </label>
 
                 <label style={{ display:'block' }}>
                   <span style={{ display:'block', marginBottom:8, fontSize:14, fontWeight:600, color:'var(--kivi-text)' }}>
@@ -395,8 +427,8 @@ export default function Productos() {
                     <option value="">Sin categoría</option>
                     <option value="fruta">🍎 Fruta</option>
                     <option value="verdura">🥬 Verdura</option>
-                  </select>
-                </label>
+                </select>
+              </label>
 
                 <label style={{ display:'block' }}>
                   <span style={{ display:'block', marginBottom:8, fontSize:14, fontWeight:600, color:'var(--kivi-text)' }}>
@@ -410,8 +442,8 @@ export default function Productos() {
                   >
                     <option value="detalle">🛒 Al detalle (suelto)</option>
                     <option value="cajon">📦 Por cajón</option>
-                  </select>
-                </label>
+                    </select>
+                  </label>
 
                 <label style={{ display:'block' }}>
                   <span style={{ display:'block', marginBottom:8, fontSize:14, fontWeight:600, color:'var(--kivi-text)' }}>
@@ -425,7 +457,7 @@ export default function Productos() {
                     onChange={e=> setEditValues(v=>({ ...v, sale_price:e.target.value }))} 
                     style={{ width:'100%', fontSize:18, fontWeight:600 }}
                   />
-                </label>
+              </label>
 
                 <label style={{ display:'block' }}>
                   <span style={{ display:'block', marginBottom:8, fontSize:14, fontWeight:600, color:'var(--kivi-text)' }}>
@@ -439,8 +471,8 @@ export default function Productos() {
                     onChange={e => setEditValues(v => ({ ...v, quality_notes: e.target.value }))} 
                     style={{ width:'100%', resize:'vertical' }} 
                   />
-                </label>
-              </div>
+                  </label>
+                </div>
 
               <button 
                 className="button" 
@@ -508,19 +540,19 @@ export default function Productos() {
                         const minq = Number(newVariant.min_qty||'')
                         const price = Number(newVariant.sale_price||'')
                         if(!name || !minq || !price){ alert('Completa todos los campos'); return }
-                        const v = await createVariant({ product_id:editValues.id, label:name })
-                        await createVariantTier({ product_id:editValues.id, variant_id: v.id, min_qty: minq, unit: (editValues.default_unit||'kg'), sale_price: price })
+                const v = await createVariant({ product_id:editValues.id, label:name })
+                await createVariantTier({ product_id:editValues.id, variant_id: v.id, min_qty: minq, unit: (editValues.default_unit||'kg'), sale_price: price })
                         setNewVariant({ label:'', min_qty:'', sale_price:'' })
-                        setEditVariants(await listVariants(editValues.id))
-                        setEditTiers(await listVariantTiers(editValues.id))
+                setEditVariants(await listVariants(editValues.id))
+                setEditTiers(await listVariantTiers(editValues.id))
                         alert('✓ Variante creada')
                       }}
                       style={{ width:'100%', background:'white', fontWeight:600 }}
                     >
                       Crear Variante
                     </button>
-                  </>
-                )}
+              </>
+              )}
               </div>
 
               {/* Variantes Existentes */}
@@ -595,10 +627,10 @@ export default function Productos() {
                               <div key={t.id} style={{ display:'flex', justifyContent:'space-between', padding:'6px 0', opacity:0.8 }}>
                                 <span>≥ {t.min_qty} {t.unit}</span>
                                 <span style={{ fontWeight:700 }}>${t.sale_price.toLocaleString('es-CL')}</span>
-                              </div>
-                            ))}
+                        </div>
+                      ))}
                             {tiers.length === 0 && <div style={{ opacity:0.5, fontSize:13 }}>Sin escalas de precio</div>}
-                          </div>
+                    </div>
                         ) : (
                           <div style={{ display:'grid', gap:12, marginTop:12 }}>
                             <input 
@@ -627,12 +659,12 @@ export default function Productos() {
                             >
                               Guardar Cambios
                             </button>
-                          </div>
+                  </div>
                         )}
-                      </div>
+              </div>
                     )
                   })}
-                </div>
+              </div>
               )}
             </div>
 
