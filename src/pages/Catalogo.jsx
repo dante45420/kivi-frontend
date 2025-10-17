@@ -641,9 +641,11 @@ function ProductCard({ product }) {
             </div>
             <div style={{
               display: 'flex',
-              flexWrap: 'wrap',
-              justifyContent: 'center',
-              gap: 10
+              flexWrap: 'nowrap',
+              justifyContent: 'flex-start',
+              gap: 6,
+              overflowX: 'auto',
+              paddingBottom: 4
             }}>
               {product.variants
                 .filter(v => v.active)
@@ -658,40 +660,37 @@ function ProductCard({ product }) {
                 return (
                   <div key={variant.id} style={{ 
                     background: 'var(--kivi-cream)', 
-                    padding: '8px 10px', 
-                    borderRadius: 8,
+                    padding: '6px 8px', 
+                    borderRadius: 6,
                     textAlign: 'center',
-                    border: '2px solid var(--kivi-green)',
-                    width: 'fit-content',
-                    minWidth: 70,
-                    maxWidth: 90,
+                    border: '1.5px solid var(--kivi-green)',
+                    minWidth: 60,
+                    maxWidth: 75,
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
-                    gap: 4
+                    gap: 2,
+                    flexShrink: 0
                   }}>
                     <div style={{ 
                       fontWeight: 700, 
                       color: '#000', 
-                      fontSize: 12,
+                      fontSize: 11,
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      lineHeight: 1.2
                     }}>
                       {variant.label}
                     </div>
                     {mainTier && (
                       <div style={{ 
-                        fontSize: 14, 
+                        fontSize: 13, 
                         fontWeight: 800, 
-                        color: 'var(--kivi-green-dark)'
+                        color: 'var(--kivi-green-dark)',
+                        lineHeight: 1.2
                       }}>
                         ${mainTier.sale_price?.toLocaleString('es-CL')}
-                      </div>
-                    )}
-                    {variant.price_tiers && variant.price_tiers.length > 1 && (
-                      <div style={{ fontSize: 9, color: '#999', fontStyle: 'italic' }}>
-                        +{variant.price_tiers.length - 1}
                       </div>
                     )}
                   </div>
