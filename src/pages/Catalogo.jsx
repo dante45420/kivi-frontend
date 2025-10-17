@@ -606,32 +606,30 @@ function ProductCard({ product }) {
       )}
 
       <div style={{ padding: 20 }}>
-        {/* Product Name & Price */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-          <h3 style={{ 
+        {/* Product Name */}
+        <h3 style={{ 
+          fontSize: 18, 
+          fontWeight: 800, 
+          margin: '0 0 12px 0',
+          color: '#000'
+        }}>
+          {product.name}
+        </h3>
+
+        {/* Default Price - Siempre mostrar */}
+        {price && (
+          <div style={{ 
             fontSize: 18, 
-            fontWeight: 800, 
-            margin: 0,
-            color: '#000',
-            flex: 1
+            fontWeight: 700, 
+            color: '#888',
+            marginBottom: 12
           }}>
-            {product.name}
-          </h3>
-          {price && (
-            <div style={{ 
-              fontSize: 18, 
-              fontWeight: 700, 
-              color: '#888',
-              marginLeft: 12,
-              whiteSpace: 'nowrap'
-            }}>
-              ${price.sale_price?.toLocaleString('es-CL')}
-              <span style={{ fontSize: 13, fontWeight: 600, color: '#888' }}>
-                /{price.unit === 'unit' ? 'unidad' : price.unit}
-              </span>
-            </div>
-          )}
-        </div>
+            ${price.sale_price?.toLocaleString('es-CL')}
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#888' }}>
+              /{price.unit === 'unit' ? 'unidad' : price.unit}
+            </span>
+          </div>
+        )}
 
         {/* Variantes - cuadrados uno al lado del otro */}
         {product.variants && product.variants.filter(v => v.active).length > 0 && (
