@@ -17,6 +17,10 @@ export function deleteVariant(variantId){
   return apiFetch(`/variants/${variantId}`, { method:'DELETE' })
 }
 
+export function deleteKiviVariants(){
+  return apiFetch('/variants/bulk/kivi', { method:'DELETE' })
+}
+
 export function listVariantTiers(productId, variantId){
   const usp = new URLSearchParams(); if (productId) usp.set('product_id', productId); if (variantId) usp.set('variant_id', variantId)
   return apiFetch(`/variants/tiers?${usp.toString()}`)
