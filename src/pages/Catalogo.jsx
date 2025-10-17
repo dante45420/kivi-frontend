@@ -627,7 +627,7 @@ function ProductCard({ product }) {
             }}>
               ${price.sale_price?.toLocaleString('es-CL')}
               <span style={{ fontSize: 13, fontWeight: 600, color: '#888' }}>
-                /{price.unit}
+                /{price.unit === 'unit' ? 'unidad' : price.unit}
               </span>
             </div>
           )}

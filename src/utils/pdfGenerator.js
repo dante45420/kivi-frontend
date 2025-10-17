@@ -56,7 +56,7 @@ export async function generateCatalogPDF(products) {
     // Logo
     if (logoImg) {
       try {
-        const logoWidth = 50
+        const logoWidth = 45
         const logoHeight = (logoImg.height * logoWidth) / logoImg.width
         doc.addImage(logoImg, 'PNG', (pageWidth - logoWidth) / 2, 15, logoWidth, logoHeight)
         
@@ -100,39 +100,53 @@ export async function generateCatalogPDF(products) {
       { align: 'center' }
     )
 
-    // Iconos y texto
-    const iconSize = 5
+    // Iconos y texto - centrados y más grandes
+    const iconSize = 7
     const iconY = footerY + 6
+    const fontSize = 10
     
+    // Calcular ancho total para centrar
+    const gap = 15 // Espacio entre los dos elementos
+    const whatsappTextWidth = 32 // Aproximado
+    const instagramTextWidth = 22 // Aproximado
+    const totalWidth = iconSize + 2 + whatsappTextWidth + gap + iconSize + 2 + instagramTextWidth
+    const startX = (pageWidth - totalWidth) / 2
+    
+    // WhatsApp
     if (whatsappImg) {
       try {
-        doc.addImage(whatsappImg, 'PNG', margin, iconY, iconSize, iconSize)
-        doc.setFontSize(9)
+        doc.addImage(whatsappImg, 'PNG', startX, iconY, iconSize, iconSize)
+        doc.setFontSize(fontSize)
         doc.setFont('helvetica', 'bold')
-        doc.text('+56 9 6917 2764', margin + iconSize + 2, iconY + 3.5)
+        doc.text('+56 9 6917 2764', startX + iconSize + 2, iconY + 5)
       } catch (e) {
-        doc.text('WhatsApp: +56 9 6917 2764', margin, iconY + 3.5)
+        doc.setFontSize(fontSize)
+        doc.setFont('helvetica', 'bold')
+        doc.text('WhatsApp: +56 9 6917 2764', startX, iconY + 5)
       }
     } else {
-      doc.setFontSize(9)
+      doc.setFontSize(fontSize)
       doc.setFont('helvetica', 'bold')
-      doc.text('WhatsApp: +56 9 6917 2764', margin, iconY + 3.5)
+      doc.text('WhatsApp: +56 9 6917 2764', startX, iconY + 5)
     }
     
+    // Instagram
+    const instaX = startX + iconSize + 2 + whatsappTextWidth + gap
     if (instagramImg) {
       try {
-        const instaX = pageWidth / 2 - iconSize / 2 - 15
         doc.addImage(instagramImg, 'PNG', instaX, iconY, iconSize, iconSize)
-        doc.setFontSize(9)
+        doc.setFontSize(fontSize)
         doc.setFont('helvetica', 'bold')
-        doc.text('@kivi.chile', instaX + iconSize + 2, iconY + 3.5)
+        doc.text('@kivi.chile', instaX + iconSize + 2, iconY + 5)
       } catch (e) {
-        doc.text('Instagram: @kivi.chile', pageWidth / 2, iconY + 3.5, { align: 'center' })
+        doc.setFontSize(fontSize)
+        doc.setFont('helvetica', 'bold')
+        doc.text('Instagram: @kivi.chile', instaX, iconY + 5)
       }
     } else {
-      doc.setFontSize(9)
+      doc.setFontSize(fontSize)
       doc.setFont('helvetica', 'bold')
-      doc.text('Instagram: @kivi.chile', pageWidth / 2, iconY + 3.5, { align: 'center' })
+      doc.text('Instagram: @kivi.chile', instaX, iconY + 5)
     }
 
     // Número de página
@@ -149,9 +163,9 @@ export async function generateCatalogPDF(products) {
   let pageNum = 1
 
   // Función para agregar una categoría
-  const addCategory = (title, items) => {
+  const addCategory = (title, items, isFirst = false) => {
     // SIEMPRE empezar categoría en nueva página (excepto la primera)
-    if (pageNum > 1) {
+    if (!isFirst) {
       addFooter(pageNum)
       doc.addPage()
       pageNum++
@@ -189,49 +203,54 @@ export async function generateCatalogPDF(products) {
         column = 0
       }
 
-      // Nombre del producto - minimalista sin bordes
-      doc.setFontSize(11)
+      // Nombre del producto - más grande
+      doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(COLORS.textDark)
       
       // Truncar nombre si es muy largo
-      const maxNameLength = 28
+      const maxNameLength = 22
       const displayName = product.name.length > maxNameLength 
         ? product.name.substring(0, maxNameLength) + '...' 
         : product.name
       doc.text(displayName, xPos, currentY + 5)
 
-      let varY = currentY + 11
+      let varY = currentY + 5
 
-      // Variantes (si existen) - mostrar SOLO las variantes (sin precio base)
+      // Variantes o precio - AL LADO del nombre, más grandes
       const hasVariants = product.variants && product.variants.filter(v => v.active).length > 0
       
       if (hasVariants) {
         const activeVariants = product.variants.filter(v => v.active)
-        doc.setFontSize(9)
+        doc.setFontSize(10.5)
         doc.setFont('helvetica', 'normal')
-        doc.setTextColor(100, 100, 100)
+        doc.setTextColor(80, 80, 80)
         
-        activeVariants.forEach(variant => {
+        let xOffset = xPos
+        varY += 7
+        
+        activeVariants.forEach((variant, idx) => {
           if (variant.price_tiers && variant.price_tiers.length > 0) {
             variant.price_tiers.forEach(tier => {
+              const unit = tier.unit === 'unit' ? 'unidad' : tier.unit
               const tierText = tier.min_qty > 1 
-                ? `${variant.label} (${tier.min_qty}+): $${tier.sale_price?.toLocaleString('es-CL')}/${tier.unit}`
-                : `${variant.label}: $${tier.sale_price?.toLocaleString('es-CL')}/${tier.unit}`
-              doc.text(tierText, xPos + 2, varY)
-              varY += 4.5
+                ? `${variant.label}(${tier.min_qty}+): $${tier.sale_price?.toLocaleString('es-CL')}/${unit}`
+                : `${variant.label}: $${tier.sale_price?.toLocaleString('es-CL')}/${unit}`
+              doc.text(tierText, xOffset, varY)
+              varY += 5.5
             })
           }
         })
       } else {
-        // Solo mostrar precio base si NO tiene variantes
+        // Precio base al lado del nombre si NO tiene variantes
         if (price) {
-          doc.setFontSize(10)
+          doc.setFontSize(11)
           doc.setFont('helvetica', 'bold')
-          doc.setTextColor(100, 100, 100)
-          const priceText = `$${price.sale_price?.toLocaleString('es-CL')}/${price.unit}`
-          doc.text(priceText, xPos + 2, varY)
-          varY += 5
+          doc.setTextColor(80, 80, 80)
+          const unit = price.unit === 'unit' ? 'unidad' : price.unit
+          const priceText = `$${price.sale_price?.toLocaleString('es-CL')}/${unit}`
+          doc.text(priceText, xPos, varY + 7)
+          varY += 7
         }
       }
 
@@ -257,16 +276,21 @@ export async function generateCatalogPDF(products) {
   }
 
   // Agregar cada categoría
+  let isFirst = true
+  
   if (frutas.length > 0) {
-    addCategory('Frutas', frutas)
+    addCategory('Frutas', frutas, isFirst)
+    isFirst = false
   }
 
   if (verduras.length > 0) {
-    addCategory('Verduras', verduras)
+    addCategory('Verduras', verduras, isFirst)
+    isFirst = false
   }
 
   if (otros.length > 0) {
-    addCategory('Otros', otros)
+    addCategory('Otros', otros, isFirst)
+    isFirst = false
   }
 
   // Agregar pie de página final

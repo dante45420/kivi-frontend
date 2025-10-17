@@ -33,7 +33,7 @@ export default function PublicNavbar() {
             src="/kivi-logo.png" 
             alt="Kivi" 
             style={{ 
-              height: 60,
+              height: 55,
               width: 'auto'
             }}
             onError={(e) => {
