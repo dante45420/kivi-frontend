@@ -12,6 +12,8 @@ import Contabilidad from './pages/ContabilidadNew'
 import Login from './pages/Login'
 import Catalogo from './pages/Catalogo'
 import About from './pages/About'
+import AdminKPIs from './pages/admin/KPIs'
+import AdminProveedores from './pages/admin/Proveedores'
 import { getToken } from './api/auth'
 
 // Componente para rutas protegidas
@@ -59,6 +61,8 @@ export default function App() {
         <Route path="/precios" element={<ProtectedRoute><Precios /></ProtectedRoute>} />
         <Route path="/precios/competidores" element={<ProtectedRoute><PreciosCompetidores /></ProtectedRoute>} />
         <Route path="/contabilidad" element={<ProtectedRoute><Contabilidad /></ProtectedRoute>} />
+        <Route path="/admin/kpis" element={<ProtectedRoute><AdminKPIs /></ProtectedRoute>} />
+        <Route path="/admin/proveedores" element={<ProtectedRoute><AdminProveedores /></ProtectedRoute>} />
         
         {/* Redirección por defecto */}
         <Route path="*" element={<Navigate to={isAuthenticated ? "/productos" : "/"} replace />} />
