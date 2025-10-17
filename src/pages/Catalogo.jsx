@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { listProducts } from '../api/products'
+import { listVariants, listVariantTiers } from '../api/variants'
 import PublicNavbar from '../components/PublicNavbar'
+import PublicFooter from '../components/PublicFooter'
 import { generateCatalogPDF } from '../utils/pdfGenerator'
 import '../styles/globals.css'
 
@@ -18,7 +20,33 @@ export default function Catalogo() {
   async function loadProducts() {
     try {
       const data = await listProducts()
-      setProducts(data)
+      
+      // Cargar variantes y price tiers para cada producto
+      const productsWithVariants = await Promise.all(
+        data.map(async (product) => {
+          try {
+            const variants = await listVariants(product.id)
+            
+            // Cargar price tiers para cada variante
+            const variantsWithTiers = await Promise.all(
+              variants.map(async (variant) => {
+                try {
+                  const tiers = await listVariantTiers(product.id, variant.id)
+                  return { ...variant, price_tiers: tiers }
+                } catch {
+                  return { ...variant, price_tiers: [] }
+                }
+              })
+            )
+            
+            return { ...product, variants: variantsWithTiers }
+          } catch {
+            return { ...product, variants: [] }
+          }
+        })
+      )
+      
+      setProducts(productsWithVariants)
     } catch (err) {
       console.error('Error al cargar productos:', err)
     } finally {
@@ -527,6 +555,8 @@ export default function Catalogo() {
           }
         }
       `}</style>
+
+      <PublicFooter />
     </div>
   )
 }

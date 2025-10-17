@@ -1,4 +1,5 @@
 import PublicNavbar from '../components/PublicNavbar'
+import PublicFooter from '../components/PublicFooter'
 import '../styles/globals.css'
 
 export default function About() {
@@ -376,6 +377,8 @@ export default function About() {
           </div>
         </div>
       </div>
+
+      <PublicFooter />
     </div>
   )
 }

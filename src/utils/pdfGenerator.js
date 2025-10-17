@@ -59,8 +59,8 @@ export async function generateCatalogPDF(products) {
 
     doc.setFontSize(9)
     doc.setFont('helvetica', 'bold')
-    doc.text('📞 +56 9 6917 2764', margin, footerY + 7)
-    doc.text('📷 @kivi.chile', pageWidth / 2, footerY + 7, { align: 'center' })
+    doc.text('WhatsApp: +56 9 6917 2764', margin, footerY + 7)
+    doc.text('Instagram: @kivi.chile', pageWidth / 2, footerY + 7, { align: 'center' })
 
     // Número de página
     doc.setFontSize(8)
