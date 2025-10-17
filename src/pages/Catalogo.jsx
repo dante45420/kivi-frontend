@@ -248,7 +248,7 @@ export default function Catalogo() {
                     }}></div>
                     <div style={{ 
                       display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))', 
+                      gridTemplateColumns: 'repeat(2, 1fr)', 
                       gap: 20 
                     }}>
                       {filteredAndSortedProducts
@@ -633,8 +633,8 @@ function ProductCard({ product }) {
           )}
         </div>
 
-        {/* Variantes - siempre mostradas */}
-        {product.variants && product.variants.length > 0 && (
+        {/* Variantes - cuadrados uno al lado del otro */}
+        {product.variants && product.variants.filter(v => v.active).length > 0 && (
           <div style={{ 
             marginTop: 16, 
             paddingTop: 16, 
@@ -643,38 +643,60 @@ function ProductCard({ product }) {
             <div style={{ 
               fontSize: 11, 
               fontWeight: 700, 
-              marginBottom: 8,
+              marginBottom: 10,
               color: '#888',
               textTransform: 'uppercase',
               letterSpacing: '0.5px'
             }}>
               Opciones
             </div>
-            {product.variants.filter(v => v.active).map(variant => (
-              <div key={variant.id} style={{ 
-                background: '#FAFAFA', 
-                padding: '8px 10px', 
-                borderRadius: 6,
-                marginBottom: 6,
-                fontSize: 13
-              }}>
-                <div style={{ fontWeight: 700, color: '#000', marginBottom: 2 }}>
-                  {variant.label}
-                </div>
-                {variant.price_tiers && variant.price_tiers.length > 0 && (
-                  <div style={{ fontSize: 12, color: '#666' }}>
-                    {variant.price_tiers.map((tier, idx) => (
-                      <div key={idx} style={{ marginTop: 2 }}>
-                        {tier.min_qty > 1 && <span>Desde {tier.min_qty} {tier.unit}: </span>}
-                        <span style={{ fontWeight: 700, color: '#88C4A8' }}>
-                          ${tier.sale_price?.toLocaleString('es-CL')}/{tier.unit}
-                        </span>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
+              gap: 8
+            }}>
+              {product.variants.filter(v => v.active).map(variant => {
+                // Tomar el primer price tier como referencia
+                const mainTier = variant.price_tiers?.[0]
+                return (
+                  <div key={variant.id} style={{ 
+                    background: 'var(--kivi-cream)', 
+                    padding: '10px', 
+                    borderRadius: 8,
+                    textAlign: 'center',
+                    border: '1px solid #E8E8E8',
+                    minHeight: 70,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    gap: 4
+                  }}>
+                    <div style={{ 
+                      fontWeight: 700, 
+                      color: '#000', 
+                      fontSize: 13,
+                      marginBottom: 2
+                    }}>
+                      {variant.label}
+                    </div>
+                    {mainTier && (
+                      <div style={{ 
+                        fontSize: 15, 
+                        fontWeight: 700, 
+                        color: '#888'
+                      }}>
+                        ${mainTier.sale_price?.toLocaleString('es-CL')}
                       </div>
-                    ))}
+                    )}
+                    {variant.price_tiers && variant.price_tiers.length > 1 && (
+                      <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>
+                        + {variant.price_tiers.length - 1} más
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            ))}
+                )
+              })}
+            </div>
           </div>
         )}
       </div>
