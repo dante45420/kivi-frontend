@@ -221,7 +221,15 @@ export async function generateCatalogPDF(products) {
       const hasVariants = product.variants && product.variants.filter(v => v.active).length > 0
       
       if (hasVariants) {
-        const activeVariants = product.variants.filter(v => v.active)
+        // Ordenar variantes por precio (de menor a mayor)
+        const activeVariants = product.variants
+          .filter(v => v.active)
+          .sort((a, b) => {
+            const priceA = a.price_tiers?.[0]?.sale_price || 0
+            const priceB = b.price_tiers?.[0]?.sale_price || 0
+            return priceA - priceB
+          })
+        
         doc.setFontSize(10.5)
         doc.setFont('helvetica', 'normal')
         doc.setTextColor(80, 80, 80)

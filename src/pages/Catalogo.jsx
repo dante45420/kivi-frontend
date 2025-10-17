@@ -645,7 +645,15 @@ function ProductCard({ product }) {
               justifyContent: 'center',
               gap: 10
             }}>
-              {product.variants.filter(v => v.active).map(variant => {
+              {product.variants
+                .filter(v => v.active)
+                .sort((a, b) => {
+                  // Ordenar por precio de menor a mayor
+                  const priceA = a.price_tiers?.[0]?.sale_price || 0
+                  const priceB = b.price_tiers?.[0]?.sale_price || 0
+                  return priceA - priceB
+                })
+                .map(variant => {
                 const mainTier = variant.price_tiers?.[0]
                 return (
                   <div key={variant.id} style={{ 
