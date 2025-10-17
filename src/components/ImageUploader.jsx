@@ -1,10 +1,19 @@
 import { useState } from 'react'
 
 export default function ImageUploader({ value, onChange }) {
-  const [uploading, setUploading] = useState(false)
+  const [preview, setPreview] = useState(value || '')
   const [error, setError] = useState('')
 
-  async function handleFileUpload(e) {
+  function handleUrlChange(e) {
+    const url = e.target.value
+    setPreview(url)
+    onChange(url)
+    
+    // Limpiar error si había
+    if (error) setError('')
+  }
+
+  function handleFileSelect(e) {
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -20,99 +29,102 @@ export default function ImageUploader({ value, onChange }) {
       return
     }
 
-    setUploading(true)
     setError('')
-
-    try {
-      // Subir a ImgBB (servicio gratuito)
-      const formData = new FormData()
-      formData.append('image', file)
-      
-      // API key pública de ImgBB (deberías crear tu propia cuenta gratuita)
-      const apiKey = '8fb7f6c65558b3fd7a1e4de8f3e3b0c1' // Cambiar por tu propia API key
-      
-      const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
-        method: 'POST',
-        body: formData
-      })
-
-      const data = await response.json()
-      
-      if (data.success) {
-        onChange(data.data.url)
-        setError('')
-      } else {
-        setError('Error al subir imagen. Intenta con URL directa.')
-      }
-    } catch (err) {
-      console.error('Error uploading:', err)
-      setError('Error al subir. Intenta con URL directa.')
-    } finally {
-      setUploading(false)
+    
+    // Mostrar preview local
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      setPreview(event.target.result)
+      onChange(event.target.result)
     }
+    reader.readAsDataURL(file)
   }
 
   return (
     <div>
-      {/* Subir archivo */}
-      <div style={{ marginBottom:12 }}>
-        <label 
-          htmlFor="file-upload"
-          style={{
-            display:'block',
-            width:'100%',
-            padding:'16px',
-            background:'white',
-            borderRadius:12,
-            border:'2px dashed var(--kivi-green)',
-            textAlign:'center',
-            cursor: uploading ? 'wait' : 'pointer',
-            transition:'all 0.2s',
-            fontWeight:600
-          }}
-          onMouseOver={e => !uploading && (e.target.style.background = 'var(--kivi-cream)')}
-          onMouseOut={e => !uploading && (e.target.style.background = 'white')}
-        >
-          {uploading ? '⏳ Subiendo...' : '📤 Subir imagen desde tu dispositivo'}
-        </label>
-        <input
-          id="file-upload"
-          type="file"
-          accept="image/*"
-          onChange={handleFileUpload}
-          disabled={uploading}
-          style={{ display:'none' }}
-        />
-      </div>
+      {/* Preview de la imagen */}
+      {preview && (
+        <div style={{ marginBottom: 16 }}>
+          <img 
+            src={preview} 
+            alt="Preview" 
+            style={{ 
+              width: '100%', 
+              maxWidth: 300,
+              height: 'auto',
+              borderRadius: 12,
+              border: '2px solid var(--kivi-green-soft)',
+              objectFit: 'cover'
+            }}
+            onError={() => {
+              setError('No se pudo cargar la imagen. Verifica la URL.')
+            }}
+          />
+        </div>
+      )}
 
-      {/* O URL directa */}
-      <div style={{ textAlign:'center', margin:'12px 0', opacity:0.6, fontSize:13 }}>
-        — o —
-      </div>
-
-      <div>
-        <label style={{ display:'block', marginBottom:6, fontSize:13, fontWeight:600 }}>
-          Pegar URL de imagen
+      {/* Input URL */}
+      <div style={{ marginBottom: 12 }}>
+        <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>
+          🔗 Pegar URL de imagen
         </label>
         <input
           type="url"
           className="input"
           placeholder="https://ejemplo.com/imagen.jpg"
           value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
-          style={{ width:'100%' }}
+          onChange={handleUrlChange}
+          style={{ width: '100%' }}
         />
+      </div>
+
+      {/* O separador */}
+      <div style={{ textAlign: 'center', margin: '12px 0', opacity: 0.6, fontSize: 13 }}>
+        — o —
+      </div>
+
+      {/* Subir desde dispositivo (solo para preview local) */}
+      <div style={{ marginBottom: 12 }}>
+        <label 
+          htmlFor="file-upload"
+          style={{
+            display: 'block',
+            width: '100%',
+            padding: '16px',
+            background: 'white',
+            borderRadius: 12,
+            border: '2px dashed var(--kivi-green)',
+            textAlign: 'center',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            fontWeight: 600
+          }}
+          onMouseOver={e => e.target.style.background = 'var(--kivi-cream)'}
+          onMouseOut={e => e.target.style.background = 'white'}
+        >
+          📤 Subir imagen desde tu dispositivo
+        </label>
+        <input
+          id="file-upload"
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          style={{ display: 'none' }}
+        />
+        <div style={{ fontSize: 11, color: '#999', marginTop: 6, textAlign: 'center' }}>
+          ⚠️ Nota: Esto guardará la imagen en la base de datos (puede ser pesado). Recomendamos usar URLs de servicios como Imgur o Google Drive.
+        </div>
       </div>
 
       {/* Mensaje de error */}
       {error && (
         <div style={{ 
-          marginTop:12, 
-          padding:12, 
-          background:'#ffebee', 
-          borderRadius:8, 
-          color:'#c62828',
-          fontSize:13
+          marginTop: 12, 
+          padding: 12, 
+          background: '#ffebee', 
+          borderRadius: 8, 
+          color: '#c62828',
+          fontSize: 13
         }}>
           ⚠️ {error}
         </div>
@@ -120,22 +132,30 @@ export default function ImageUploader({ value, onChange }) {
 
       {/* Ayuda */}
       <div style={{ 
-        marginTop:12, 
-        padding:12, 
-        background:'rgba(255,255,255,0.7)', 
-        borderRadius:8, 
-        fontSize:12,
-        opacity:0.8
+        marginTop: 12, 
+        padding: 12, 
+        background: 'rgba(255,255,255,0.7)', 
+        borderRadius: 8, 
+        fontSize: 12,
+        opacity: 0.8
       }}>
-        💡 <strong>Consejo:</strong> Puedes subir una imagen directamente o pegar un enlace de servicios como{' '}
-        <a href="https://imgbb.com" target="_blank" rel="noopener noreferrer" style={{ color:'var(--kivi-green-dark)', fontWeight:600 }}>
-          ImgBB
-        </a>,{' '}
-        <a href="https://imgur.com" target="_blank" rel="noopener noreferrer" style={{ color:'var(--kivi-green-dark)', fontWeight:600 }}>
-          Imgur
-        </a> o Google Drive (enlace público).
+        💡 <strong>Cómo obtener URL de imagen:</strong>
+        <ul style={{ margin: '8px 0 0 0', paddingLeft: 20, lineHeight: 1.6 }}>
+          <li>
+            <a href="https://imgur.com/upload" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--kivi-green-dark)', fontWeight: 600 }}>
+              Imgur
+            </a> - Sube gratis, clic derecho → "Copiar enlace de imagen"
+          </li>
+          <li>
+            <a href="https://imgbb.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--kivi-green-dark)', fontWeight: 600 }}>
+              ImgBB
+            </a> - Sube gratis, copia la URL directa
+          </li>
+          <li>
+            <strong>Google Drive</strong> - Sube imagen, clic derecho → "Obtener enlace" (asegúrate que sea público)
+          </li>
+        </ul>
       </div>
     </div>
   )
 }
-
