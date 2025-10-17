@@ -603,51 +603,51 @@ function ProductCard({ product }) {
           )}
         </div>
 
-      {/* Variantes - siempre mostradas */}
-      {product.variants && product.variants.length > 0 && (
-        <div style={{ 
-          marginTop: 16, 
-          paddingTop: 16, 
-          borderTop: '1px solid #E8E8E8'
-        }}
-        >
+        {/* Variantes - siempre mostradas */}
+        {product.variants && product.variants.length > 0 && (
           <div style={{ 
-            fontSize: 11, 
-            fontWeight: 700, 
-            marginBottom: 8,
-            color: '#888',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
+            marginTop: 16, 
+            paddingTop: 16, 
+            borderTop: '1px solid #E8E8E8'
           }}>
-            Opciones
-          </div>
-          {product.variants.filter(v => v.active).map(variant => (
-            <div key={variant.id} style={{ 
-              background: '#FAFAFA', 
-              padding: '8px 10px', 
-              borderRadius: 6,
-              marginBottom: 6,
-              fontSize: 13
+            <div style={{ 
+              fontSize: 11, 
+              fontWeight: 700, 
+              marginBottom: 8,
+              color: '#888',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
             }}>
-              <div style={{ fontWeight: 700, color: '#000', marginBottom: 2 }}>
-                {variant.label}
-              </div>
-              {variant.price_tiers && variant.price_tiers.length > 0 && (
-                <div style={{ fontSize: 12, color: '#666' }}>
-                  {variant.price_tiers.map((tier, idx) => (
-                    <div key={idx} style={{ marginTop: 2 }}>
-                      {tier.min_qty > 1 && <span>Desde {tier.min_qty} {tier.unit}: </span>}
-                      <span style={{ fontWeight: 700, color: '#88C4A8' }}>
-                        ${tier.sale_price?.toLocaleString('es-CL')}/{tier.unit}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              Opciones
             </div>
-          ))}
-        </div>
-      )}
+            {product.variants.filter(v => v.active).map(variant => (
+              <div key={variant.id} style={{ 
+                background: '#FAFAFA', 
+                padding: '8px 10px', 
+                borderRadius: 6,
+                marginBottom: 6,
+                fontSize: 13
+              }}>
+                <div style={{ fontWeight: 700, color: '#000', marginBottom: 2 }}>
+                  {variant.label}
+                </div>
+                {variant.price_tiers && variant.price_tiers.length > 0 && (
+                  <div style={{ fontSize: 12, color: '#666' }}>
+                    {variant.price_tiers.map((tier, idx) => (
+                      <div key={idx} style={{ marginTop: 2 }}>
+                        {tier.min_qty > 1 && <span>Desde {tier.min_qty} {tier.unit}: </span>}
+                        <span style={{ fontWeight: 700, color: '#88C4A8' }}>
+                          ${tier.sale_price?.toLocaleString('es-CL')}/{tier.unit}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
