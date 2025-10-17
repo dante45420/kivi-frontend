@@ -3,10 +3,10 @@ const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 export async function apiFetch(path, { method = 'GET', body } = {}) {
   const headers = { 'Content-Type': 'application/json' }
   
-  // Obtener token del localStorage y enviarlo como X-Token (el backend espera este header)
+  // Obtener token del localStorage y enviarlo como X-API-Token
   const token = localStorage.getItem('kivi_token')
   if (token) {
-    headers['X-Token'] = token
+    headers['X-API-Token'] = token
   }
   
   const res = await fetch(`${baseUrl}${path}`, {
