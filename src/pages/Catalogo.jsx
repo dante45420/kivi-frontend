@@ -648,7 +648,7 @@ function ProductCard({ product }) {
               {product.variants
                 .filter(v => v.active)
                 .sort((a, b) => {
-                  // Ordenar por precio de menor a mayor
+                  // Ordenar por precio de menor a mayor (más barato a la izquierda)
                   const priceA = a.price_tiers?.[0]?.sale_price || 0
                   const priceB = b.price_tiers?.[0]?.sale_price || 0
                   return priceA - priceB
@@ -658,26 +658,31 @@ function ProductCard({ product }) {
                 return (
                   <div key={variant.id} style={{ 
                     background: 'var(--kivi-cream)', 
-                    padding: '12px 16px', 
-                    borderRadius: 12,
+                    padding: '8px 10px', 
+                    borderRadius: 8,
                     textAlign: 'center',
                     border: '2px solid var(--kivi-green)',
-                    minWidth: 100,
+                    width: 'fit-content',
+                    minWidth: 70,
+                    maxWidth: 90,
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
-                    gap: 6
+                    gap: 4
                   }}>
                     <div style={{ 
                       fontWeight: 700, 
                       color: '#000', 
-                      fontSize: 14
+                      fontSize: 12,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
                     }}>
                       {variant.label}
                     </div>
                     {mainTier && (
                       <div style={{ 
-                        fontSize: 16, 
+                        fontSize: 14, 
                         fontWeight: 800, 
                         color: 'var(--kivi-green-dark)'
                       }}>
@@ -685,8 +690,8 @@ function ProductCard({ product }) {
                       </div>
                     )}
                     {variant.price_tiers && variant.price_tiers.length > 1 && (
-                      <div style={{ fontSize: 10, color: '#999', fontStyle: 'italic' }}>
-                        +{variant.price_tiers.length - 1} más
+                      <div style={{ fontSize: 9, color: '#999', fontStyle: 'italic' }}>
+                        +{variant.price_tiers.length - 1}
                       </div>
                     )}
                   </div>

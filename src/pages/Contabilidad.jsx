@@ -374,8 +374,8 @@ export default function Contabilidad(){
                   style={{ width:'100%', padding:'12px 16px', borderRadius:12 }}
                 >
                   <option value="">Seleccionar cliente...</option>
-                  {customers.map(c=> <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+            {customers.map(c=> <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
 
                 <input 
                   className="input" 
