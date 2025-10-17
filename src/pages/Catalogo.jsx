@@ -95,7 +95,7 @@ export default function Catalogo() {
               src="/kivi-logo.png" 
               alt="Kivi Logo" 
               style={{ 
-                maxWidth: 300, 
+                maxWidth: 280, 
                 width: '100%',
                 height: 'auto'
               }}

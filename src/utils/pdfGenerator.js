@@ -56,7 +56,7 @@ export async function generateCatalogPDF(products) {
     // Logo
     if (logoImg) {
       try {
-        const logoWidth = 45
+        const logoWidth = 50
         const logoHeight = (logoImg.height * logoWidth) / logoImg.width
         doc.addImage(logoImg, 'PNG', (pageWidth - logoWidth) / 2, 15, logoWidth, logoHeight)
         
@@ -215,9 +215,9 @@ export async function generateCatalogPDF(products) {
         : product.name
       doc.text(displayName, xPos, currentY + 5)
 
-      let varY = currentY + 5
+      let varY = currentY + 11
 
-      // Variantes o precio - AL LADO del nombre, más grandes
+      // Variantes o precio - debajo del nombre con mismo formato
       const hasVariants = product.variants && product.variants.filter(v => v.active).length > 0
       
       if (hasVariants) {
@@ -226,9 +226,6 @@ export async function generateCatalogPDF(products) {
         doc.setFont('helvetica', 'normal')
         doc.setTextColor(80, 80, 80)
         
-        let xOffset = xPos
-        varY += 7
-        
         activeVariants.forEach((variant, idx) => {
           if (variant.price_tiers && variant.price_tiers.length > 0) {
             variant.price_tiers.forEach(tier => {
@@ -236,28 +233,28 @@ export async function generateCatalogPDF(products) {
               const tierText = tier.min_qty > 1 
                 ? `${variant.label}(${tier.min_qty}+): $${tier.sale_price?.toLocaleString('es-CL')}/${unit}`
                 : `${variant.label}: $${tier.sale_price?.toLocaleString('es-CL')}/${unit}`
-              doc.text(tierText, xOffset, varY)
+              doc.text(tierText, xPos, varY)
               varY += 5.5
             })
           }
         })
       } else {
-        // Precio base al lado del nombre si NO tiene variantes
+        // Precio base debajo del nombre con MISMO formato que variantes
         if (price) {
-          doc.setFontSize(11)
-          doc.setFont('helvetica', 'bold')
+          doc.setFontSize(10.5)
+          doc.setFont('helvetica', 'normal')
           doc.setTextColor(80, 80, 80)
           const unit = price.unit === 'unit' ? 'unidad' : price.unit
           const priceText = `$${price.sale_price?.toLocaleString('es-CL')}/${unit}`
-          doc.text(priceText, xPos, varY + 7)
-          varY += 7
+          doc.text(priceText, xPos, varY)
+          varY += 5.5
         }
       }
 
-      // Línea divisoria sutil entre productos
+      // Línea divisoria sutil entre productos - mismo espacio para todos
       doc.setDrawColor(220, 220, 220)
       doc.setLineWidth(0.2)
-      doc.line(xPos, currentY + (varY - currentY) + 2, xPos + columnWidth, currentY + (varY - currentY) + 2)
+      doc.line(xPos, varY + 1, xPos + columnWidth, varY + 1)
 
       // Cambiar de columna
       column++
