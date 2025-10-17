@@ -3,305 +3,454 @@ import { getKpisOverview, getTopProducts } from '../../api/adminKpis'
 import '../../styles/globals.css'
 
 export default function KPIs() {
-  const [loading, setLoading] = useState(true)
-  const [kpis, setKpis] = useState(null)
+  const [mode, setMode] = useState('tradicional') // 'tradicional' | 'b2b'
+  const [loading, setLoading] = useState(false)
+  
+  // KPIs data
+  const [ticketData, setTicketData] = useState(null)
+  const [recompraData, setRecompraData] = useState(null)
+  const [clientesData, setClientesData] = useState(null)
   const [topProducts, setTopProducts] = useState([])
   
-  // Filtros
-  const [dateFrom, setDateFrom] = useState('')
-  const [dateTo, setDateTo] = useState('')
-  const [recompraDays, setRecompraDays] = useState(15)
-  const [activoDays, setActivoDays] = useState(15)
+  // Filtros individuales por KPI
+  const [ticketFilters, setTicketFilters] = useState({ date_from: '', date_to: '' })
+  const [recompraFilters, setRecompraFilters] = useState({ date_from: '', date_to: '', days: 15 })
+  const [clientesFilters, setClientesFilters] = useState({ days: 15 })
+  const [topFilters, setTopFilters] = useState({ date_from: '', date_to: '', limit: 10 })
 
-  async function loadData() {
-    setLoading(true)
+  // Carga individual de cada KPI
+  async function loadTicket() {
     try {
-      const params = {
-        recompra_days: recompraDays,
-        activo_days: activoDays
-      }
-      if (dateFrom) params.date_from = dateFrom
-      if (dateTo) params.date_to = dateTo
-      
-      const [kpisData, topData] = await Promise.all([
-        getKpisOverview(params),
-        getTopProducts({ ...params, limit: 10 })
-      ])
-      
-      setKpis(kpisData)
-      setTopProducts(topData)
+      const params = { ...ticketFilters }
+      const data = await getKpisOverview(params)
+      setTicketData(data.ticket_promedio)
     } catch (e) {
-      alert('Error al cargar KPIs: ' + e.message)
-    } finally {
-      setLoading(false)
+      console.error('Error ticket:', e)
     }
   }
 
+  async function loadRecompra() {
+    try {
+      const params = { 
+        date_from: recompraFilters.date_from,
+        date_to: recompraFilters.date_to,
+        recompra_days: recompraFilters.days 
+      }
+      const data = await getKpisOverview(params)
+      setRecompraData(data.tasa_recompra)
+    } catch (e) {
+      console.error('Error recompra:', e)
+    }
+  }
+
+  async function loadClientes() {
+    try {
+      const params = { activo_days: clientesFilters.days }
+      const data = await getKpisOverview(params)
+      setClientesData(data.clientes)
+    } catch (e) {
+      console.error('Error clientes:', e)
+    }
+  }
+
+  async function loadTop() {
+    try {
+      const data = await getTopProducts({ 
+        ...topFilters,
+        limit: topFilters.limit 
+      })
+      setTopProducts(data)
+    } catch (e) {
+      console.error('Error top products:', e)
+    }
+  }
+
+  // Cargar todos al inicio
   useEffect(() => {
-    loadData()
+    setLoading(true)
+    Promise.all([loadTicket(), loadRecompra(), loadClientes(), loadTop()])
+      .finally(() => setLoading(false))
   }, [])
 
   if (loading) {
     return (
-      <div style={{ padding: 40, textAlign: 'center' }}>
-        <div style={{ fontSize: 18, color: 'var(--kivi-text)', opacity: 0.6 }}>
-          Cargando KPIs...
-        </div>
+      <div style={{ padding: 60, textAlign: 'center' }}>
+        <div style={{ fontSize: 16, opacity: 0.5 }}>Cargando...</div>
       </div>
     )
   }
 
   return (
-    <div style={{ padding: '20px', maxWidth: 1400, margin: '0 auto' }}>
-      {/* Header */}
-      <div style={{ marginBottom: 32 }}>
-        <h1 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 8px 0', color: 'var(--kivi-text-dark)' }}>
-          📊 KPIs del Negocio
+    <div style={{ padding: '20px 20px 100px 20px', maxWidth: 1400, margin: '0 auto' }}>
+      {/* Header minimalista */}
+      <div style={{ marginBottom: 40, textAlign: 'center' }}>
+        <h1 style={{ 
+          fontSize: 28, 
+          fontWeight: 800, 
+          margin: 0, 
+          color: 'var(--kivi-text-dark)',
+          letterSpacing: '-0.5px'
+        }}>
+          KPIs
         </h1>
-        <p style={{ margin: 0, opacity: 0.7, fontSize: 16 }}>
-          Métricas clave de rendimiento
-        </p>
       </div>
 
-      {/* Filtros */}
-      <div style={{ 
-        background: 'white', 
-        padding: 24, 
-        borderRadius: 20, 
-        marginBottom: 28,
-        boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-      }}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700 }}>⚙️ Filtros</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
-          <div>
-            <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>
-              Desde
-            </label>
-            <input
-              type="date"
-              className="input"
-              value={dateFrom}
-              onChange={e => setDateFrom(e.target.value)}
-              style={{ width: '100%' }}
-            />
-          </div>
-          
-          <div>
-            <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>
-              Hasta
-            </label>
-            <input
-              type="date"
-              className="input"
-              value={dateTo}
-              onChange={e => setDateTo(e.target.value)}
-              style={{ width: '100%' }}
-            />
-          </div>
-          
-          <div>
-            <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>
-              Días para recompra
-            </label>
-            <input
-              type="number"
-              className="input"
-              value={recompraDays}
-              onChange={e => setRecompraDays(parseInt(e.target.value) || 15)}
-              style={{ width: '100%' }}
-              min="1"
-            />
-          </div>
-          
-          <div>
-            <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>
-              Días cliente activo
-            </label>
-            <input
-              type="number"
-              className="input"
-              value={activoDays}
-              onChange={e => setActivoDays(parseInt(e.target.value) || 15)}
-              style={{ width: '100%' }}
-              min="1"
-            />
-          </div>
-        </div>
+      {/* Grid de KPIs */}
+      <div style={{ display: 'grid', gap: 24, marginBottom: 32 }}>
         
-        <button
-          className="button"
-          onClick={loadData}
-          style={{ marginTop: 16, background: 'var(--kivi-green)', fontWeight: 600 }}
-        >
-          🔄 Actualizar
-        </button>
-      </div>
-
-      {/* Tarjetas de KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 20, marginBottom: 28 }}>
-        {/* Ticket Promedio */}
+        {/* TICKET PROMEDIO */}
         <KPICard
-          title="💰 Ticket Promedio"
-          icon="💵"
-          data={kpis?.ticket_promedio}
-          renderContent={(data) => (
-            <>
-              <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--kivi-green-dark)', marginBottom: 12 }}>
-                ${data.total?.toLocaleString('es-CL') || 0}
-              </div>
-              <div style={{ fontSize: 14, marginBottom: 8 }}>
-                <strong>Utilidad:</strong> ${data.utilidad?.toLocaleString('es-CL') || 0} 
-                <span style={{ marginLeft: 8, color: 'var(--kivi-green-dark)', fontWeight: 700 }}>
-                  ({data.margen_utilidad_porcentaje || 0}%)
-                </span>
-              </div>
-              <div style={{ fontSize: 13, opacity: 0.7 }}>
-                📦 {data.num_pedidos || 0} pedidos • 👥 {data.num_clientes || 0} clientes
-              </div>
-              <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>
-                Promedio/pedido: ${data.promedio_por_pedido?.toLocaleString('es-CL') || 0}
-              </div>
-            </>
-          )}
-        />
-
-        {/* Tasa de Recompra */}
-        <KPICard
-          title="🔄 Tasa de Recompra"
-          icon="📈"
-          data={kpis?.tasa_recompra}
-          renderContent={(data) => (
-            <>
-              <div style={{ fontSize: 48, fontWeight: 800, color: 'var(--kivi-green-dark)', marginBottom: 12 }}>
-                {data.tasa_porcentaje || 0}%
-              </div>
-              <div style={{ fontSize: 14, marginBottom: 8 }}>
-                {data.recompraron || 0} de {data.total_clientes || 0} clientes
-              </div>
-              <div style={{ fontSize: 13, opacity: 0.7 }}>
-                Periodo: {data.plazo_dias || 15} días
-              </div>
-            </>
-          )}
-        />
-
-        {/* Clientes Activos */}
-        <KPICard
-          title="👥 Clientes Activos"
-          icon="✅"
-          data={kpis?.clientes}
-          renderContent={(data) => (
-            <>
-              <div style={{ fontSize: 48, fontWeight: 800, color: 'var(--kivi-green-dark)', marginBottom: 12 }}>
-                {data.activos || 0}
-              </div>
-              <div style={{ fontSize: 14, marginBottom: 8 }}>
-                <strong>{data.tasa_actividad_porcentaje || 0}%</strong> del total histórico
-              </div>
-              <div style={{ fontSize: 13, opacity: 0.7 }}>
-                Total histórico: {data.total_historico || 0}
-              </div>
-              <div style={{ fontSize: 13, opacity: 0.7, marginTop: 4 }}>
-                🆕 {data.nuevos_mes || 0} nuevos este mes
-              </div>
-              <div style={{ fontSize: 12, opacity: 0.6, marginTop: 8 }}>
-                (Últimos {data.filtro_dias || 15} días)
-              </div>
-            </>
-          )}
-        />
-      </div>
-
-      {/* Top Productos */}
-      <div style={{ 
-        background: 'white', 
-        padding: 24, 
-        borderRadius: 20, 
-        boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-      }}>
-        <h3 style={{ margin: '0 0 20px 0', fontSize: 18, fontWeight: 700 }}>
-          🏆 Top 10 Productos
-        </h3>
-        
-        {topProducts.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: 40, opacity: 0.5 }}>
-            No hay datos en el periodo seleccionado
-          </div>
-        ) : (
-          <div style={{ display: 'grid', gap: 12 }}>
-            {topProducts.map((product, idx) => (
-              <div
-                key={product.product_id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: 16,
-                  background: idx < 3 ? 'var(--kivi-cream)' : '#f8f8f8',
-                  borderRadius: 12,
-                  border: idx < 3 ? '2px solid var(--kivi-green-soft)' : 'none'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <div style={{ 
-                    fontSize: 20, 
-                    fontWeight: 800, 
-                    color: idx < 3 ? 'var(--kivi-green-dark)' : '#999',
-                    minWidth: 30
-                  }}>
-                    #{idx + 1}
+          title="Ticket Promedio"
+          emoji="💰"
+          filters={
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <input
+                type="date"
+                value={ticketFilters.date_from}
+                onChange={e => setTicketFilters(v => ({ ...v, date_from: e.target.value }))}
+                placeholder="Desde"
+                style={inputStyle}
+              />
+              <input
+                type="date"
+                value={ticketFilters.date_to}
+                onChange={e => setTicketFilters(v => ({ ...v, date_to: e.target.value }))}
+                placeholder="Hasta"
+                style={inputStyle}
+              />
+              <button onClick={loadTicket} style={buttonStyle}>
+                Actualizar
+              </button>
+            </div>
+          }
+          content={
+            ticketData ? (
+              <div style={{ display: 'grid', gap: 16 }}>
+                <div>
+                  <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--kivi-green-dark)' }}>
+                    ${ticketData.total?.toLocaleString('es-CL') || 0}
+                  </div>
+                  <div style={{ fontSize: 13, opacity: 0.6, marginTop: 4 }}>total promedio</div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 14 }}>
+                  <div>
+                    <span style={{ opacity: 0.6 }}>Utilidad:</span>
+                    <div style={{ fontWeight: 700, color: 'var(--kivi-green-dark)' }}>
+                      ${ticketData.utilidad?.toLocaleString('es-CL') || 0}
+                    </div>
                   </div>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--kivi-text-dark)' }}>
-                      {product.product_name}
-                    </div>
-                    <div style={{ fontSize: 13, opacity: 0.7, marginTop: 2 }}>
-                      {product.cantidad_vendida?.toFixed(1)} unidades vendidas
+                    <span style={{ opacity: 0.6 }}>Margen:</span>
+                    <div style={{ fontWeight: 700, color: 'var(--kivi-green-dark)' }}>
+                      {ticketData.margen_utilidad_porcentaje || 0}%
                     </div>
                   </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--kivi-green-dark)' }}>
-                    ${product.ingresos_totales?.toLocaleString('es-CL')}
+                  <div>
+                    <span style={{ opacity: 0.6 }}>Pedidos:</span>
+                    <div style={{ fontWeight: 700 }}>{ticketData.num_pedidos || 0}</div>
                   </div>
-                  <div style={{ fontSize: 12, opacity: 0.6 }}>
-                    ingresos
+                  <div>
+                    <span style={{ opacity: 0.6 }}>Clientes:</span>
+                    <div style={{ fontWeight: 700 }}>{ticketData.num_clientes || 0}</div>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
+            ) : (
+              <div style={{ opacity: 0.5, fontSize: 14 }}>Sin datos</div>
+            )
+          }
+        />
+
+        {/* TASA DE RECOMPRA */}
+        <KPICard
+          title="Tasa de Recompra"
+          emoji="🔄"
+          filters={
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+              <input
+                type="date"
+                value={recompraFilters.date_from}
+                onChange={e => setRecompraFilters(v => ({ ...v, date_from: e.target.value }))}
+                placeholder="Desde"
+                style={inputStyle}
+              />
+              <input
+                type="date"
+                value={recompraFilters.date_to}
+                onChange={e => setRecompraFilters(v => ({ ...v, date_to: e.target.value }))}
+                placeholder="Hasta"
+                style={inputStyle}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="number"
+                  value={recompraFilters.days}
+                  onChange={e => setRecompraFilters(v => ({ ...v, days: parseInt(e.target.value) || 15 }))}
+                  placeholder="Días"
+                  min="1"
+                  style={{ ...inputStyle, width: 70 }}
+                />
+                <span style={{ fontSize: 13, opacity: 0.6, whiteSpace: 'nowrap' }}>días</span>
+              </div>
+              <button onClick={loadRecompra} style={buttonStyle}>
+                Actualizar
+              </button>
+            </div>
+          }
+          content={
+            recompraData ? (
+              <div style={{ display: 'grid', gap: 16 }}>
+                <div>
+                  <div style={{ fontSize: 48, fontWeight: 800, color: 'var(--kivi-green-dark)' }}>
+                    {recompraData.tasa_porcentaje || 0}%
+                  </div>
+                  <div style={{ fontSize: 13, opacity: 0.6, marginTop: 4 }}>
+                    {recompraData.recompraron || 0} de {recompraData.total_clientes || 0} clientes recompraron
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ opacity: 0.5, fontSize: 14 }}>Sin datos</div>
+            )
+          }
+        />
+
+        {/* CLIENTES ACTIVOS */}
+        <KPICard
+          title="Clientes Activos"
+          emoji="👥"
+          filters={
+            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <input
+                  type="number"
+                  value={clientesFilters.days}
+                  onChange={e => setClientesFilters({ days: parseInt(e.target.value) || 15 })}
+                  placeholder="Días"
+                  min="1"
+                  style={{ ...inputStyle, width: 70 }}
+                />
+                <span style={{ fontSize: 13, opacity: 0.6, whiteSpace: 'nowrap' }}>días</span>
+              </div>
+              <button onClick={loadClientes} style={buttonStyle}>
+                Actualizar
+              </button>
+            </div>
+          }
+          content={
+            clientesData ? (
+              <div style={{ display: 'grid', gap: 16 }}>
+                <div>
+                  <div style={{ fontSize: 48, fontWeight: 800, color: 'var(--kivi-green-dark)' }}>
+                    {clientesData.activos || 0}
+                  </div>
+                  <div style={{ fontSize: 13, opacity: 0.6, marginTop: 4 }}>
+                    {clientesData.tasa_actividad_porcentaje || 0}% del total histórico ({clientesData.total_historico || 0})
+                  </div>
+                </div>
+                <div style={{ fontSize: 14 }}>
+                  <span style={{ opacity: 0.6 }}>Nuevos este mes:</span>
+                  <span style={{ fontWeight: 700, marginLeft: 8 }}>{clientesData.nuevos_mes || 0}</span>
+                </div>
+              </div>
+            ) : (
+              <div style={{ opacity: 0.5, fontSize: 14 }}>Sin datos</div>
+            )
+          }
+        />
+
+        {/* TOP PRODUCTOS */}
+        <KPICard
+          title="Top Productos"
+          emoji="🏆"
+          filters={
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+              <input
+                type="date"
+                value={topFilters.date_from}
+                onChange={e => setTopFilters(v => ({ ...v, date_from: e.target.value }))}
+                placeholder="Desde"
+                style={inputStyle}
+              />
+              <input
+                type="date"
+                value={topFilters.date_to}
+                onChange={e => setTopFilters(v => ({ ...v, date_to: e.target.value }))}
+                placeholder="Hasta"
+                style={inputStyle}
+              />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, opacity: 0.6, whiteSpace: 'nowrap' }}>Top</span>
+                <input
+                  type="number"
+                  value={topFilters.limit}
+                  onChange={e => setTopFilters(v => ({ ...v, limit: parseInt(e.target.value) || 10 }))}
+                  min="1"
+                  max="50"
+                  style={{ ...inputStyle, width: 60 }}
+                />
+              </div>
+              <button onClick={loadTop} style={buttonStyle}>
+                Actualizar
+              </button>
+            </div>
+          }
+          content={
+            topProducts.length > 0 ? (
+              <div style={{ display: 'grid', gap: 8 }}>
+                {topProducts.map((product, idx) => (
+                  <div
+                    key={product.product_id}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: 12,
+                      background: idx < 3 ? 'var(--kivi-cream)' : '#fafafa',
+                      borderRadius: 8,
+                      fontSize: 14
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ 
+                        fontWeight: 800, 
+                        color: idx < 3 ? 'var(--kivi-green-dark)' : '#999',
+                        minWidth: 24
+                      }}>
+                        #{idx + 1}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 700 }}>{product.product_name}</div>
+                        <div style={{ fontSize: 12, opacity: 0.6 }}>
+                          {product.cantidad_vendida?.toFixed(1)} unidades
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ fontWeight: 800, color: 'var(--kivi-green-dark)' }}>
+                      ${product.ingresos_totales?.toLocaleString('es-CL')}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ opacity: 0.5, fontSize: 14, textAlign: 'center', padding: 20 }}>
+                No hay datos
+              </div>
+            )
+          }
+        />
+      </div>
+
+      {/* Toggle fijo abajo (centrado) */}
+      <div style={{
+        position: 'fixed',
+        bottom: 20,
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 1000
+      }}>
+        <button
+          onClick={() => setMode(m => m === 'tradicional' ? 'b2b' : 'tradicional')}
+          style={{
+            padding: '14px 32px',
+            background: mode === 'tradicional' ? 'var(--kivi-green)' : 'var(--kivi-blue-soft)',
+            border: 'none',
+            borderRadius: 999,
+            cursor: 'pointer',
+            fontSize: 15,
+            fontWeight: 700,
+            color: '#000',
+            boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8
+          }}
+          onMouseOver={e => e.target.style.transform = 'scale(1.05)'}
+          onMouseOut={e => e.target.style.transform = 'scale(1)'}
+        >
+          {mode === 'tradicional' ? '👤 Clientes Tradicionales' : '🏢 Comerciantes B2B'}
+          <span style={{ opacity: 0.6, fontSize: 13 }}>↔</span>
+        </button>
       </div>
     </div>
   )
 }
 
-// Componente reutilizable para tarjeta de KPI
-function KPICard({ title, icon, data, renderContent }) {
-  if (!data) return null
+// Componente de tarjeta KPI minimalista
+function KPICard({ title, emoji, filters, content }) {
+  const [expanded, setExpanded] = useState(false)
   
   return (
     <div style={{
       background: 'white',
-      padding: 24,
-      borderRadius: 20,
-      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-      border: '2px solid var(--kivi-cream)'
+      borderRadius: 16,
+      overflow: 'hidden',
+      border: '1px solid #e0e0e0',
+      transition: 'all 0.2s'
     }}>
-      <div style={{ 
-        fontSize: 14, 
-        fontWeight: 700, 
-        marginBottom: 16,
-        color: 'var(--kivi-text)',
-        opacity: 0.7,
-        textTransform: 'uppercase',
-        letterSpacing: '0.5px'
-      }}>
-        {title}
+      {/* Header */}
+      <div 
+        onClick={() => setExpanded(!expanded)}
+        style={{
+          padding: '20px 24px',
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: expanded ? 'var(--kivi-cream)' : 'white',
+          transition: 'all 0.2s'
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 24 }}>{emoji}</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--kivi-text-dark)' }}>
+            {title}
+          </span>
+        </div>
+        <span style={{ fontSize: 20, opacity: 0.5, transition: 'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'rotate(0)' }}>
+          ▼
+        </span>
       </div>
-      {renderContent(data)}
+      
+      {/* Content */}
+      <div style={{ padding: '20px 24px' }}>
+        {content}
+      </div>
+      
+      {/* Filtros (colapsables) */}
+      {expanded && (
+        <div style={{
+          padding: '16px 24px',
+          borderTop: '1px solid #e0e0e0',
+          background: '#fafafa'
+        }}>
+          {filters}
+        </div>
+      )}
     </div>
   )
 }
 
+// Estilos compartidos
+const inputStyle = {
+  padding: '8px 12px',
+  border: '1px solid #ddd',
+  borderRadius: 8,
+  fontSize: 13,
+  outline: 'none',
+  transition: 'border 0.2s'
+}
+
+const buttonStyle = {
+  padding: '8px 16px',
+  background: 'var(--kivi-green)',
+  border: 'none',
+  borderRadius: 8,
+  cursor: 'pointer',
+  fontSize: 13,
+  fontWeight: 600,
+  color: '#000',
+  transition: 'all 0.2s',
+  whiteSpace: 'nowrap'
+}
