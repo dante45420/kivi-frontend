@@ -30,5 +30,9 @@ export function createVariantTier(payload){
   return apiFetch('/variants/tiers', { method:'POST', body: payload })
 }
 
+export function updateVariantTier(tierId, payload){
+  return apiFetch(`/variants/tiers/${tierId}`, { method:'PUT', body: payload })
+}
+
 
 

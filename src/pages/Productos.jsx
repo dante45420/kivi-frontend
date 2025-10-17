@@ -55,6 +55,7 @@ export default function Productos() {
   
   async function saveBasic() {
     const payload = { 
+      name: editValues.name,
       default_unit: editValues.default_unit,
       category: editValues.category || null,
       purchase_type: editValues.purchase_type || 'detalle',
@@ -401,6 +402,19 @@ export default function Productos() {
               <div style={{ display:'grid', gap:16 }}>
                 <label style={{ display:'block' }}>
                   <span style={{ display:'block', marginBottom:8, fontSize:14, fontWeight:600, color:'var(--kivi-text)' }}>
+                    Nombre del producto
+                  </span>
+                  <input
+                    className="input"
+                    value={editValues.name}
+                    onChange={e => setEditValues(v => ({ ...v, name: e.target.value }))}
+                    placeholder="Ej: Manzana Fuji"
+                    style={{ width:'100%' }}
+                  />
+                </label>
+
+                <label style={{ display:'block' }}>
+                  <span style={{ display:'block', marginBottom:8, fontSize:14, fontWeight:600, color:'var(--kivi-text)' }}>
                     Unidad de cobro
                   </span>
                   <select 
@@ -633,31 +647,88 @@ export default function Productos() {
                     </div>
                         ) : (
                           <div style={{ display:'grid', gap:12, marginTop:12 }}>
-                            <input 
-                              className="input" 
-                              placeholder="Nombre" 
-                              value={editingVariant.label} 
-                              onChange={e=> setEditingVariant(v=>({ ...v, label:e.target.value }))}
-                            />
-                            <select 
-                              className="input" 
-                              value={editingVariant.active? '1':'0'} 
-                              onChange={e=> setEditingVariant(v=>({ ...v, active:e.target.value==='1' }))}
-                            >
-                              <option value="1">✓ Activa</option>
-                              <option value="0">✗ Inactiva</option>
-                            </select>
+                            <div>
+                              <label style={{ display:'block', marginBottom:6, fontSize:13, fontWeight:600 }}>
+                                Nombre de la variante
+                              </label>
+                              <input 
+                                className="input" 
+                                placeholder="Ej: M, L, Premium" 
+                                value={editingVariant.label} 
+                                onChange={e=> setEditingVariant(v=>({ ...v, label:e.target.value }))}
+                                style={{ width:'100%' }}
+                              />
+                            </div>
+                            
+                            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                              <div>
+                                <label style={{ display:'block', marginBottom:6, fontSize:13, fontWeight:600 }}>
+                                  Cantidad mínima
+                                </label>
+                                <input 
+                                  type="number"
+                                  className="input" 
+                                  placeholder="1" 
+                                  value={editingVariant.min_qty} 
+                                  onChange={e=> setEditingVariant(v=>({ ...v, min_qty:e.target.value }))}
+                                  style={{ width:'100%' }}
+                                />
+                              </div>
+                              
+                              <div>
+                                <label style={{ display:'block', marginBottom:6, fontSize:13, fontWeight:600 }}>
+                                  Precio
+                                </label>
+                                <input 
+                                  type="number"
+                                  className="input" 
+                                  placeholder="$0" 
+                                  value={editingVariant.sale_price} 
+                                  onChange={e=> setEditingVariant(v=>({ ...v, sale_price:e.target.value }))}
+                                  style={{ width:'100%' }}
+                                />
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <label style={{ display:'block', marginBottom:6, fontSize:13, fontWeight:600 }}>
+                                Estado
+                              </label>
+                              <select 
+                                className="input" 
+                                value={editingVariant.active? '1':'0'} 
+                                onChange={e=> setEditingVariant(v=>({ ...v, active:e.target.value==='1' }))}
+                                style={{ width:'100%' }}
+                              >
+                                <option value="1">✓ Activa</option>
+                                <option value="0">✗ Inactiva</option>
+                              </select>
+                            </div>
+                            
                             <button 
                               className="button" 
                               onClick={async()=>{ 
+                                // Actualizar variante (nombre y estado)
                                 await updateVariant(v.id, { label:editingVariant.label, active:editingVariant.active })
+                                
+                                // Actualizar precio (tier)
+                                const tier = tiers[0]
+                                if(tier && editingVariant.sale_price) {
+                                  const { updateVariantTier } = await import('../api/variants')
+                                  await updateVariantTier(tier.id, {
+                                    min_qty: parseFloat(editingVariant.min_qty) || 1,
+                                    sale_price: parseFloat(editingVariant.sale_price) || 0
+                                  })
+                                }
+                                
                                 setEditVariants(await listVariants(editValues.id))
+                                setEditTiers(await listVariantTiers(editValues.id))
                                 setEditingVariantId(null)
                                 alert('✓ Variante actualizada')
                               }}
                               style={{ width:'100%', background:'var(--kivi-green)' }}
                             >
-                              Guardar Cambios
+                              💾 Guardar Cambios
                             </button>
                   </div>
                         )}
