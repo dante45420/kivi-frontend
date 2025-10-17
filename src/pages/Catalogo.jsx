@@ -606,89 +606,79 @@ function ProductCard({ product }) {
       )}
 
       <div style={{ padding: 20 }}>
-        {/* Product Name */}
+        {/* Product Name - Centrado */}
         <h3 style={{ 
           fontSize: 18, 
           fontWeight: 800, 
           margin: '0 0 12px 0',
-          color: '#000'
+          color: '#000',
+          textAlign: 'center'
         }}>
           {product.name}
         </h3>
 
-        {/* Default Price - Siempre mostrar */}
-        {price && (
-          <div style={{ 
-            fontSize: 18, 
-            fontWeight: 700, 
-            color: '#888',
-            marginBottom: 12
-          }}>
-            ${price.sale_price?.toLocaleString('es-CL')}
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#888' }}>
-              /{price.unit === 'unit' ? 'unidad' : price.unit}
-            </span>
-          </div>
-        )}
+        {/* Línea separadora elegante */}
+        <div style={{
+          height: 1,
+          background: 'linear-gradient(90deg, transparent, #A8D5BA, transparent)',
+          marginBottom: 16
+        }} />
 
-        {/* Variantes - cuadrados uno al lado del otro */}
-        {product.variants && product.variants.filter(v => v.active).length > 0 && (
-          <div style={{ 
-            marginTop: 16, 
-            paddingTop: 16, 
-            borderTop: '1px solid #E8E8E8'
-          }}>
+        {/* Mostrar variantes si existen, sino mostrar precio por defecto */}
+        {product.variants && product.variants.filter(v => v.active).length > 0 ? (
+          // Hay variantes - Mostrar opciones
+          <div>
             <div style={{ 
               fontSize: 11, 
               fontWeight: 700, 
-              marginBottom: 10,
+              marginBottom: 12,
               color: '#888',
               textTransform: 'uppercase',
-              letterSpacing: '0.5px'
+              letterSpacing: '0.5px',
+              textAlign: 'center'
             }}>
-              Opciones
+              Opciones ({price?.unit === 'unit' ? 'por unidad' : price?.unit === 'kg' ? 'por kg' : ''})
             </div>
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
-              gap: 8
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              gap: 10
             }}>
               {product.variants.filter(v => v.active).map(variant => {
-                // Tomar el primer price tier como referencia
                 const mainTier = variant.price_tiers?.[0]
                 return (
                   <div key={variant.id} style={{ 
                     background: 'var(--kivi-cream)', 
-                    padding: '10px', 
-                    borderRadius: 8,
+                    padding: '12px 16px', 
+                    borderRadius: 12,
                     textAlign: 'center',
-                    border: '1px solid #E8E8E8',
-                    minHeight: 70,
+                    border: '2px solid var(--kivi-green)',
+                    minWidth: 100,
                     display: 'flex',
                     flexDirection: 'column',
                     justifyContent: 'center',
-                    gap: 4
+                    gap: 6
                   }}>
                     <div style={{ 
                       fontWeight: 700, 
                       color: '#000', 
-                      fontSize: 13,
-                      marginBottom: 2
+                      fontSize: 14
                     }}>
                       {variant.label}
                     </div>
                     {mainTier && (
                       <div style={{ 
-                        fontSize: 15, 
-                        fontWeight: 700, 
-                        color: '#888'
+                        fontSize: 16, 
+                        fontWeight: 800, 
+                        color: 'var(--kivi-green-dark)'
                       }}>
                         ${mainTier.sale_price?.toLocaleString('es-CL')}
                       </div>
                     )}
                     {variant.price_tiers && variant.price_tiers.length > 1 && (
-                      <div style={{ fontSize: 10, color: '#999', marginTop: 2 }}>
-                        + {variant.price_tiers.length - 1} más
+                      <div style={{ fontSize: 10, color: '#999', fontStyle: 'italic' }}>
+                        +{variant.price_tiers.length - 1} más
                       </div>
                     )}
                   </div>
@@ -696,6 +686,29 @@ function ProductCard({ product }) {
               })}
             </div>
           </div>
+        ) : (
+          // No hay variantes - Mostrar solo precio por defecto centrado
+          price && (
+            <div style={{ 
+              textAlign: 'center'
+            }}>
+              <div style={{ 
+                fontSize: 24, 
+                fontWeight: 800, 
+                color: 'var(--kivi-green-dark)',
+                marginBottom: 4
+              }}>
+                ${price.sale_price?.toLocaleString('es-CL')}
+              </div>
+              <div style={{ 
+                fontSize: 13, 
+                fontWeight: 600, 
+                color: '#888'
+              }}>
+                por {price.unit === 'unit' ? 'unidad' : price.unit}
+              </div>
+            </div>
+          )
         )}
       </div>
     </div>
