@@ -34,9 +34,9 @@ export default function MerchantOrders() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending': return '#ff9800'
-      case 'confirmed': return '#2196f3'
+      case 'confirmed': return '#88C4A8'
       case 'preparing': return '#9c27b0'
-      case 'ready': return '#4caf50'
+      case 'ready': return '#88C4A8'
       case 'delivered': return '#00bcd4'
       case 'cancelled': return '#f44336'
       default: return '#666'
@@ -92,7 +92,7 @@ export default function MerchantOrders() {
                 boxShadow: selectedOrder?.id === order.id ? '0 4px 12px rgba(0,0,0,0.15)' : '0 1px 3px rgba(0,0,0,0.05)'
               }}
               onClick={() => setSelectedOrder(selectedOrder?.id === order.id ? null : order)}
-              onMouseEnter={e => e.currentTarget.style.borderColor = '#2196f3'}
+              onMouseEnter={e => e.currentTarget.style.borderColor = '#88C4A8'}
               onMouseLeave={e => e.currentTarget.style.borderColor = '#e0e0e0'}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: 12 }}>
@@ -125,7 +125,7 @@ export default function MerchantOrders() {
               <div style={{ 
                 fontSize: 24, 
                 fontWeight: 700, 
-                color: '#2196f3',
+                color: '#88C4A8',
                 marginBottom: 12
               }}>
                 ${order.total_amount?.toLocaleString('es-CL') || '0'}
@@ -162,7 +162,7 @@ export default function MerchantOrders() {
                             {item.quantity} × ${item.unit_price?.toLocaleString('es-CL')}
                           </div>
                         </div>
-                        <div style={{ fontWeight: 600, color: '#2196f3' }}>
+                        <div style={{ fontWeight: 600, color: '#88C4A8' }}>
                           ${(item.quantity * item.unit_price)?.toLocaleString('es-CL')}
                         </div>
                       </div>

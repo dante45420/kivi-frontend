@@ -37,9 +37,9 @@ export default function AdminPedidosB2B() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'pending': return '#ff9800'
-      case 'confirmed': return '#2196f3'
+      case 'confirmed': return '#88C4A8'
       case 'preparing': return '#9c27b0'
-      case 'ready': return '#4caf50'
+      case 'ready': return '#88C4A8'
       case 'delivered': return '#00bcd4'
       case 'cancelled': return '#f44336'
       default: return '#666'
@@ -173,7 +173,7 @@ export default function AdminPedidosB2B() {
               <div style={{ 
                 fontSize: 24, 
                 fontWeight: 700, 
-                color: '#2196f3',
+                color: '#88C4A8',
                 marginBottom: 16
               }}>
                 Total: ${order.total_amount?.toLocaleString('es-CL') || '0'}
@@ -209,7 +209,7 @@ export default function AdminPedidosB2B() {
                             {item.quantity} {item.unit} × ${item.unit_price?.toLocaleString('es-CL')}
                           </div>
                         </div>
-                        <div style={{ fontWeight: 700, color: '#2196f3', textAlign: 'right' }}>
+                        <div style={{ fontWeight: 700, color: '#88C4A8', textAlign: 'right' }}>
                           ${(item.quantity * item.unit_price)?.toLocaleString('es-CL')}
                         </div>
                       </div>

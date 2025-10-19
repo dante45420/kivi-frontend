@@ -147,7 +147,7 @@ export default function Merchants() {
         <button
           className="button"
           onClick={openCreate}
-          style={{ background: 'var(--kivi-green)', fontWeight: 700, padding: '12px 24px' }}
+          style={{ background: '#88C4A8', fontWeight: 700, padding: '12px 24px' }}
         >
           ➕ Crear Comerciante
         </button>
@@ -184,8 +184,8 @@ export default function Merchants() {
         </div>
       ) : (
         <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e0e0e0', overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '900px' }}>
               <thead>
                 <tr style={{ background: 'var(--kivi-cream)' }}>
                   <th style={thStyle}>Estado</th>
@@ -230,7 +230,7 @@ export default function Merchants() {
                           onClick={() => openEdit(merchant)}
                           style={{
                             padding: '6px 12px',
-                            background: 'var(--kivi-green)',
+                            background: '#88C4A8',
                             border: 'none',
                             borderRadius: 8,
                             cursor: 'pointer',
@@ -244,7 +244,7 @@ export default function Merchants() {
                           onClick={() => handleToggle(merchant)}
                           style={{
                             padding: '6px 12px',
-                            background: merchant.is_active ? '#ff9800' : '#4caf50',
+                            background: merchant.is_active ? '#ff9800' : '#88C4A8',
                             border: 'none',
                             borderRadius: 8,
                             cursor: 'pointer',
@@ -288,7 +288,7 @@ export default function Merchants() {
             onClick={e => e.stopPropagation()} 
             style={{ maxWidth: 600, borderRadius: 20, maxHeight: '90vh', overflowY: 'auto' }}
           >
-            <h3 style={{ margin: '0 0 24px 0', fontSize: 22, fontWeight: 700 }}>
+            <h3 style={{ margin: '0 0 24px 0', fontSize: 22, fontWeight: 700, color: '#88C4A8' }}>
               {editMode === 'create' ? '➕ Crear Comerciante' : '✏️ Editar Comerciante'}
             </h3>
 
@@ -422,7 +422,7 @@ export default function Merchants() {
               <button
                 className="button"
                 onClick={handleSave}
-                style={{ flex: 1, background: 'var(--kivi-green)', fontWeight: 700, padding: '14px' }}
+                style={{ flex: 1, background: '#88C4A8', fontWeight: 700, padding: '14px' }}
               >
                 {editMode === 'create' ? '✓ Crear' : '💾 Guardar'}
               </button>

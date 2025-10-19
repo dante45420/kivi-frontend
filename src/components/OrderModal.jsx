@@ -204,7 +204,19 @@ export default function OrderModal({ orderData, onClose, editingCharge, setEditi
                     <span style={{ fontWeight:700, color:'#2e7d32', fontSize:18 }}>
                       ${cust.billed.toLocaleString('es-CL')}
                     </span>
-                    <span style={{ opacity:0.5, fontSize:14 }}>{isCustExpanded ? '▼' : '▶'}</span>
+                    <button
+                      style={{
+                        padding: '2px 8px',
+                        background: isCustExpanded ? '#88C4A8' : '#f5f5f5',
+                        color: isCustExpanded ? 'white' : '#666',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: 600
+                      }}
+                    >
+                      {isCustExpanded ? 'Ocultar' : 'Ver'}
+                    </button>
                   </div>
                 </button>
 

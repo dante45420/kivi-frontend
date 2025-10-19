@@ -167,7 +167,19 @@ export default function CustomerModal({
                       <span style={{ fontWeight:700, fontSize:18 }}>
                         ${ord.billed.toLocaleString('es-CL')}
                       </span>
-                      <span style={{ opacity:0.5, fontSize:14 }}>{isOrdExpanded ? '▼' : '▶'}</span>
+                      <button
+                        style={{
+                          padding: '2px 8px',
+                          background: isOrdExpanded ? '#88C4A8' : '#f5f5f5',
+                          color: isOrdExpanded ? 'white' : '#666',
+                          border: 'none',
+                          borderRadius: '6px',
+                          fontSize: '11px',
+                          fontWeight: 600
+                        }}
+                      >
+                        {isOrdExpanded ? 'Ocultar' : 'Ver'}
+                      </button>
                     </div>
                   </button>
                   

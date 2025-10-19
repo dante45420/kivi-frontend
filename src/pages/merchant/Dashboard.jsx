@@ -234,7 +234,7 @@ export default function MerchantDashboard() {
             fontSize: 14
           }}
         />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <label style={{ fontSize: 14, fontWeight: 600, color: '#666' }}>
             Ordenar por:
           </label>
@@ -333,7 +333,7 @@ export default function MerchantDashboard() {
                           onClick={() => addToCart(product, product.selectedVendor)}
                           style={{
                             padding: '8px 16px',
-                            background: '#4caf50',
+                            background: '#88C4A8',
                             border: 'none',
                             borderRadius: 999,
                             cursor: 'pointer',
@@ -379,7 +379,7 @@ export default function MerchantDashboard() {
                             onClick={() => addToCart(product, vendor)}
                             style={{
                               padding: '8px 16px',
-                              background: '#4caf50',
+                              background: '#88C4A8',
                               border: 'none',
                               borderRadius: 999,
                               cursor: 'pointer',
@@ -668,7 +668,7 @@ export default function MerchantDashboard() {
                     style={{
                       flex: 2,
                       padding: '12px',
-                      background: submitting ? '#ccc' : '#4caf50',
+                      background: submitting ? '#ccc' : '#88C4A8',
                       color: 'white',
                       border: 'none',
                       borderRadius: 8,

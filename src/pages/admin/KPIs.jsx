@@ -130,13 +130,13 @@ export default function KPIs() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'center' }}>
                   <div style={{ borderRight: '2px solid #e0e0e0', paddingRight: 16 }}>
                     <div style={{ fontSize: 13, opacity: 0.6, marginBottom: 4 }}>Total Facturado</div>
-                    <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--kivi-green-dark)' }}>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: '#88C4A8' }}>
                       ${ticketData.total?.toLocaleString('es-CL') || 0}
                     </div>
                   </div>
                   <div>
                     <div style={{ fontSize: 13, opacity: 0.6, marginBottom: 4 }}>Promedio por Pedido</div>
-                    <div style={{ fontSize: 32, fontWeight: 800, color: '#2196f3' }}>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: '#88C4A8' }}>
                       ${ticketData.promedio_por_pedido?.toLocaleString('es-CL') || 0}
                     </div>
                   </div>
@@ -144,13 +144,13 @@ export default function KPIs() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, fontSize: 14, paddingTop: 12, borderTop: '1px solid #e0e0e0' }}>
                   <div>
                     <span style={{ opacity: 0.6, fontSize: 12 }}>Utilidad:</span>
-                    <div style={{ fontWeight: 700, color: 'var(--kivi-green-dark)' }}>
+                    <div style={{ fontWeight: 700, color: '#88C4A8' }}>
                       ${ticketData.utilidad?.toLocaleString('es-CL') || 0}
                     </div>
                   </div>
                   <div>
                     <span style={{ opacity: 0.6, fontSize: 12 }}>Margen:</span>
-                    <div style={{ fontWeight: 700, color: 'var(--kivi-green-dark)' }}>
+                    <div style={{ fontWeight: 700, color: '#88C4A8' }}>
                       {ticketData.margen_utilidad_porcentaje || 0}%
                     </div>
                   </div>
@@ -194,7 +194,7 @@ export default function KPIs() {
                               Promedio: ${cliente.promedio_por_pedido?.toLocaleString('es-CL')}
                             </div>
                           </div>
-                          <div style={{ fontWeight: 700, color: '#2196f3', fontSize: 16 }}>
+                          <div style={{ fontWeight: 700, color: '#88C4A8', fontSize: 16 }}>
                             ${cliente.total?.toLocaleString('es-CL')}
                           </div>
                         </div>
@@ -369,7 +369,7 @@ export default function KPIs() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                         <div style={{ 
                           fontWeight: 800, 
-                          color: idx < 3 ? 'var(--kivi-green-dark)' : '#999',
+                          color: idx < 3 ? '#88C4A8' : '#999',
                           minWidth: 24
                         }}>
                           #{idx + 1}
@@ -393,7 +393,7 @@ export default function KPIs() {
                       </div>
                       <div>
                         <span style={{ opacity: 0.6 }}>Utilidad:</span>
-                        <div style={{ fontWeight: 700, color: product.utilidad >= 0 ? 'var(--kivi-green-dark)' : '#d32f2f' }}>
+                        <div style={{ fontWeight: 700, color: product.utilidad >= 0 ? '#88C4A8' : '#d32f2f' }}>
                           ${product.utilidad?.toLocaleString('es-CL')}
                         </div>
                       </div>
@@ -422,7 +422,7 @@ export default function KPIs() {
           onClick={() => setMode(m => m === 'tradicional' ? 'b2b' : 'tradicional')}
           style={{
             padding: '14px 32px',
-            background: mode === 'tradicional' ? 'var(--kivi-green)' : 'var(--kivi-blue-soft)',
+            background: mode === 'tradicional' ? '#88C4A8' : '#E0E0E0',
             border: 'none',
             borderRadius: 999,
             cursor: 'pointer',
@@ -477,9 +477,20 @@ function KPICard({ title, emoji, filters, content }) {
             {title}
           </span>
         </div>
-        <span style={{ fontSize: 20, opacity: 0.5, transition: 'transform 0.2s', transform: expanded ? 'rotate(180deg)' : 'rotate(0)' }}>
-          ▼
-        </span>
+        <button
+          style={{
+            padding: '4px 12px',
+            background: expanded ? '#88C4A8' : '#f5f5f5',
+            color: expanded ? 'white' : '#666',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '12px',
+            fontWeight: 600
+          }}
+        >
+          {expanded ? 'Ocultar' : 'Ver más'}
+        </button>
       </div>
       
       {/* Content */}
@@ -513,7 +524,7 @@ const inputStyle = {
 
 const buttonStyle = {
   padding: '8px 16px',
-  background: 'var(--kivi-green)',
+  background: '#88C4A8',
   border: 'none',
   borderRadius: 8,
   cursor: 'pointer',

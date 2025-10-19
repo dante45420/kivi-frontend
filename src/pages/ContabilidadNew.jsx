@@ -148,7 +148,7 @@ export default function ContabilidadNew(){
           style={{
             width:'100%',
             padding:'20px',
-            background:'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background:'#88C4A8',
             border:'none',
             borderRadius:20,
             color:'white',
@@ -163,7 +163,19 @@ export default function ContabilidadNew(){
           }}
         >
           <span>💰 Registrar Pago</span>
-          <span style={{ fontSize:16 }}>{showPayments ? '▲' : '▼'}</span>
+          <button
+            style={{
+              padding: '4px 10px',
+              background: showPayments ? '#88C4A8' : '#f5f5f5',
+              color: showPayments ? 'white' : '#666',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: 600
+            }}
+          >
+            {showPayments ? 'Ocultar' : 'Ver pagos'}
+          </button>
         </button>
 
         {showPayments && (
@@ -272,7 +284,7 @@ export default function ContabilidadNew(){
                   width:'100%',
                   padding:'14px',
                   borderRadius:12,
-                  background: (!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount) ? '#e0e0e0' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  background: (!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount) ? '#e0e0e0' : '#88C4A8',
                   color:'white',
                   border:'none',
                   fontSize:16,

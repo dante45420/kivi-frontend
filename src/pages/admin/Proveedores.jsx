@@ -220,14 +220,14 @@ export default function Proveedores() {
           <button
             className="button"
             onClick={() => setVendorModalOpen(true)}
-            style={{ background: '#2196f3', color: 'white', fontWeight: 600, whiteSpace: 'nowrap' }}
+            style={{ background: '#88C4A8', color: 'white', fontWeight: 600, whiteSpace: 'nowrap' }}
           >
             Crear Proveedor
           </button>
           <button
             className="button"
             onClick={openCreate}
-            style={{ background: '#4caf50', color: 'white', fontWeight: 600, whiteSpace: 'nowrap' }}
+            style={{ background: '#88C4A8', color: 'white', fontWeight: 600, whiteSpace: 'nowrap' }}
           >
             Agregar Precio
           </button>
@@ -296,7 +296,7 @@ export default function Proveedores() {
         <button
           className="button"
           onClick={loadData}
-          style={{ marginTop: 16, background: '#4caf50', color: 'white', fontWeight: 600 }}
+          style={{ marginTop: 16, background: '#88C4A8', color: 'white', fontWeight: 600 }}
         >
           Aplicar Filtros
         </button>
@@ -354,12 +354,12 @@ export default function Proveedores() {
                         </span>
                       </td>
                       <td style={tdStyle}>
-                        <span style={{ color: 'var(--kivi-green-dark)', fontWeight: 600 }}>
+                        <span style={{ color: '#88C4A8', fontWeight: 600 }}>
                           +{price.markup_percentage}%
                         </span>
                       </td>
                       <td style={tdStyle}>
-                        <span style={{ fontSize: 16, fontWeight: 800, color: 'var(--kivi-green-dark)' }}>
+                        <span style={{ fontSize: 16, fontWeight: 800, color: '#88C4A8' }}>
                           ${price.final_price?.toLocaleString('es-CL')}
                         </span>
                       </td>
@@ -379,13 +379,13 @@ export default function Proveedores() {
                           onClick={() => handleToggle(price.id)}
                           style={{
                             padding: '6px 12px',
-                            background: price.is_available ? 'var(--kivi-green-soft)' : '#ffcccc',
+                            background: price.is_available ? '#E8F5E9' : '#ffcccc',
                             border: 'none',
                             borderRadius: 8,
                             cursor: 'pointer',
                             fontSize: 12,
                             fontWeight: 600,
-                            color: price.is_available ? 'var(--kivi-green-dark)' : '#c62828',
+                            color: price.is_available ? '#88C4A8' : '#c62828',
                             transition: 'all 0.2s'
                           }}
                         >
@@ -574,12 +574,12 @@ export default function Proveedores() {
                 background: 'var(--kivi-cream)', 
                 padding: 16, 
                 borderRadius: 12,
-                border: '2px solid var(--kivi-green-soft)'
+                border: '2px solid #E8F5E9'
               }}>
                 <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>
                   💰 Precio Final (comerciante paga)
                 </label>
-                <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--kivi-green-dark)' }}>
+                <div style={{ fontSize: 28, fontWeight: 800, color: '#88C4A8' }}>
                   ${editValues.final_price ? parseFloat(editValues.final_price).toLocaleString('es-CL') : 0}
                 </div>
               </div>
@@ -603,7 +603,7 @@ export default function Proveedores() {
               <button
                 className="button"
                 onClick={handleSave}
-                style={{ flex: 1, background: 'var(--kivi-green)', fontWeight: 600 }}
+                style={{ flex: 1, background: '#88C4A8', fontWeight: 600 }}
               >
                 💾 Guardar
               </button>
@@ -659,7 +659,7 @@ export default function Proveedores() {
               <button
                 className="button"
                 onClick={handleCreateVendor}
-                style={{ flex: 1, background: 'var(--kivi-green)', fontWeight: 600 }}
+                style={{ flex: 1, background: '#88C4A8', fontWeight: 600 }}
               >
                 ✓ Crear Proveedor
               </button>
@@ -690,7 +690,7 @@ const thStyle = {
   textTransform: 'uppercase',
   letterSpacing: '0.5px',
   color: 'var(--kivi-text)',
-  borderBottom: '2px solid var(--kivi-green-soft)'
+  borderBottom: '2px solid #E8F5E9'
 }
 
 const tdStyle = {
