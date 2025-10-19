@@ -16,7 +16,7 @@ import AdminKPIs from './pages/admin/KPIs'
 import AdminProveedores from './pages/admin/Proveedores'
 import AdminMerchants from './pages/admin/Merchants'
 import MerchantDashboard from './pages/merchant/Dashboard'
-import { getToken } from './api/auth'
+import { getToken, getUserType } from './api/auth'
 
 // Componente para rutas protegidas
 function ProtectedRoute({ children }) {
@@ -25,6 +25,12 @@ function ProtectedRoute({ children }) {
     return <Navigate to="/login" replace />
   }
   return children
+}
+
+// Función helper para obtener la ruta por defecto según el tipo de usuario
+function getDefaultRoute() {
+  const userType = getUserType()
+  return userType === 'merchant' ? '/merchant/dashboard' : '/productos'
 }
 
 export default function App() {
@@ -47,12 +53,12 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: 'sans-serif', padding: isAuthenticated ? 12 : 0 }}>
-      {isAuthenticated && <Navbar />}
+      {isAuthenticated && getUserType() !== 'merchant' && <Navbar />}
       <Routes>
         {/* Rutas públicas */}
-        <Route path="/" element={isAuthenticated ? <Navigate to="/productos" replace /> : <Catalogo />} />
+        <Route path="/" element={isAuthenticated ? <Navigate to={getDefaultRoute()} replace /> : <Catalogo />} />
         <Route path="/about" element={<About />} />
-        <Route path="/login" element={isAuthenticated ? <Navigate to="/productos" replace /> : <Login />} />
+        <Route path="/login" element={isAuthenticated ? <Navigate to={getDefaultRoute()} replace /> : <Login />} />
         
         {/* Rutas protegidas */}
         <Route path="/productos" element={<ProtectedRoute><Productos /></ProtectedRoute>} />
@@ -71,7 +77,7 @@ export default function App() {
         <Route path="/merchant/dashboard" element={<ProtectedRoute><MerchantDashboard /></ProtectedRoute>} />
         
         {/* Redirección por defecto */}
-        <Route path="*" element={<Navigate to={isAuthenticated ? "/productos" : "/"} replace />} />
+        <Route path="*" element={<Navigate to={isAuthenticated ? getDefaultRoute() : "/"} replace />} />
       </Routes>
     </div>
   )
