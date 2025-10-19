@@ -7,11 +7,12 @@ import '../styles/globals.css'
 export default function VueltaReconocimientoModal({ open, onClose, products, onSuccess }) {
   const [vendors, setVendors] = useState([])
   const [selectedVendor, setSelectedVendor] = useState('')
-  const [prices, setPrices] = useState({}) // {uniqueKey: {product_id, variant_id, price, unit}}
+  const [prices, setPrices] = useState({}) // {product_id: {price, unit, variants: {variant_id: {price, unit}}}}
   const [saving, setSaving] = useState(false)
   const [showNewVendor, setShowNewVendor] = useState(false)
   const [newVendorName, setNewVendorName] = useState('')
   const [productVariants, setProductVariants] = useState({}) // {product_id: [variants]}
+  const [expandedProducts, setExpandedProducts] = useState({}) // {product_id: boolean}
 
   useEffect(() => {
     if (open) {
@@ -48,16 +49,12 @@ export default function VueltaReconocimientoModal({ open, onClose, products, onS
   function initializePrices() {
     const initialPrices = {}
     products.forEach(p => {
-      // Solo agregar entrada sin variante por defecto
-      const key = `${p.product_id}-null`
-      initialPrices[key] = {
-        product_id: p.product_id,
+      initialPrices[p.product_id] = {
         product_name: p.product_name,
         product_category: p.category || 'otro',
-        variant_id: null,
-        variant_label: null,
         price: '',
-        unit: p.default_unit || 'kg'
+        unit: p.default_unit || 'kg',
+        variants: {}
       }
     })
     setPrices(initialPrices)
@@ -81,15 +78,35 @@ export default function VueltaReconocimientoModal({ open, onClose, products, onS
       return
     }
 
-    const pricesArray = Object.values(prices)
-      .filter(data => data.price && parseFloat(data.price) > 0)
-      .map(data => ({
-        product_id: data.product_id,
-        variant_id: data.variant_id,
-        base_price: parseFloat(data.price),
-        unit: data.unit,
-        markup_percentage: 20
-      }))
+    const pricesArray = []
+    
+    Object.entries(prices).forEach(([productId, data]) => {
+      // Precio base (sin variante)
+      if (data.price && parseFloat(data.price) > 0) {
+        pricesArray.push({
+          product_id: parseInt(productId),
+          variant_id: null,
+          base_price: parseFloat(data.price),
+          unit: data.unit,
+          markup_percentage: 20
+        })
+      }
+      
+      // Precios de variantes
+      if (data.variants) {
+        Object.entries(data.variants).forEach(([variantId, variantData]) => {
+          if (variantData.price && parseFloat(variantData.price) > 0) {
+            pricesArray.push({
+              product_id: parseInt(productId),
+              variant_id: parseInt(variantId),
+              base_price: parseFloat(variantData.price),
+              unit: variantData.unit,
+              markup_percentage: 20
+            })
+          }
+        })
+      }
+    })
 
     if (pricesArray.length === 0) {
       alert('Debes ingresar al menos un precio')
@@ -109,85 +126,50 @@ export default function VueltaReconocimientoModal({ open, onClose, products, onS
     }
   }
 
-  function updatePrice(key, field, value) {
+  function updatePrice(productId, field, value) {
     setPrices(prev => ({
       ...prev,
-      [key]: {
-        ...prev[key],
+      [productId]: {
+        ...prev[productId],
         [field]: value
       }
     }))
   }
 
-  function addVariantRow(productId) {
-    const variants = productVariants[productId] || []
-    if (variants.length === 0) {
-      alert('Este producto no tiene variantes')
-      return
-    }
-
-    const product = products.find(p => p.product_id === productId)
-    
-    // Encontrar la primera variante que no tenga precio aún
-    const existingVariantIds = Object.values(prices)
-      .filter(p => p.product_id === productId && p.variant_id)
-      .map(p => p.variant_id)
-
-    const availableVariant = variants.find(v => !existingVariantIds.includes(v.id))
-    
-    if (!availableVariant) {
-      alert('Ya agregaste todas las variantes disponibles')
-      return
-    }
-
-    const key = `${productId}-${availableVariant.id}-${Date.now()}`
-    
+  function updateVariantPrice(productId, variantId, field, value) {
     setPrices(prev => ({
       ...prev,
-      [key]: {
-        product_id: productId,
-        product_name: product?.product_name || '',
-        product_category: product?.category || 'otro',
-        variant_id: availableVariant.id,
-        variant_label: availableVariant.label,
-        price: '',
-        unit: product?.default_unit || 'kg'
+      [productId]: {
+        ...prev[productId],
+        variants: {
+          ...prev[productId].variants,
+          [variantId]: {
+            ...(prev[productId].variants[variantId] || {}),
+            [field]: value
+          }
+        }
       }
     }))
   }
 
-  function removeVariantRow(key) {
-    // No permitir eliminar la fila base (sin variante)
-    if (prices[key] && !prices[key].variant_id) {
-      return
-    }
-    
-    setPrices(prev => {
-      const newPrices = { ...prev }
-      delete newPrices[key]
-      return newPrices
-    })
+  function toggleProduct(productId) {
+    setExpandedProducts(prev => ({
+      ...prev,
+      [productId]: !prev[productId]
+    }))
   }
 
   if (!open) return null
 
   // Agrupar y ordenar productos por categoría
   const categorizedProducts = {}
-  const priceEntries = Object.entries(prices)
-
-  priceEntries.forEach(([key, data]) => {
-    const category = data.product_category || 'otro'
+  
+  products.forEach(product => {
+    const category = product.category || 'otro'
     if (!categorizedProducts[category]) {
-      categorizedProducts[category] = {}
+      categorizedProducts[category] = []
     }
-    if (!categorizedProducts[category][data.product_id]) {
-      categorizedProducts[category][data.product_id] = {
-        product_name: data.product_name,
-        product_id: data.product_id,
-        rows: []
-      }
-    }
-    categorizedProducts[category][data.product_id].rows.push({ key, ...data })
+    categorizedProducts[category].push(product)
   })
 
   // Ordenar categorías y productos alfabéticamente
@@ -200,8 +182,8 @@ export default function VueltaReconocimientoModal({ open, onClose, products, onS
     return orderA - orderB
   })
 
-  sortedCategories.forEach(([_, products]) => {
-    Object.values(products).sort((a, b) => a.product_name.localeCompare(b.product_name))
+  sortedCategories.forEach(([_, prods]) => {
+    prods.sort((a, b) => a.product_name.localeCompare(b.product_name))
   })
 
   return (
@@ -213,62 +195,61 @@ export default function VueltaReconocimientoModal({ open, onClose, products, onS
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '12px',
+        padding: '16px',
         zIndex: 2000,
-        backdropFilter: 'blur(4px)'
+        overflowY: 'auto'
       }}
       onClick={onClose}
     >
       <div 
         style={{ 
           background: 'white',
-          borderRadius: '24px',
+          borderRadius: '16px',
           width: '100%',
-          maxWidth: '900px',
+          maxWidth: '600px',
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          boxShadow: '0 24px 80px rgba(0,0,0,0.25)'
+          boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+          border: '1px solid #E0E0E0',
+          margin: 'auto'
         }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Header Elegante */}
+        {/* Header Simple */}
         <div style={{ 
-          padding: '24px 28px',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
+          padding: '24px',
+          borderBottom: '1px solid #E0E0E0',
           display: 'flex',
           justifyContent: 'space-between',
-          alignItems: 'center'
+          alignItems: 'center',
+          background: 'white'
         }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '22px', fontWeight: 700, letterSpacing: '-0.5px' }}>
+            <h2 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: '#000' }}>
               Reconocimiento de Precios
             </h2>
-            <p style={{ margin: '6px 0 0 0', fontSize: '14px', opacity: 0.9 }}>
+            <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#666' }}>
               Registra los precios que preguntaste hoy
             </p>
           </div>
           <button
             onClick={onClose}
             style={{
-              background: 'rgba(255,255,255,0.2)',
+              background: '#f5f5f5',
               border: 'none',
-              width: '36px',
-              height: '36px',
-              borderRadius: '18px',
-              fontSize: '24px',
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              fontSize: '20px',
               cursor: 'pointer',
-              color: 'white',
+              color: '#666',
               lineHeight: 1,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s'
+              justifyContent: 'center'
             }}
-            onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.3)'}
-            onMouseLeave={e => e.target.style.background = 'rgba(255,255,255,0.2)'}
           >
             ×
           </button>
@@ -278,47 +259,43 @@ export default function VueltaReconocimientoModal({ open, onClose, products, onS
         <div style={{ 
           flex: 1, 
           overflow: 'auto', 
-          padding: '24px 28px',
-          background: '#fafafa'
+          padding: '20px',
+          background: 'var(--kivi-cream)'
         }}>
-          {/* Selección de proveedor - Card elegante */}
+          {/* Selección de proveedor */}
           <div style={{ 
-            marginBottom: '24px',
+            marginBottom: '20px',
             background: 'white',
-            borderRadius: '16px',
-            padding: '20px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.06)'
+            borderRadius: '12px',
+            padding: '16px',
+            border: '1px solid #E0E0E0'
           }}>
             <label style={{ 
               display: 'block', 
-              marginBottom: '12px', 
+              marginBottom: '8px', 
               fontSize: '14px', 
               fontWeight: 600,
-              color: '#333'
+              color: '#000'
             }}>
               Proveedor *
             </label>
             
             {!showNewVendor ? (
-              <div style={{ display: 'flex', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <select
                   value={selectedVendor}
                   onChange={e => setSelectedVendor(e.target.value)}
                   style={{
                     flex: 1,
-                    padding: '14px 16px',
-                    border: '2px solid #e8e8e8',
+                    minWidth: '200px',
+                    padding: '12px',
+                    border: '1px solid #E0E0E0',
                     borderRadius: '12px',
-                    fontSize: '15px',
-                    fontWeight: 500,
-                    background: 'white',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
+                    fontSize: '14px',
+                    background: 'white'
                   }}
-                  onFocus={e => e.target.style.borderColor = '#667eea'}
-                  onBlur={e => e.target.style.borderColor = '#e8e8e8'}
                 >
-                  <option value="">Seleccionar proveedor...</option>
+                  <option value="">Seleccionar...</option>
                   {vendors.map(v => (
                     <option key={v.id} value={v.id}>{v.name}</option>
                   ))}
@@ -326,55 +303,47 @@ export default function VueltaReconocimientoModal({ open, onClose, products, onS
                 <button
                   onClick={() => setShowNewVendor(true)}
                   style={{
-                    padding: '14px 24px',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    padding: '12px 20px',
+                    background: '#88C4A8',
                     color: 'white',
                     border: 'none',
                     borderRadius: '12px',
                     cursor: 'pointer',
                     fontWeight: 600,
-                    fontSize: '15px',
-                    whiteSpace: 'nowrap',
-                    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
-                    transition: 'all 0.2s'
+                    fontSize: '14px',
+                    whiteSpace: 'nowrap'
                   }}
-                  onMouseEnter={e => e.target.style.transform = 'translateY(-1px)'}
-                  onMouseLeave={e => e.target.style.transform = 'translateY(0)'}
                 >
                   + Nuevo
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'grid', gap: '12px' }}>
+              <div style={{ display: 'grid', gap: '8px' }}>
                 <input
                   type="text"
                   value={newVendorName}
                   onChange={e => setNewVendorName(e.target.value)}
                   placeholder="Nombre del proveedor"
                   style={{
-                    padding: '14px 16px',
-                    border: '2px solid #e8e8e8',
+                    padding: '12px',
+                    border: '1px solid #E0E0E0',
                     borderRadius: '12px',
-                    fontSize: '15px',
-                    transition: 'all 0.2s'
+                    fontSize: '14px'
                   }}
-                  onFocus={e => e.target.style.borderColor = '#667eea'}
-                  onBlur={e => e.target.style.borderColor = '#e8e8e8'}
                   onKeyPress={e => e.key === 'Enter' && handleCreateVendor()}
                 />
-                <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
                   <button
                     onClick={handleCreateVendor}
                     style={{
                       flex: 1,
-                      padding: '12px',
-                      background: '#4caf50',
+                      padding: '10px',
+                      background: '#88C4A8',
                       color: 'white',
                       border: 'none',
                       borderRadius: '12px',
                       cursor: 'pointer',
-                      fontWeight: 600,
-                      fontSize: '15px'
+                      fontWeight: 600
                     }}
                   >
                     Crear
@@ -383,14 +352,13 @@ export default function VueltaReconocimientoModal({ open, onClose, products, onS
                     onClick={() => { setShowNewVendor(false); setNewVendorName('') }}
                     style={{
                       flex: 1,
-                      padding: '12px',
-                      background: '#e8e8e8',
-                      color: '#333',
+                      padding: '10px',
+                      background: '#f5f5f5',
+                      color: '#666',
                       border: 'none',
                       borderRadius: '12px',
                       cursor: 'pointer',
-                      fontWeight: 600,
-                      fontSize: '15px'
+                      fontWeight: 600
                     }}
                   >
                     Cancelar
@@ -401,266 +369,203 @@ export default function VueltaReconocimientoModal({ open, onClose, products, onS
           </div>
 
           {/* Productos por categoría */}
-          <div style={{ display: 'grid', gap: '20px' }}>
-            {sortedCategories.map(([category, productGroups]) => {
-              const sortedProducts = Object.values(productGroups).sort((a, b) => 
-                a.product_name.localeCompare(b.product_name)
-              )
-              
-              return (
-                <div key={category}>
-                  {/* Header de Categoría - Estilo Uber/Cornershop */}
-                  <div style={{ 
-                    marginBottom: '16px',
-                    paddingBottom: '12px',
-                    borderBottom: '3px solid transparent',
-                    backgroundImage: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
-                    backgroundSize: '100% 3px',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundPosition: 'bottom'
+          <div style={{ display: 'grid', gap: '16px' }}>
+            {sortedCategories.map(([category, categoryProducts]) => (
+              <div key={category}>
+                {/* Header de Categoría Simple */}
+                <div style={{ 
+                  marginBottom: '12px',
+                  paddingBottom: '8px',
+                  borderBottom: '2px solid #88C4A8'
+                }}>
+                  <h3 style={{ 
+                    margin: 0,
+                    fontSize: '18px',
+                    fontWeight: 700,
+                    color: '#000'
                   }}>
-                    <h3 style={{ 
-                      margin: 0,
-                      fontSize: '20px',
-                      fontWeight: 700,
-                      color: '#333',
-                      letterSpacing: '-0.5px'
-                    }}>
-                      {categoryLabels[category] || category}
-                    </h3>
-                    <p style={{
-                      margin: '4px 0 0 0',
-                      fontSize: '13px',
-                      color: '#666'
-                    }}>
-                      {sortedProducts.length} {sortedProducts.length === 1 ? 'producto' : 'productos'}
-                    </p>
-                  </div>
+                    {categoryLabels[category] || category}
+                  </h3>
+                </div>
 
-                  {/* Productos de esta categoría */}
-                  <div style={{ display: 'grid', gap: '12px' }}>
-                    {sortedProducts.map(productGroup => {
-                      const hasVariants = productVariants[productGroup.product_id]?.length > 0
+                {/* Productos */}
+                <div style={{ display: 'grid', gap: '8px' }}>
+                  {categoryProducts.map(product => {
+                    const hasVariants = productVariants[product.product_id]?.length > 0
+                    const isExpanded = expandedProducts[product.product_id]
+                    const priceData = prices[product.product_id]
 
-                      return (
-                        <div 
-                          key={productGroup.product_id}
-                          style={{
-                            background: 'white',
-                            borderRadius: '16px',
-                            overflow: 'hidden',
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
-                            transition: 'all 0.2s'
-                          }}
-                        >
-                          {/* Header del producto */}
-                          <div style={{
-                            padding: '16px 20px',
-                            background: 'linear-gradient(135deg, #f5f7fa 0%, #f0f2f5 100%)',
-                            borderBottom: '1px solid #e8e8e8',
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center'
-                          }}>
-                            <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: 700, fontSize: '16px', color: '#333', marginBottom: '2px' }}>
-                                {productGroup.product_name}
-                              </div>
-                              {hasVariants && (
-                                <div style={{ fontSize: '12px', color: '#667eea', fontWeight: 600 }}>
-                                  {productVariants[productGroup.product_id].length} variantes disponibles
-                                </div>
-                              )}
+                    return (
+                      <div 
+                        key={product.product_id}
+                        style={{
+                          background: 'white',
+                          borderRadius: '12px',
+                          overflow: 'hidden',
+                          border: '1px solid #E0E0E0'
+                        }}
+                      >
+                        {/* Header del producto */}
+                        <div style={{
+                          padding: '12px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center',
+                          gap: '8px',
+                          borderBottom: '1px solid #f5f5f5'
+                        }}>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: '14px', color: '#000' }}>
+                              {product.product_name}
                             </div>
                             {hasVariants && (
-                              <button
-                                onClick={() => addVariantRow(productGroup.product_id)}
-                                style={{
-                                  padding: '8px 16px',
-                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                  color: 'white',
-                                  border: 'none',
-                                  borderRadius: '20px',
-                                  cursor: 'pointer',
-                                  fontSize: '13px',
-                                  fontWeight: 600,
-                                  whiteSpace: 'nowrap',
-                                  boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)'
-                                }}
-                              >
-                                + Variante
-                              </button>
+                              <div style={{ fontSize: '11px', color: '#666', marginTop: '2px' }}>
+                                {productVariants[product.product_id].length} variantes
+                              </div>
                             )}
                           </div>
+                          {hasVariants && (
+                            <button
+                              onClick={() => toggleProduct(product.product_id)}
+                              style={{
+                                padding: '6px 12px',
+                                background: isExpanded ? '#88C4A8' : '#f5f5f5',
+                                color: isExpanded ? 'white' : '#666',
+                                border: 'none',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 600,
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              {isExpanded ? 'Ocultar' : 'Variantes'}
+                            </button>
+                          )}
+                        </div>
 
-                          {/* Filas de precio */}
-                          <div style={{ padding: '12px' }}>
-                            <div style={{ display: 'grid', gap: '10px' }}>
-                              {productGroup.rows.map((priceData) => {
-                                const isVariant = !!priceData.variant_id
-                                
-                                return (
-                                  <div 
-                                    key={priceData.key}
-                                    style={{
-                                      display: 'grid',
-                                      gridTemplateColumns: hasVariants ? '1fr auto 90px 80px auto' : '1fr auto 90px 80px',
-                                      gap: '10px',
-                                      alignItems: 'center',
-                                      padding: '12px',
-                                      background: isVariant ? '#f8f9ff' : 'white',
-                                      borderRadius: '12px',
-                                      border: isVariant ? '2px dashed #d0d7ff' : '2px solid #f0f0f0'
-                                    }}
-                                  >
-                                    {/* Variante selector o label */}
-                                    {hasVariants && isVariant ? (
-                                      <select
-                                        value={priceData.variant_id || ''}
-                                        onChange={e => {
-                                          const variantId = parseInt(e.target.value)
-                                          const variant = productVariants[productGroup.product_id]?.find(v => v.id === variantId)
-                                          updatePrice(priceData.key, 'variant_id', variantId)
-                                          updatePrice(priceData.key, 'variant_label', variant?.label || '')
-                                        }}
-                                        style={{
-                                          padding: '10px 12px',
-                                          border: '2px solid #e8e8e8',
-                                          borderRadius: '10px',
-                                          fontSize: '14px',
-                                          background: 'white',
-                                          fontWeight: 500
-                                        }}
-                                      >
-                                        {productVariants[productGroup.product_id]?.map(v => (
-                                          <option key={v.id} value={v.id}>{v.label}</option>
-                                        ))}
-                                      </select>
-                                    ) : (
-                                      <div style={{ 
-                                        fontSize: '14px', 
-                                        color: isVariant ? '#667eea' : '#666',
-                                        fontWeight: isVariant ? 600 : 500,
-                                        paddingLeft: '4px'
-                                      }}>
-                                        {priceData.variant_label || 'Precio base'}
-                                      </div>
-                                    )}
-                                    
-                                    {/* Símbolo $ */}
-                                    <div style={{ fontSize: '18px', fontWeight: 700, color: '#333' }}>$</div>
-                                    
-                                    {/* Input precio */}
-                                    <input
-                                      type="number"
-                                      placeholder="0"
-                                      value={priceData.price || ''}
-                                      onChange={e => updatePrice(priceData.key, 'price', e.target.value)}
-                                      style={{
-                                        padding: '10px 12px',
-                                        border: '2px solid #e8e8e8',
-                                        borderRadius: '10px',
-                                        fontSize: '15px',
-                                        textAlign: 'right',
-                                        fontWeight: 600,
-                                        transition: 'all 0.2s'
-                                      }}
-                                      onFocus={e => {
-                                        e.target.style.borderColor = '#667eea'
-                                        e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)'
-                                      }}
-                                      onBlur={e => {
-                                        e.target.style.borderColor = '#e8e8e8'
-                                        e.target.style.boxShadow = 'none'
-                                      }}
-                                      min="0"
-                                      step="1"
-                                    />
-                                    
-                                    {/* Selector unidad */}
-                                    <select
-                                      value={priceData.unit || 'kg'}
-                                      onChange={e => updatePrice(priceData.key, 'unit', e.target.value)}
-                                      style={{
-                                        padding: '10px 12px',
-                                        border: '2px solid #e8e8e8',
-                                        borderRadius: '10px',
-                                        fontSize: '14px',
-                                        background: 'white',
-                                        fontWeight: 600
-                                      }}
-                                    >
-                                      <option value="kg">kg</option>
-                                      <option value="unit">un</option>
-                                    </select>
-
-                                    {/* Botón eliminar (solo para filas de variantes) */}
-                                    {hasVariants && isVariant && (
-                                      <button
-                                        onClick={() => removeVariantRow(priceData.key)}
-                                        style={{
-                                          width: '36px',
-                                          height: '36px',
-                                          background: '#ffebee',
-                                          color: '#f44336',
-                                          border: 'none',
-                                          borderRadius: '10px',
-                                          cursor: 'pointer',
-                                          fontSize: '20px',
-                                          fontWeight: 700,
-                                          display: 'flex',
-                                          alignItems: 'center',
-                                          justifyContent: 'center',
-                                          transition: 'all 0.2s'
-                                        }}
-                                        onMouseEnter={e => e.target.style.background = '#f44336'}
-                                        onMouseLeave={e => e.target.style.background = '#ffebee'}
-                                        onMouseOver={e => e.target.style.color = 'white'}
-                                        onMouseOut={e => e.target.style.color = '#f44336'}
-                                      >
-                                        ×
-                                      </button>
-                                    )}
-                                  </div>
-                                )
-                              })}
+                        {/* Precio base */}
+                        <div style={{ padding: '12px' }}>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <div style={{ fontSize: '13px', color: '#666', minWidth: '80px' }}>
+                              Precio base:
                             </div>
+                            <input
+                              type="number"
+                              placeholder="0"
+                              value={priceData?.price || ''}
+                              onChange={e => updatePrice(product.product_id, 'price', e.target.value)}
+                              style={{
+                                flex: 1,
+                                minWidth: '80px',
+                                maxWidth: '120px',
+                                padding: '8px',
+                                border: '1px solid #E0E0E0',
+                                borderRadius: '8px',
+                                fontSize: '14px'
+                              }}
+                            />
+                            <select
+                              value={priceData?.unit || 'kg'}
+                              onChange={e => updatePrice(product.product_id, 'unit', e.target.value)}
+                              style={{
+                                padding: '8px',
+                                border: '1px solid #E0E0E0',
+                                borderRadius: '8px',
+                                fontSize: '14px',
+                                background: 'white'
+                              }}
+                            >
+                              <option value="kg">kg</option>
+                              <option value="unit">un</option>
+                            </select>
                           </div>
                         </div>
-                      )
-                    })}
-                  </div>
+
+                        {/* Variantes (desplegable) */}
+                        {hasVariants && isExpanded && (
+                          <div style={{ 
+                            padding: '12px',
+                            borderTop: '1px solid #f5f5f5',
+                            background: '#fafafa',
+                            display: 'grid',
+                            gap: '8px'
+                          }}>
+                            {productVariants[product.product_id].map(variant => {
+                              const variantPrice = priceData?.variants?.[variant.id]
+                              
+                              return (
+                                <div key={variant.id} style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                                  <div style={{ fontSize: '12px', color: '#666', minWidth: '80px', fontWeight: 500 }}>
+                                    {variant.label}:
+                                  </div>
+                                  <input
+                                    type="number"
+                                    placeholder="0"
+                                    value={variantPrice?.price || ''}
+                                    onChange={e => updateVariantPrice(product.product_id, variant.id, 'price', e.target.value)}
+                                    style={{
+                                      flex: 1,
+                                      minWidth: '80px',
+                                      maxWidth: '120px',
+                                      padding: '8px',
+                                      border: '1px solid #E0E0E0',
+                                      borderRadius: '8px',
+                                      fontSize: '13px'
+                                    }}
+                                  />
+                                  <select
+                                    value={variantPrice?.unit || priceData?.unit || 'kg'}
+                                    onChange={e => updateVariantPrice(product.product_id, variant.id, 'unit', e.target.value)}
+                                    style={{
+                                      padding: '8px',
+                                      border: '1px solid #E0E0E0',
+                                      borderRadius: '8px',
+                                      fontSize: '13px',
+                                      background: 'white'
+                                    }}
+                                  >
+                                    <option value="kg">kg</option>
+                                    <option value="unit">un</option>
+                                  </select>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
-              )
-            })}
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Footer con botones */}
+        {/* Footer */}
         <div style={{ 
-          padding: '20px 28px',
-          borderTop: '1px solid #e8e8e8',
+          padding: '16px',
+          borderTop: '1px solid #E0E0E0',
           display: 'flex',
-          gap: '12px',
-          background: 'white'
+          gap: '8px',
+          background: 'white',
+          flexWrap: 'wrap'
         }}>
           <button
             onClick={onClose}
             disabled={saving}
             style={{
               flex: 1,
-              padding: '16px',
-              background: 'white',
-              border: '2px solid #e8e8e8',
-              borderRadius: '14px',
+              minWidth: '120px',
+              padding: '12px',
+              background: '#f5f5f5',
+              border: 'none',
+              borderRadius: '12px',
               cursor: saving ? 'not-allowed' : 'pointer',
-              fontSize: '15px',
+              fontSize: '14px',
               fontWeight: 600,
-              color: '#666',
-              transition: 'all 0.2s'
+              color: '#666'
             }}
-            onMouseEnter={e => !saving && (e.target.style.background = '#f5f5f5')}
-            onMouseLeave={e => e.target.style.background = 'white'}
           >
             Cancelar
           </button>
@@ -669,23 +574,18 @@ export default function VueltaReconocimientoModal({ open, onClose, products, onS
             disabled={saving || !selectedVendor}
             style={{
               flex: 2,
-              padding: '16px',
-              background: (saving || !selectedVendor) 
-                ? '#e8e8e8' 
-                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: (saving || !selectedVendor) ? '#999' : 'white',
+              minWidth: '160px',
+              padding: '12px',
+              background: (saving || !selectedVendor) ? '#ccc' : '#88C4A8',
+              color: 'white',
               border: 'none',
-              borderRadius: '14px',
+              borderRadius: '12px',
               cursor: (saving || !selectedVendor) ? 'not-allowed' : 'pointer',
-              fontSize: '16px',
-              fontWeight: 700,
-              boxShadow: (saving || !selectedVendor) ? 'none' : '0 4px 16px rgba(102, 126, 234, 0.4)',
-              transition: 'all 0.2s'
+              fontSize: '14px',
+              fontWeight: 700
             }}
-            onMouseEnter={e => !saving && selectedVendor && (e.target.style.transform = 'translateY(-2px)')}
-            onMouseLeave={e => e.target.style.transform = 'translateY(0)'}
           >
-            {saving ? 'Guardando...' : `Guardar Precios`}
+            {saving ? 'Guardando...' : 'Guardar Precios'}
           </button>
         </div>
       </div>
