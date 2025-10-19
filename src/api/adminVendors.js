@@ -45,3 +45,14 @@ export function toggleVendorPriceAvailability(priceId) {
   })
 }
 
+// Batch update (Vuelta de Reconocimiento)
+export function batchUpdateVendorPrices(vendorId, prices) {
+  return apiFetch('/admin/vendors/prices/batch', {
+    method: 'POST',
+    body: {
+      vendor_id: vendorId,
+      prices: prices  // [{product_id, unit, base_price, markup_percentage}]
+    }
+  })
+}
+

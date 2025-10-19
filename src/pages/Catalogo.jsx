@@ -121,26 +121,40 @@ export default function Catalogo() {
             Todo pedido es personalizable a tu manera
           </p>
           <button
-            disabled={true}
+            onClick={() => generateCatalogPDF(products)}
+            disabled={loading || products.length === 0}
             style={{
               padding: '14px 28px',
               borderRadius: 'var(--radius-pill)',
               border: 'none',
-              background: '#ccc',
-              color: '#666',
+              background: (loading || products.length === 0) ? '#ccc' : '#88C4A8',
+              color: (loading || products.length === 0) ? '#666' : 'white',
               fontWeight: 700,
               fontSize: 16,
-              cursor: 'not-allowed',
+              cursor: (loading || products.length === 0) ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s',
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
-              opacity: 0.6
+              opacity: (loading || products.length === 0) ? 0.6 : 1,
+              boxShadow: (loading || products.length === 0) ? 'none' : '0 4px 12px rgba(136, 196, 168, 0.3)'
             }}
-            title="Temporalmente desactivado"
+            onMouseOver={e => {
+              if (!loading && products.length > 0) {
+                e.currentTarget.style.transform = 'scale(1.05)'
+                e.currentTarget.style.boxShadow = '0 6px 16px rgba(136, 196, 168, 0.4)'
+              }
+            }}
+            onMouseOut={e => {
+              if (!loading && products.length > 0) {
+                e.currentTarget.style.transform = 'scale(1)'
+                e.currentTarget.style.boxShadow = '0 4px 12px rgba(136, 196, 168, 0.3)'
+              }
+            }}
+            title={loading ? 'Cargando productos...' : products.length === 0 ? 'No hay productos para descargar' : 'Descargar catálogo en PDF'}
           >
             <span style={{ fontSize: 18 }}>📄</span>
-            Descargar PDF (Próximamente)
+            {loading ? 'Cargando...' : 'Descargar Catálogo PDF'}
           </button>
         </div>
 

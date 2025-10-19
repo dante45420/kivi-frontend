@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { listVendorPrices, createVendorPrice, updateVendorPrice, deleteVendorPrice, toggleVendorPriceAvailability } from '../../api/adminVendors'
-import { listVendors } from '../../api/vendors'
+import { listVendors, createVendor } from '../../api/vendors'
 import { listProducts } from '../../api/products'
 import { listVariants } from '../../api/variants'
 import '../../styles/globals.css'
@@ -21,6 +21,11 @@ export default function Proveedores() {
   const [editMode, setEditMode] = useState('create') // 'create' | 'edit'
   const [editValues, setEditValues] = useState({})
   const [variants, setVariants] = useState([])
+  
+  // Modal crear proveedor
+  const [vendorModalOpen, setVendorModalOpen] = useState(false)
+  const [newVendorName, setNewVendorName] = useState('')
+  const [newVendorNotes, setNewVendorNotes] = useState('')
 
   async function loadData() {
     setLoading(true)

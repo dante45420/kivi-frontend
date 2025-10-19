@@ -3,6 +3,8 @@ import { listOrders, getOrderDetail } from '../api/orders'
 import { apiFetch } from '../api/client'
 import { listProducts } from '../api/products'
 import { listPrices } from '../api/prices'
+import { listVendors } from '../api/vendors'
+import { batchUpdateVendorPrices } from '../api/adminVendors'
 import QualityModal from '../components/QualityModal'
 import PurchaseEditModal from '../components/PurchaseEditModal'
 import '../styles/globals.css'
@@ -35,6 +37,12 @@ export default function Compras() {
   const [filterStatus, setFilterStatus] = useState('all') // all, complete, incomplete
   const [filterCategory, setFilterCategory] = useState('all') // all, fruta, verdura
   const [filterPurchaseType, setFilterPurchaseType] = useState('all') // all, cajon, detalle
+  
+  // Modal Vuelta de Reconocimiento
+  const [reconModalOpen, setReconModalOpen] = useState(false)
+  const [vendors, setVendors] = useState([])
+  const [selectedVendor, setSelectedVendor] = useState('')
+  const [reconPrices, setReconPrices] = useState({}) // {product_id: {price, unit}}
 
   useEffect(() => { 
     listOrders().then(os => { 
