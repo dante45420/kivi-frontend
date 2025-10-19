@@ -207,29 +207,29 @@ export default function Proveedores() {
   return (
     <div style={{ padding: '20px', maxWidth: 1600, margin: '0 auto' }}>
       {/* Header */}
-      <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+      <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <h1 style={{ fontSize: 32, fontWeight: 800, margin: '0 0 8px 0', color: 'var(--kivi-text-dark)' }}>
-            🏪 Gestión de Proveedores
+            Gestión de Proveedores
           </h1>
           <p style={{ margin: 0, opacity: 0.7, fontSize: 16 }}>
             Precios y disponibilidad para comerciantes B2B
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <button
             className="button"
             onClick={() => setVendorModalOpen(true)}
-            style={{ background: 'var(--kivi-blue-soft)', fontWeight: 600, whiteSpace: 'nowrap' }}
+            style={{ background: '#2196f3', color: 'white', fontWeight: 600, whiteSpace: 'nowrap' }}
           >
-            🏢 Crear Proveedor
+            Crear Proveedor
           </button>
           <button
             className="button"
             onClick={openCreate}
-            style={{ background: 'var(--kivi-green)', fontWeight: 600, whiteSpace: 'nowrap' }}
+            style={{ background: '#4caf50', color: 'white', fontWeight: 600, whiteSpace: 'nowrap' }}
           >
-            ➕ Agregar Precio
+            Agregar Precio
           </button>
         </div>
       </div>
@@ -242,7 +242,7 @@ export default function Proveedores() {
         marginBottom: 28,
         boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
       }}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700 }}>🔍 Filtros</h3>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: 16, fontWeight: 700 }}>Filtros</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
           <div>
             <label style={{ display: 'block', marginBottom: 6, fontSize: 13, fontWeight: 600 }}>
@@ -296,9 +296,9 @@ export default function Proveedores() {
         <button
           className="button"
           onClick={loadData}
-          style={{ marginTop: 16, background: 'var(--kivi-green)', fontWeight: 600 }}
+          style={{ marginTop: 16, background: '#4caf50', color: 'white', fontWeight: 600 }}
         >
-          🔄 Aplicar Filtros
+          Aplicar Filtros
         </button>
       </div>
 
@@ -314,8 +314,8 @@ export default function Proveedores() {
             No hay precios que coincidan con los filtros
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
               <thead>
                 <tr style={{ background: 'var(--kivi-cream)' }}>
                   <th style={thStyle}>Proveedor</th>
@@ -389,7 +389,7 @@ export default function Proveedores() {
                             transition: 'all 0.2s'
                           }}
                         >
-                          {price.is_available ? '✓ Activo' : '✗ Inactivo'}
+                          {price.is_available ? 'Activo' : 'Inactivo'}
                         </button>
                       </td>
                       <td style={tdStyle}>
@@ -399,7 +399,7 @@ export default function Proveedores() {
                           textTransform: 'uppercase',
                           letterSpacing: '0.5px'
                         }}>
-                          {price.source === 'auto' ? '🤖 Auto' : '✏️ Manual'}
+                          {price.source === 'auto' ? 'Auto' : 'Manual'}
                         </span>
                       </td>
                       <td style={tdStyle}>
@@ -416,7 +416,7 @@ export default function Proveedores() {
                               fontWeight: 600
                             }}
                           >
-                            ✏️ Editar
+                            Editar
                           </button>
                           <button
                             onClick={() => handleDelete(price.id)}
@@ -431,7 +431,7 @@ export default function Proveedores() {
                               color: '#c62828'
                             }}
                           >
-                            🗑️
+                            ×
                           </button>
                         </div>
                       </td>
