@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import Navbar from './components/Navbar'
+import MerchantNavbar from './components/MerchantNavbar'
 import Productos from './pages/Productos'
 import Pedidos from './pages/Pedidos'
 import Compras from './pages/Compras'
@@ -16,6 +17,7 @@ import AdminKPIs from './pages/admin/KPIs'
 import AdminProveedores from './pages/admin/Proveedores'
 import AdminMerchants from './pages/admin/Merchants'
 import MerchantDashboard from './pages/merchant/Dashboard'
+import MerchantOrders from './pages/merchant/Orders'
 import { getToken, getUserType, verifyCurrentToken, clearToken } from './api/auth'
 
 // Componente para rutas protegidas
@@ -93,6 +95,7 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: 'sans-serif', padding: isAuthenticated ? 12 : 0 }}>
+      {isAuthenticated && getUserType() === 'merchant' && <MerchantNavbar />}
       {isAuthenticated && getUserType() !== 'merchant' && <Navbar />}
       <Routes>
         {/* Rutas públicas */}
@@ -115,6 +118,7 @@ export default function App() {
         
         {/* Rutas de merchant */}
         <Route path="/merchant/dashboard" element={<ProtectedRoute><MerchantDashboard /></ProtectedRoute>} />
+        <Route path="/merchant/orders" element={<ProtectedRoute><MerchantOrders /></ProtectedRoute>} />
         
         {/* Redirección por defecto */}
         <Route path="*" element={<Navigate to={isAuthenticated ? getDefaultRoute() : "/"} replace />} />
