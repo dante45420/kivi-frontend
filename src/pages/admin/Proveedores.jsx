@@ -128,14 +128,22 @@ export default function Proveedores() {
 
   async function handleSave() {
     try {
+      // El backend espera 'cost_price' que es el precio base
+      const costPrice = editValues.unit === 'kg' 
+        ? parseFloat(editValues.price_per_kg || 0) 
+        : parseFloat(editValues.price_per_unit || 0)
+
+      if (!costPrice || costPrice <= 0) {
+        alert('Debes ingresar un precio mayor a 0')
+        return
+      }
+
       const payload = {
         product_id: parseInt(editValues.product_id),
         variant_id: editValues.variant_id ? parseInt(editValues.variant_id) : null,
-        price_per_kg: editValues.unit === 'kg' ? parseFloat(editValues.price_per_kg || 0) : null,
-        price_per_unit: editValues.unit === 'unit' ? parseFloat(editValues.price_per_unit || 0) : null,
         unit: editValues.unit,
+        cost_price: costPrice,
         markup_percentage: parseFloat(editValues.markup_percentage || 0),
-        final_price: parseFloat(editValues.final_price || 0),
         is_available: editValues.is_available
       }
       

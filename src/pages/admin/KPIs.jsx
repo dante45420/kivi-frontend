@@ -127,31 +127,39 @@ export default function KPIs() {
           content={
             ticketData ? (
               <div style={{ display: 'grid', gap: 16 }}>
-                <div>
-                  <div style={{ fontSize: 36, fontWeight: 800, color: 'var(--kivi-green-dark)' }}>
-                    ${ticketData.total?.toLocaleString('es-CL') || 0}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'center' }}>
+                  <div style={{ borderRight: '2px solid #e0e0e0', paddingRight: 16 }}>
+                    <div style={{ fontSize: 13, opacity: 0.6, marginBottom: 4 }}>Total Facturado</div>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: 'var(--kivi-green-dark)' }}>
+                      ${ticketData.total?.toLocaleString('es-CL') || 0}
+                    </div>
                   </div>
-                  <div style={{ fontSize: 13, opacity: 0.6, marginTop: 4 }}>total promedio</div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, fontSize: 14 }}>
                   <div>
-                    <span style={{ opacity: 0.6 }}>Utilidad:</span>
+                    <div style={{ fontSize: 13, opacity: 0.6, marginBottom: 4 }}>Promedio por Pedido</div>
+                    <div style={{ fontSize: 32, fontWeight: 800, color: '#2196f3' }}>
+                      ${ticketData.promedio_por_pedido?.toLocaleString('es-CL') || 0}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 12, fontSize: 14, paddingTop: 12, borderTop: '1px solid #e0e0e0' }}>
+                  <div>
+                    <span style={{ opacity: 0.6, fontSize: 12 }}>Utilidad:</span>
                     <div style={{ fontWeight: 700, color: 'var(--kivi-green-dark)' }}>
                       ${ticketData.utilidad?.toLocaleString('es-CL') || 0}
                     </div>
                   </div>
                   <div>
-                    <span style={{ opacity: 0.6 }}>Margen:</span>
+                    <span style={{ opacity: 0.6, fontSize: 12 }}>Margen:</span>
                     <div style={{ fontWeight: 700, color: 'var(--kivi-green-dark)' }}>
                       {ticketData.margen_utilidad_porcentaje || 0}%
                     </div>
                   </div>
                   <div>
-                    <span style={{ opacity: 0.6 }}>Pedidos:</span>
+                    <span style={{ opacity: 0.6, fontSize: 12 }}>Pedidos:</span>
                     <div style={{ fontWeight: 700 }}>{ticketData.num_pedidos || 0}</div>
                   </div>
                   <div>
-                    <span style={{ opacity: 0.6 }}>Clientes:</span>
+                    <span style={{ opacity: 0.6, fontSize: 12 }}>Clientes:</span>
                     <div style={{ fontWeight: 700 }}>{ticketData.num_clientes || 0}</div>
                   </div>
                 </div>
