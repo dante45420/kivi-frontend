@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { listProducts, createProduct, updateProduct } from '../api/products'
-import { listVariants, createVariant, updateVariant, deleteVariant, deleteKiviVariants, listVariantTiers, createVariantTier } from '../api/variants'
+import { listVariants, createVariant, updateVariant, deleteVariant, listVariantTiers, createVariantTier } from '../api/variants'
 import ImageUploader from '../components/ImageUploader'
 import '../styles/globals.css'
 
@@ -77,17 +77,6 @@ export default function Productos() {
     return matchesSearch && matchesCategory
   })
 
-  async function handleDeleteKiviVariants() {
-    if(!confirm('¿Estás seguro de eliminar TODAS las variantes "kivi" de todos los productos? Esta acción no se puede deshacer.')) return
-    try {
-      const result = await deleteKiviVariants()
-      alert(result.message || '✓ Variantes eliminadas')
-      await load()
-    } catch(e) {
-      alert('Error al eliminar variantes: ' + (e.message || 'Error desconocido'))
-    }
-  }
-
   return (
     <div style={{ padding:'20px', maxWidth:1400, margin:'0 auto' }}>
       {/* Header */}
@@ -98,25 +87,6 @@ export default function Productos() {
           </h1>
           <p style={{ margin:0, opacity:0.7, fontSize:16 }}>Gestiona tu catálogo de productos</p>
         </div>
-        <button
-          onClick={handleDeleteKiviVariants}
-          style={{
-            padding:'12px 20px',
-            background:'#e74c3c',
-            color:'white',
-            border:'none',
-            borderRadius:12,
-            fontWeight:600,
-            cursor:'pointer',
-            fontSize:14,
-            transition:'all 0.2s',
-            whiteSpace:'nowrap'
-          }}
-          onMouseOver={e => e.target.style.background='#c0392b'}
-          onMouseOut={e => e.target.style.background='#e74c3c'}
-        >
-          🗑️ Eliminar Variantes "Kivi"
-        </button>
       </div>
 
       {/* Crear Producto */}

@@ -1,7 +1,10 @@
 import { NavLink } from 'react-router-dom'
+import { useState } from 'react'
 import '../styles/globals.css'
 
 export default function PublicNavbar() {
+  const [open, setOpen] = useState(false)
+
   return (
     <header style={{ 
       background: 'white', 
@@ -42,8 +45,8 @@ export default function PublicNavbar() {
           />
         </NavLink>
 
-        {/* Navigation */}
-        <nav style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+        {/* Navigation Desktop */}
+        <nav className="nav-desktop" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
           <NavLink 
             to="/" 
             className={({isActive}) => isActive ? 'nav-link active' : 'nav-link'}
@@ -99,7 +102,96 @@ export default function PublicNavbar() {
             Iniciar Sesión
           </NavLink>
         </nav>
+
+        {/* Hamburger Toggle Mobile */}
+        <button 
+          className="nav-toggle"
+          onClick={() => setOpen(v => !v)}
+          aria-label="menu"
+          style={{
+            display: 'none',
+            background: '#000',
+            color: '#fff',
+            border: '1px solid #444',
+            padding: '8px 12px',
+            borderRadius: 8,
+            cursor: 'pointer',
+            fontSize: 18,
+            fontWeight: 600
+          }}
+        >
+          ☰
+        </button>
       </div>
+
+      {/* Mobile Menu */}
+      {open && (
+        <div className="nav-mobile" style={{ 
+          borderTop: '1px solid var(--kivi-cream)', 
+          background: 'white'
+        }}>
+          <div style={{ 
+            maxWidth: 1200, 
+            margin: '0 auto', 
+            padding: '12px 20px', 
+            display: 'grid', 
+            gap: 8, 
+            justifyItems: 'stretch' 
+          }} onClick={() => setOpen(false)}>
+            <NavLink 
+              to="/" 
+              style={({isActive}) => ({
+                display: 'block',
+                width: '100%',
+                textAlign: 'center',
+                textDecoration: 'none',
+                padding: '12px 14px',
+                borderRadius: 999,
+                border: '1px solid #ddd',
+                background: isActive ? 'var(--kivi-green-soft)' : 'white',
+                color: '#000',
+                fontWeight: 600
+              })}
+            >
+              Catálogo
+            </NavLink>
+            <NavLink 
+              to="/about" 
+              style={({isActive}) => ({
+                display: 'block',
+                width: '100%',
+                textAlign: 'center',
+                textDecoration: 'none',
+                padding: '12px 14px',
+                borderRadius: 999,
+                border: '1px solid #ddd',
+                background: isActive ? 'var(--kivi-green-soft)' : 'white',
+                color: '#000',
+                fontWeight: 600
+              })}
+            >
+              Sobre Nosotros
+            </NavLink>
+            <NavLink 
+              to="/login" 
+              style={{
+                display: 'block',
+                width: '100%',
+                textAlign: 'center',
+                textDecoration: 'none',
+                padding: '12px 14px',
+                borderRadius: 999,
+                border: '2px solid var(--kivi-green)',
+                background: 'var(--kivi-green)',
+                color: 'white',
+                fontWeight: 700
+              }}
+            >
+              Iniciar Sesión
+            </NavLink>
+          </div>
+        </div>
+      )}
 
       <style>{`
         .nav-link:hover {
@@ -112,12 +204,17 @@ export default function PublicNavbar() {
         }
         
         @media (max-width: 768px) {
-          header nav {
-            gap: 8px;
+          .nav-desktop {
+            display: none !important;
           }
-          .nav-link {
-            padding: 8px 14px !important;
-            font-size: 13px !important;
+          .nav-toggle {
+            display: block !important;
+          }
+        }
+        
+        @media (min-width: 769px) {
+          .nav-mobile {
+            display: none !important;
           }
         }
       `}</style>

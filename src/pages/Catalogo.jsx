@@ -121,33 +121,26 @@ export default function Catalogo() {
             Todo pedido es personalizable a tu manera
           </p>
           <button
-            onClick={() => generateCatalogPDF(products)}
+            disabled={true}
             style={{
               padding: '14px 28px',
               borderRadius: 'var(--radius-pill)',
               border: 'none',
-              background: '#88C4A8',
-              color: 'white',
+              background: '#ccc',
+              color: '#666',
               fontWeight: 700,
               fontSize: 16,
-              cursor: 'pointer',
+              cursor: 'not-allowed',
               transition: 'all 0.2s',
               display: 'inline-flex',
               alignItems: 'center',
               gap: 8,
-              boxShadow: '0 4px 12px rgba(136, 196, 168, 0.3)'
+              opacity: 0.6
             }}
-            onMouseOver={e => {
-              e.currentTarget.style.transform = 'scale(1.05)'
-              e.currentTarget.style.boxShadow = '0 6px 16px rgba(136, 196, 168, 0.4)'
-            }}
-            onMouseOut={e => {
-              e.currentTarget.style.transform = 'scale(1)'
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(136, 196, 168, 0.3)'
-            }}
+            title="Temporalmente desactivado"
           >
             <span style={{ fontSize: 18 }}>📄</span>
-            Descargar Catálogo PDF
+            Descargar PDF (Próximamente)
           </button>
         </div>
 

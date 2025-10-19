@@ -173,7 +173,7 @@ export async function generateCatalogPDF(products) {
     }
 
     // Título de categoría - minimalista
-    doc.setFontSize(16)
+    doc.setFontSize(18)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(COLORS.textDark)
     doc.text(title, margin, currentY)
@@ -204,12 +204,12 @@ export async function generateCatalogPDF(products) {
       }
 
       // Nombre del producto - más grande
-      doc.setFontSize(12)
+      doc.setFontSize(14)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(COLORS.textDark)
       
       // Truncar nombre si es muy largo
-      const maxNameLength = 22
+      const maxNameLength = 20
       const displayName = product.name.length > maxNameLength 
         ? product.name.substring(0, maxNameLength) + '...' 
         : product.name
@@ -230,7 +230,7 @@ export async function generateCatalogPDF(products) {
             return priceA - priceB
           })
         
-        doc.setFontSize(10.5)
+        doc.setFontSize(12)
         doc.setFont('helvetica', 'normal')
         doc.setTextColor(80, 80, 80)
         
@@ -238,24 +238,29 @@ export async function generateCatalogPDF(products) {
           if (variant.price_tiers && variant.price_tiers.length > 0) {
             variant.price_tiers.forEach(tier => {
               const unit = tier.unit === 'unit' ? 'unidad' : tier.unit
+              // Truncar nombre de variante si es muy largo
+              const maxVarLength = 15
+              const displayVariant = variant.label.length > maxVarLength
+                ? variant.label.substring(0, maxVarLength) + '...'
+                : variant.label
               const tierText = tier.min_qty > 1 
-                ? `${variant.label}(${tier.min_qty}+): $${tier.sale_price?.toLocaleString('es-CL')}/${unit}`
-                : `${variant.label}: $${tier.sale_price?.toLocaleString('es-CL')}/${unit}`
+                ? `${displayVariant}(${tier.min_qty}+): $${tier.sale_price?.toLocaleString('es-CL')}/${unit}`
+                : `${displayVariant}: $${tier.sale_price?.toLocaleString('es-CL')}/${unit}`
               doc.text(tierText, xPos, varY)
-              varY += 5.5
+              varY += 6
             })
           }
         })
       } else {
         // Precio base debajo del nombre con MISMO formato que variantes
         if (price) {
-          doc.setFontSize(10.5)
+          doc.setFontSize(12)
           doc.setFont('helvetica', 'normal')
           doc.setTextColor(80, 80, 80)
           const unit = price.unit === 'unit' ? 'unidad' : price.unit
           const priceText = `$${price.sale_price?.toLocaleString('es-CL')}/${unit}`
           doc.text(priceText, xPos, varY)
-          varY += 5.5
+          varY += 6
         }
       }
 
@@ -268,13 +273,13 @@ export async function generateCatalogPDF(products) {
       column++
       if (column >= 2) {
         column = 0
-        currentY = Math.max(currentY + 18, varY + 4)
+        currentY = Math.max(currentY + 22, varY + 5)
       }
     })
 
     // Si quedamos en la primera columna, avanzar
     if (column === 1) {
-      currentY += 18
+      currentY += 22
     }
 
     currentY += 3 // Espacio después de la categoría
