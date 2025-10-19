@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { login, setToken } from '../api/auth'
+import { login, setToken, setUserType, setUserData } from '../api/auth'
 import '../styles/globals.css'
 
 export default function Login() {
@@ -18,11 +18,19 @@ export default function Login() {
     try {
       const response = await login(email, password)
       setToken(response.token)
+      setUserType(response.userType)
+      setUserData(response.user)
+      
       // Disparar evento para actualizar el estado de autenticación en App.jsx
       window.dispatchEvent(new Event('auth-change'))
-      // Pequeño delay para asegurar que el token se guarde antes de navegar
+      
+      // Redirigir según el tipo de usuario
       setTimeout(() => {
-        navigate('/productos')
+        if (response.userType === 'merchant') {
+          navigate('/merchant/dashboard')
+        } else {
+          navigate('/productos')
+        }
       }, 100)
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión')
@@ -66,10 +74,9 @@ export default function Login() {
             }}
           />
           <div style={{ display: 'none', fontSize: 48, marginBottom: 16 }}>🥝</div>
-          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#000' }}>Área de Trabajadores</h2>
+          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: '#000' }}>Iniciar Sesión</h2>
           <p style={{ margin: '12px 0 0 0', color: '#666', fontSize: 14, lineHeight: 1.6 }}>
-            Este es el panel de gestión interno de Kivi.<br/>
-            Solo personal autorizado puede acceder.
+            Panel de gestión y comercio mayorista
           </p>
         </div>
 
