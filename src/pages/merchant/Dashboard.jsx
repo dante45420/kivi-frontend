@@ -47,9 +47,11 @@ export default function MerchantDashboard() {
       item => `${item.product_id}-${item.vendor_id}-${item.variant_id || 'null'}` === cartKey
     )
 
+    const minQty = vendor.min_qty || 1
+
     if (existingIndex >= 0) {
       const newCart = [...cart]
-      newCart[existingIndex].qty += 1
+      newCart[existingIndex].qty += minQty
       setCart(newCart)
     } else {
       setCart([
@@ -63,17 +65,27 @@ export default function MerchantDashboard() {
           vendor_name: vendor.vendor_name,
           unit: vendor.unit,
           price: vendor.price,
-          qty: 1
+          min_qty: minQty,
+          qty: minQty
         }
       ])
     }
   }
 
   function updateCartQty(index, newQty) {
+    const item = cart[index]
+    const minQty = item.min_qty || 1
+    
     if (newQty <= 0) {
       removeFromCart(index)
       return
     }
+    
+    if (newQty < minQty) {
+      alert(`La cantidad mínima para este producto es ${minQty} ${item.unit === 'unit' ? 'unidades' : 'kg'}`)
+      return
+    }
+    
     const newCart = [...cart]
     newCart[index].qty = newQty
     setCart(newCart)
@@ -357,6 +369,11 @@ export default function MerchantDashboard() {
                               ${vendor.price.toLocaleString('es-CL')} / {vendor.unit === 'unit' ? 'unidad' : vendor.unit}
                               {vendor.variant_label && ` • ${vendor.variant_label}`}
                             </div>
+                            {vendor.min_qty && vendor.min_qty > 1 && (
+                              <div style={{ fontSize: '11px', color: '#ff9800', fontWeight: 600, marginTop: '2px' }}>
+                                Mínimo: {vendor.min_qty} {vendor.unit === 'unit' ? 'un' : 'kg'}
+                              </div>
+                            )}
                           </div>
                           <button
                             onClick={() => addToCart(product, vendor)}
@@ -491,6 +508,11 @@ export default function MerchantDashboard() {
                         <div style={{ fontSize: 13, color: '#666', marginTop: 4 }}>
                           ${item.price.toLocaleString('es-CL')} / {item.unit === 'unit' ? 'unidad' : item.unit}
                         </div>
+                        {item.min_qty && item.min_qty > 1 && (
+                          <div style={{ fontSize: 11, color: '#ff9800', fontWeight: 600, marginTop: 2 }}>
+                            Mínimo: {item.min_qty} {item.unit === 'unit' ? 'un' : 'kg'}
+                          </div>
+                        )}
                       </div>
 
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
