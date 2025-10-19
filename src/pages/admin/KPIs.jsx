@@ -163,6 +163,45 @@ export default function KPIs() {
                     <div style={{ fontWeight: 700 }}>{ticketData.num_clientes || 0}</div>
                   </div>
                 </div>
+
+                {/* Desglose por cliente */}
+                {ticketData.desglose_clientes && ticketData.desglose_clientes.length > 0 && (
+                  <div style={{ paddingTop: 16, borderTop: '1px solid #e0e0e0' }}>
+                    <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, opacity: 0.8 }}>
+                      Desglose por Cliente:
+                    </div>
+                    <div style={{ display: 'grid', gap: 8, maxHeight: 300, overflowY: 'auto' }}>
+                      {ticketData.desglose_clientes.map((cliente, idx) => (
+                        <div 
+                          key={idx}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '10px 12px',
+                            background: '#f9f9f9',
+                            borderRadius: 8,
+                            fontSize: 13
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 600, marginBottom: 2 }}>
+                              {cliente.customer_name}
+                            </div>
+                            <div style={{ fontSize: 11, opacity: 0.6 }}>
+                              {cliente.num_pedidos} {cliente.num_pedidos === 1 ? 'pedido' : 'pedidos'}
+                              {' • '}
+                              Promedio: ${cliente.promedio_por_pedido?.toLocaleString('es-CL')}
+                            </div>
+                          </div>
+                          <div style={{ fontWeight: 700, color: '#2196f3', fontSize: 16 }}>
+                            ${cliente.total?.toLocaleString('es-CL')}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ opacity: 0.5, fontSize: 14 }}>Sin datos</div>

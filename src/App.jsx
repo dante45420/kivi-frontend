@@ -16,6 +16,7 @@ import About from './pages/About'
 import AdminKPIs from './pages/admin/KPIs'
 import AdminProveedores from './pages/admin/Proveedores'
 import AdminMerchants from './pages/admin/Merchants'
+import AdminPedidosB2B from './pages/admin/PedidosB2B'
 import MerchantDashboard from './pages/merchant/Dashboard'
 import MerchantOrders from './pages/merchant/Orders'
 import { getToken, getUserType, verifyCurrentToken, clearToken } from './api/auth'
@@ -115,6 +116,7 @@ export default function App() {
         <Route path="/admin/kpis" element={<ProtectedRoute><AdminKPIs /></ProtectedRoute>} />
         <Route path="/admin/proveedores" element={<ProtectedRoute><AdminProveedores /></ProtectedRoute>} />
         <Route path="/admin/merchants" element={<ProtectedRoute><AdminMerchants /></ProtectedRoute>} />
+        <Route path="/admin/pedidos-b2b" element={<ProtectedRoute><AdminPedidosB2B /></ProtectedRoute>} />
         
         {/* Rutas de merchant */}
         <Route path="/merchant/dashboard" element={<ProtectedRoute><MerchantDashboard /></ProtectedRoute>} />
