@@ -218,6 +218,7 @@ export async function generateCatalogPDF(products) {
       let varY = currentY + 11
 
       // Variantes o precio - debajo del nombre con mismo formato
+      const startY = currentY // Guardar Y inicial de esta fila
       const hasVariants = product.variants && product.variants.filter(v => v.active).length > 0
       
       if (hasVariants) {
@@ -243,9 +244,8 @@ export async function generateCatalogPDF(products) {
               const displayVariant = variant.label.length > maxVarLength
                 ? variant.label.substring(0, maxVarLength) + '...'
                 : variant.label
-              const tierText = tier.min_qty > 1 
-                ? `${displayVariant}(${tier.min_qty}+): $${tier.sale_price?.toLocaleString('es-CL')}/${unit}`
-                : `${displayVariant}: $${tier.sale_price?.toLocaleString('es-CL')}/${unit}`
+              // NO agregar (min_qty+) - asumir que está en el nombre
+              const tierText = `${displayVariant}: $${tier.sale_price?.toLocaleString('es-CL')}/${unit}`
               doc.text(tierText, xPos, varY)
               varY += 6
             })
@@ -264,22 +264,33 @@ export async function generateCatalogPDF(products) {
         }
       }
 
-      // Línea divisoria sutil entre productos - mismo espacio para todos
+      // Línea divisoria sutil entre productos
       doc.setDrawColor(220, 220, 220)
       doc.setLineWidth(0.2)
       doc.line(xPos, varY + 1, xPos + columnWidth, varY + 1)
 
+      // Calcular altura real de este producto
+      const productHeight = varY - startY + 7
+
       // Cambiar de columna
-      column++
-      if (column >= 2) {
+      if (column === 0) {
+        // Primera columna: guardar máxima altura
+        if (!items.maxHeightThisRow) items.maxHeightThisRow = productHeight
+        else items.maxHeightThisRow = Math.max(items.maxHeightThisRow, productHeight)
+        column = 1
+      } else {
+        // Segunda columna: actualizar maxHeight y avanzar currentY
+        items.maxHeightThisRow = Math.max(items.maxHeightThisRow || 0, productHeight)
+        currentY += items.maxHeightThisRow
+        items.maxHeightThisRow = 0
         column = 0
-        currentY = Math.max(currentY + 22, varY + 5)
       }
     })
 
-    // Si quedamos en la primera columna, avanzar
+    // Si quedamos en la primera columna, avanzar con la altura correcta
     if (column === 1) {
-      currentY += 22
+      currentY += (items.maxHeightThisRow || 22)
+      items.maxHeightThisRow = 0
     }
 
     currentY += 3 // Espacio después de la categoría

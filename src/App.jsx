@@ -15,6 +15,7 @@ import About from './pages/About'
 import AdminKPIs from './pages/admin/KPIs'
 import AdminProveedores from './pages/admin/Proveedores'
 import AdminMerchants from './pages/admin/Merchants'
+import MerchantDashboard from './pages/merchant/Dashboard'
 import { getToken } from './api/auth'
 
 // Componente para rutas protegidas
@@ -65,6 +66,9 @@ export default function App() {
         <Route path="/admin/kpis" element={<ProtectedRoute><AdminKPIs /></ProtectedRoute>} />
         <Route path="/admin/proveedores" element={<ProtectedRoute><AdminProveedores /></ProtectedRoute>} />
         <Route path="/admin/merchants" element={<ProtectedRoute><AdminMerchants /></ProtectedRoute>} />
+        
+        {/* Rutas de merchant */}
+        <Route path="/merchant/dashboard" element={<ProtectedRoute><MerchantDashboard /></ProtectedRoute>} />
         
         {/* Redirección por defecto */}
         <Route path="*" element={<Navigate to={isAuthenticated ? "/productos" : "/"} replace />} />

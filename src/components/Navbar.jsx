@@ -16,23 +16,21 @@ export default function Navbar() {
   }
 
   return (
-    <header style={{ background:'#000', color:'#fff' }}>
-      <div style={{ maxWidth:960, margin:'0 auto', padding:'10px 12px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-        <div style={{ fontWeight:800, letterSpacing:0.5 }}>🥝 Kivi</div>
-        <nav className="nav-desktop" style={{ gap:10, alignItems:'center' }}>
-          <NavLink to="/productos" className={({isActive})=>`chip ${isActive?'active':''}`} style={{ background:'#fff', color:'#000', textDecoration:'none' }}>Productos</NavLink>
-          <NavLink to="/pedidos" className={({isActive})=>`chip ${isActive?'active':''}`} style={{ background:'#fff', color:'#000', textDecoration:'none' }}>Pedidos</NavLink>
-          <NavLink to="/compras" className={({isActive})=>`chip ${isActive?'active':''}`} style={{ background:'#fff', color:'#000', textDecoration:'none' }}>Compras</NavLink>
-          <NavLink to="/precios" className={({isActive})=>`chip ${isActive?'active':''}`} style={{ background:'#fff', color:'#000', textDecoration:'none' }}>Precios</NavLink>
-          <NavLink to="/contabilidad" className={({isActive})=>`chip ${isActive?'active':''}`} style={{ background:'#fff', color:'#000', textDecoration:'none' }}>Contabilidad</NavLink>
-          <NavLink to="/admin/kpis" className={({isActive})=>`chip ${isActive?'active':''}`} style={{ background:'#fff', color:'#000', textDecoration:'none' }}>📊 KPIs</NavLink>
-          <NavLink to="/admin/proveedores" className={({isActive})=>`chip ${isActive?'active':''}`} style={{ background:'#fff', color:'#000', textDecoration:'none' }}>🏪 Proveedores</NavLink>
-          <NavLink to="/admin/merchants" className={({isActive})=>`chip ${isActive?'active':''}`} style={{ background:'#fff', color:'#000', textDecoration:'none' }}>🏢 Merchants</NavLink>
+    <header style={{ background:'#000', color:'#fff', borderBottom:'1px solid #222' }}>
+      <div style={{ maxWidth:1200, margin:'0 auto', padding:'14px 20px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ fontWeight:800, fontSize:18, letterSpacing:0.5 }}>🥝 Kivi</div>
+        <nav className="nav-desktop" style={{ display:'flex', gap:24, alignItems:'center' }}>
+          <NavLink to="/productos" style={({isActive}) => ({ color:'#fff', textDecoration:'none', fontSize:14, fontWeight:500, opacity: isActive ? 1 : 0.7, transition:'opacity 0.2s' })}>Productos</NavLink>
+          <NavLink to="/pedidos" style={({isActive}) => ({ color:'#fff', textDecoration:'none', fontSize:14, fontWeight:500, opacity: isActive ? 1 : 0.7, transition:'opacity 0.2s' })}>Pedidos</NavLink>
+          <NavLink to="/compras" style={({isActive}) => ({ color:'#fff', textDecoration:'none', fontSize:14, fontWeight:500, opacity: isActive ? 1 : 0.7, transition:'opacity 0.2s' })}>Compras</NavLink>
+          <NavLink to="/precios" style={({isActive}) => ({ color:'#fff', textDecoration:'none', fontSize:14, fontWeight:500, opacity: isActive ? 1 : 0.7, transition:'opacity 0.2s' })}>Precios</NavLink>
+          <NavLink to="/contabilidad" style={({isActive}) => ({ color:'#fff', textDecoration:'none', fontSize:14, fontWeight:500, opacity: isActive ? 1 : 0.7, transition:'opacity 0.2s' })}>Contabilidad</NavLink>
+          <NavLink to="/admin/kpis" style={({isActive}) => ({ color:'#fff', textDecoration:'none', fontSize:14, fontWeight:500, opacity: isActive ? 1 : 0.7, transition:'opacity 0.2s' })}>KPIs</NavLink>
+          <NavLink to="/admin/proveedores" style={({isActive}) => ({ color:'#fff', textDecoration:'none', fontSize:14, fontWeight:500, opacity: isActive ? 1 : 0.7, transition:'opacity 0.2s' })}>Proveedores</NavLink>
+          <NavLink to="/admin/merchants" style={({isActive}) => ({ color:'#fff', textDecoration:'none', fontSize:14, fontWeight:500, opacity: isActive ? 1 : 0.7, transition:'opacity 0.2s' })}>Merchants</NavLink>
+          <button onClick={handleLogout} style={{ background:'transparent', border:'1px solid rgba(255,255,255,0.3)', color:'#fff', padding:'6px 16px', borderRadius:6, cursor:'pointer', fontSize:13, fontWeight:500, transition:'all 0.2s' }} onMouseOver={e => e.target.style.background = 'rgba(255,255,255,0.1)'} onMouseOut={e => e.target.style.background = 'transparent'}>Salir</button>
         </nav>
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <button onClick={handleLogout} className="chip" style={{ background:'#eee', color:'#000', border:'none', cursor:'pointer' }}>Salir →</button>
-          <button className="button ghost nav-toggle" onClick={()=>setOpen(v=>!v)} aria-label="menu" style={{ background:'#000', color:'#fff', border:'1px solid #444', padding:'6px 10px' }}>☰</button>
-        </div>
+        <button className="nav-toggle" onClick={()=>setOpen(v=>!v)} aria-label="menu" style={{ background:'transparent', color:'#fff', border:'1px solid #444', padding:'8px 12px', cursor:'pointer', borderRadius:6, fontSize:18 }}>☰</button>
       </div>
       {open && (
         <div className="nav-mobile" style={{ borderTop:'1px solid #222', background:'#000' }}>
@@ -50,10 +48,13 @@ export default function Navbar() {
         </div>
       )}
       <style>{`
-        @media (min-width: 720px){
-          .nav-desktop{ display:flex }
-          .nav-mobile{ display:none }
-          .nav-toggle{ display:none }
+        @media (min-width: 1100px){
+          .nav-desktop{ display:flex !important }
+          .nav-mobile{ display:none !important }
+          .nav-toggle{ display:none !important }
+        }
+        @media (max-width: 1099px){
+          .nav-desktop{ display:none !important }
         }
       `}</style>
     </header>
