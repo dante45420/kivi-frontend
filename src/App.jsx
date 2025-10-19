@@ -16,7 +16,7 @@ import AdminKPIs from './pages/admin/KPIs'
 import AdminProveedores from './pages/admin/Proveedores'
 import AdminMerchants from './pages/admin/Merchants'
 import MerchantDashboard from './pages/merchant/Dashboard'
-import { getToken, getUserType } from './api/auth'
+import { getToken, getUserType, verifyCurrentToken, clearToken } from './api/auth'
 
 // Componente para rutas protegidas
 function ProtectedRoute({ children }) {
@@ -35,6 +35,31 @@ function getDefaultRoute() {
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(!!getToken())
+  const [isVerifying, setIsVerifying] = useState(true)
+
+  // Verificar token al cargar la app
+  useEffect(() => {
+    async function checkTokenValidity() {
+      if (!getToken()) {
+        setIsVerifying(false)
+        return
+      }
+
+      const result = await verifyCurrentToken()
+      
+      if (!result.valid) {
+        // Token inválido, hacer logout
+        console.warn('Token inválido, cerrando sesión:', result.error)
+        clearToken()
+        setIsAuthenticated(false)
+        window.location.href = '/login'
+      }
+      
+      setIsVerifying(false)
+    }
+
+    checkTokenValidity()
+  }, [])
 
   useEffect(() => {
     // Función para actualizar el estado de autenticación
@@ -50,6 +75,21 @@ export default function App() {
       window.removeEventListener('auth-change', checkAuth)
     }
   }, [])
+
+  // Mostrar loading mientras verifica el token
+  if (isVerifying) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontFamily: 'sans-serif'
+      }}>
+        <div>Verificando sesión...</div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ fontFamily: 'sans-serif', padding: isAuthenticated ? 12 : 0 }}>

@@ -36,6 +36,35 @@ export async function verifyToken() {
   return apiFetch('/verify')
 }
 
+// Verificar token según el tipo de usuario
+export async function verifyCurrentToken() {
+  const userType = getUserType()
+  const token = getToken()
+  
+  if (!token) {
+    return { valid: false, error: 'No token' }
+  }
+  
+  try {
+    if (userType === 'merchant') {
+      // Verificar token de merchant
+      const data = await apiFetch('/merchant/auth/me')
+      return { valid: true, user: data }
+    } else {
+      // Verificar token de admin
+      const data = await apiFetch('/verify')
+      return { valid: true, user: data.user }
+    }
+  } catch (error) {
+    // Si es 401, el token es inválido
+    if (error.status === 401) {
+      return { valid: false, error: 'Token inválido' }
+    }
+    // Otros errores no invalidan el token (puede ser temporal)
+    return { valid: true, error: error.message }
+  }
+}
+
 export function getToken() {
   return localStorage.getItem('kivi_token')
 }

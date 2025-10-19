@@ -17,13 +17,14 @@ export async function apiFetch(path, { method = 'GET', body } = {}) {
   const contentType = res.headers.get('content-type') || ''
   const data = contentType.includes('application/json') ? await res.json() : await res.text()
   
-  // Manejar sesión expirada
-  if (res.status === 401) {
-    localStorage.removeItem('kivi_token')
-    window.location.href = '/login'
-    throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.')
+  // Si hay error, lanzarlo sin hacer logout automático
+  // Cada componente decidirá si debe hacer logout o no
+  if (!res.ok) {
+    const errorMsg = typeof data === 'string' ? data : (data.error || 'Error')
+    const error = new Error(errorMsg)
+    error.status = res.status
+    throw error
   }
   
-  if (!res.ok) throw new Error(typeof data === 'string' ? data : (data.error || 'Error'))
   return data
 }
