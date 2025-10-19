@@ -7,6 +7,7 @@ import { listVendors } from '../api/vendors'
 import { batchUpdateVendorPrices } from '../api/adminVendors'
 import QualityModal from '../components/QualityModal'
 import PurchaseEditModal from '../components/PurchaseEditModal'
+import VueltaReconocimientoModal from '../components/VueltaReconocimientoModal'
 import '../styles/globals.css'
 
 const toCLP = (n) => {
@@ -270,17 +271,39 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
         <p style={{ margin:0, opacity:0.7, fontSize:14 }}>Gestiona tus compras por pedido</p>
       </div>
 
-      {/* Selector de pedido */}
-      <div style={{ marginBottom:20 }}>
+      {/* Selector de pedido y botón Vuelta Reconocimiento */}
+      <div style={{ marginBottom:20, display:'flex', gap:12, alignItems:'center', justifyContent:'center', flexWrap:'wrap' }}>
         <select 
           className="input" 
-          style={{ width:'100%', maxWidth:400, margin:'0 auto', display:'block', padding:'12px 16px', borderRadius:12, fontSize:15 }} 
+          style={{ flex:'1', maxWidth:400, padding:'12px 16px', borderRadius:12, fontSize:15 }} 
           value={selectedOrder || ''} 
           onChange={e=>setSelectedOrder(Number(e.target.value))}
         >
           <option value="">Seleccionar pedido...</option>
           {orders.map(o=> (<option key={o.id} value={o.id}>{o.title || `Pedido #${o.id}`}</option>))}
         </select>
+        
+        {selectedOrder && (
+          <button
+            onClick={() => setReconModalOpen(true)}
+            style={{
+              padding:'12px 24px',
+              background:'var(--kivi-green)',
+              border:'none',
+              borderRadius:12,
+              cursor:'pointer',
+              fontSize:15,
+              fontWeight:700,
+              color:'#000',
+              transition:'all 0.2s',
+              whiteSpace:'nowrap'
+            }}
+            onMouseOver={e => e.target.style.transform = 'scale(1.05)'}
+            onMouseOut={e => e.target.style.transform = 'scale(1)'}
+          >
+            🚚 Vuelta de Reconocimiento
+          </button>
+        )}
       </div>
 
       {!selectedOrder ? (
@@ -755,6 +778,24 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
           purchase={editingPurchase} 
           onClose={() => setEditingPurchase(null)} 
           onSaved={refreshOrderDetail}
+        />
+      )}
+
+      {/* Modal Vuelta de Reconocimiento */}
+      {reconModalOpen && (
+        <VueltaReconocimientoModal
+          open={reconModalOpen}
+          onClose={() => setReconModalOpen(false)}
+          products={products.map(p => ({
+            product_id: p.id,
+            product_name: p.name,
+            default_unit: p.default_unit || 'kg',
+            category: p.category
+          }))}
+          onSuccess={() => {
+            alert('✓ Precios actualizados correctamente')
+            setReconModalOpen(false)
+          }}
         />
       )}
     </div>

@@ -16,7 +16,7 @@ export default function KPIs() {
   const [ticketFilters, setTicketFilters] = useState({ date_from: '', date_to: '' })
   const [recompraFilters, setRecompraFilters] = useState({ date_from: '', date_to: '', days: 15 })
   const [clientesFilters, setClientesFilters] = useState({ days: 15 })
-  const [topFilters, setTopFilters] = useState({ date_from: '', date_to: '', limit: 10 })
+  const [topFilters, setTopFilters] = useState({ date_from: '', date_to: '', limit: 10, sort_by: 'revenue' })
 
   // Carga individual de cada KPI
   async function loadTicket() {
@@ -57,7 +57,8 @@ export default function KPIs() {
     try {
       const data = await getTopProducts({ 
         ...topFilters,
-        limit: topFilters.limit 
+        limit: topFilters.limit,
+        sort_by: topFilters.sort_by
       })
       setTopProducts(data)
     } catch (e) {
@@ -265,6 +266,15 @@ export default function KPIs() {
           emoji="🏆"
           filters={
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
+              <select
+                value={topFilters.sort_by}
+                onChange={e => setTopFilters(v => ({ ...v, sort_by: e.target.value }))}
+                style={inputStyle}
+              >
+                <option value="revenue">💰 Por Monto</option>
+                <option value="quantity">📦 Por Unidades</option>
+                <option value="profit">💎 Por Utilidad</option>
+              </select>
               <input
                 type="date"
                 value={topFilters.date_from}
@@ -302,32 +312,44 @@ export default function KPIs() {
                   <div
                     key={product.product_id}
                     style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
                       padding: 12,
                       background: idx < 3 ? 'var(--kivi-cream)' : '#fafafa',
                       borderRadius: 8,
                       fontSize: 14
                     }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ 
-                        fontWeight: 800, 
-                        color: idx < 3 ? 'var(--kivi-green-dark)' : '#999',
-                        minWidth: 24
-                      }}>
-                        #{idx + 1}
-                      </div>
-                      <div>
-                        <div style={{ fontWeight: 700 }}>{product.product_name}</div>
-                        <div style={{ fontSize: 12, opacity: 0.6 }}>
-                          {product.cantidad_vendida?.toFixed(1)} unidades
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ 
+                          fontWeight: 800, 
+                          color: idx < 3 ? 'var(--kivi-green-dark)' : '#999',
+                          minWidth: 24
+                        }}>
+                          #{idx + 1}
                         </div>
+                        <div style={{ fontWeight: 700 }}>{product.product_name}</div>
+                      </div>
+                      <div style={{ fontWeight: 800, color: 'var(--kivi-green-dark)' }}>
+                        ${product.ingresos_totales?.toLocaleString('es-CL')}
                       </div>
                     </div>
-                    <div style={{ fontWeight: 800, color: 'var(--kivi-green-dark)' }}>
-                      ${product.ingresos_totales?.toLocaleString('es-CL')}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, fontSize: 12 }}>
+                      <div>
+                        <span style={{ opacity: 0.6 }}>Unidades:</span>
+                        <div style={{ fontWeight: 700 }}>{product.cantidad_vendida?.toFixed(1)}</div>
+                      </div>
+                      <div>
+                        <span style={{ opacity: 0.6 }}>Costos:</span>
+                        <div style={{ fontWeight: 700, color: '#d32f2f' }}>
+                          ${product.costos_totales?.toLocaleString('es-CL')}
+                        </div>
+                      </div>
+                      <div>
+                        <span style={{ opacity: 0.6 }}>Utilidad:</span>
+                        <div style={{ fontWeight: 700, color: product.utilidad >= 0 ? 'var(--kivi-green-dark)' : '#d32f2f' }}>
+                          ${product.utilidad?.toLocaleString('es-CL')}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}

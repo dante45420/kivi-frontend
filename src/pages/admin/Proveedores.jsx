@@ -154,6 +154,26 @@ export default function Proveedores() {
     }
   }
 
+  async function handleCreateVendor() {
+    if (!newVendorName.trim()) {
+      alert('El nombre del proveedor es obligatorio')
+      return
+    }
+    try {
+      await createVendor({
+        name: newVendorName.trim(),
+        notes: newVendorNotes.trim() || ''
+      })
+      alert('✓ Proveedor creado correctamente')
+      setVendorModalOpen(false)
+      setNewVendorName('')
+      setNewVendorNotes('')
+      await loadData()
+    } catch (e) {
+      alert('Error al crear proveedor: ' + e.message)
+    }
+  }
+
   // Calcular precio final automáticamente
   useEffect(() => {
     if (editOpen) {
@@ -188,13 +208,22 @@ export default function Proveedores() {
             Precios y disponibilidad para comerciantes B2B
           </p>
         </div>
-        <button
-          className="button"
-          onClick={openCreate}
-          style={{ background: 'var(--kivi-green)', fontWeight: 600, whiteSpace: 'nowrap' }}
-        >
-          ➕ Agregar Precio
-        </button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button
+            className="button"
+            onClick={() => setVendorModalOpen(true)}
+            style={{ background: 'var(--kivi-blue-soft)', fontWeight: 600, whiteSpace: 'nowrap' }}
+          >
+            🏢 Crear Proveedor
+          </button>
+          <button
+            className="button"
+            onClick={openCreate}
+            style={{ background: 'var(--kivi-green)', fontWeight: 600, whiteSpace: 'nowrap' }}
+          >
+            ➕ Agregar Precio
+          </button>
+        </div>
       </div>
 
       {/* Filtros */}
@@ -573,6 +602,66 @@ export default function Proveedores() {
               <button
                 className="button"
                 onClick={() => setEditOpen(false)}
+                style={{ flex: 1, background: '#ddd', fontWeight: 600 }}
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Crear Proveedor */}
+      {vendorModalOpen && (
+        <div className="modal-backdrop" onClick={() => setVendorModalOpen(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 500, borderRadius: 20 }}>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: 20, fontWeight: 700, color: 'var(--kivi-text-dark)' }}>
+              🏢 Crear Nuevo Proveedor
+            </h3>
+            
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
+                Nombre del Proveedor *
+              </label>
+              <input
+                type="text"
+                className="input"
+                value={newVendorName}
+                onChange={e => setNewVendorName(e.target.value)}
+                placeholder="Ej: Proveedor Central"
+                style={{ width: '100%', padding: '12px 14px', fontSize: 14 }}
+              />
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
+                Notas (opcional)
+              </label>
+              <textarea
+                className="input"
+                value={newVendorNotes}
+                onChange={e => setNewVendorNotes(e.target.value)}
+                placeholder="Información adicional del proveedor..."
+                rows={3}
+                style={{ width: '100%', padding: '12px 14px', fontSize: 14, resize: 'vertical' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button
+                className="button"
+                onClick={handleCreateVendor}
+                style={{ flex: 1, background: 'var(--kivi-green)', fontWeight: 600 }}
+              >
+                ✓ Crear Proveedor
+              </button>
+              <button
+                className="button"
+                onClick={() => {
+                  setVendorModalOpen(false)
+                  setNewVendorName('')
+                  setNewVendorNotes('')
+                }}
                 style={{ flex: 1, background: '#ddd', fontWeight: 600 }}
               >
                 Cancelar
