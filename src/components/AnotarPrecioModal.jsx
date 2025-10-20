@@ -39,50 +39,58 @@ export default function AnotarPrecioModal({ open, onClose, product, vendorId, ve
     }
 
     const pricesArray = []
-
-    // Precio base
-    if (prices.base.price && parseFloat(prices.base.price) > 0) {
-      const hasVariantPrices = Object.values(prices.variants).some(v => v.price && parseFloat(v.price) > 0)
-      
-      if (!hasVariantPrices) {
-        pricesArray.push({
-          product_id: product.product_id,
-          variant_id: null,
-          base_price: parseFloat(prices.base.price),
-          unit: prices.base.unit,
-          markup_percentage: 20,
-          min_qty: 1.0
-        })
-      }
+    
+    // Verificar si hay variantes con precios
+    const variantPrices = []
+    if (prices.variants && typeof prices.variants === 'object') {
+      Object.entries(prices.variants).forEach(([variantId, variantData]) => {
+        if (variantData && variantData.price && parseFloat(variantData.price) > 0) {
+          variantPrices.push({
+            product_id: product.product_id,
+            variant_id: parseInt(variantId),
+            base_price: parseFloat(variantData.price),
+            unit: variantData.unit || prices.base.unit || 'kg',
+            markup_percentage: 20,
+            min_qty: 1.0
+          })
+        }
+      })
     }
 
-    // Precios de variantes
-    Object.entries(prices.variants).forEach(([variantId, variantData]) => {
-      if (variantData.price && parseFloat(variantData.price) > 0) {
-        pricesArray.push({
-          product_id: product.product_id,
-          variant_id: parseInt(variantId),
-          base_price: parseFloat(variantData.price),
-          unit: variantData.unit || prices.base.unit,
-          markup_percentage: 20,
-          min_qty: 1.0
-        })
-      }
-    })
+    // Si hay precios de variantes, usar solo esos
+    if (variantPrices.length > 0) {
+      pricesArray.push(...variantPrices)
+    } 
+    // Si no hay variantes con precio, usar el precio base
+    else if (prices.base && prices.base.price && parseFloat(prices.base.price) > 0) {
+      pricesArray.push({
+        product_id: product.product_id,
+        variant_id: null,
+        base_price: parseFloat(prices.base.price),
+        unit: prices.base.unit || 'kg',
+        markup_percentage: 20,
+        min_qty: 1.0
+      })
+    }
 
     if (pricesArray.length === 0) {
-      alert('Debes ingresar al menos un precio')
+      alert('⚠️ Debes ingresar al menos un precio')
       return
     }
 
     setSaving(true)
     try {
-      await batchUpdateVendorPrices(parseInt(vendorId), pricesArray)
+      const vendorIdInt = parseInt(vendorId)
+      if (isNaN(vendorIdInt)) {
+        throw new Error('ID de proveedor inválido')
+      }
+      
+      await batchUpdateVendorPrices(vendorIdInt, pricesArray)
       alert(`✓ Precio${pricesArray.length > 1 ? 's' : ''} guardado${pricesArray.length > 1 ? 's' : ''}`)
       onSuccess?.()
       onClose()
     } catch (e) {
-      alert('Error al guardar: ' + e.message)
+      alert('❌ Error al guardar: ' + e.message)
       console.error('Error:', e)
     } finally {
       setSaving(false)
