@@ -306,77 +306,45 @@ export default function MerchantDashboard() {
                     {product.name}
                   </h3>
                   
-                  {/* Opciones de vendedores */}
+                  {/* Opciones de vendedores y variantes */}
                   <div style={{ display: 'grid', gap: 8 }}>
                     {sortBy === 'vendor' && product.selectedVendor ? (
                       // Modo proveedor: mostrar solo el vendor seleccionado
                       <div
                         style={{
-                          display: 'flex',
-                          justifyContent: 'space-between',
-                          alignItems: 'center',
                           padding: 12,
                           background: '#f0f0f0',
                           borderRadius: 12,
                           fontSize: 13
                         }}
                       >
-                        <div>
-                          <div style={{ fontWeight: 700, marginBottom: 4 }}>
-                            ${product.selectedVendor.price.toLocaleString('es-CL')} / {product.selectedVendor.unit === 'unit' ? 'unidad' : product.selectedVendor.unit}
-                          </div>
-                          <div style={{ opacity: 0.7 }}>
-                            {product.selectedVendor.variant_label || 'Sin variante'}
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => addToCart(product, product.selectedVendor)}
-                          style={{
-                            padding: '8px 16px',
-                            background: '#88C4A8',
-                            border: 'none',
-                            borderRadius: 999,
-                            cursor: 'pointer',
-                            fontSize: 12,
-                            fontWeight: 700,
-                            color: '#fff',
-                            whiteSpace: 'nowrap'
-                          }}
-                        >
-                          + Agregar
-                        </button>
-                      </div>
-                    ) : (
-                      // Modo categoría: mostrar todos los vendors
-                      product.vendors.map((vendor, vidx) => (
-                        <div
-                          key={vidx}
-                          style={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            padding: 12,
-                            background: '#f0f0f0',
-                            borderRadius: 12,
-                            fontSize: 13
-                          }}
-                        >
-                          <div>
-                            <div style={{ fontWeight: 700, marginBottom: 4 }}>
-                              {vendor.vendor_name}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: 15, color: '#88C4A8', marginBottom: 4 }}>
+                              ${product.selectedVendor.price.toLocaleString('es-CL')} / {product.selectedVendor.unit === 'unit' ? 'unidad' : product.selectedVendor.unit}
                             </div>
-                            <div style={{ opacity: 0.7 }}>
-                              ${vendor.price.toLocaleString('es-CL')} / {vendor.unit === 'unit' ? 'unidad' : vendor.unit}
-                              {vendor.variant_label && ` • ${vendor.variant_label}`}
-                            </div>
-                            {vendor.min_qty && vendor.min_qty > 1 && (
-                              <div style={{ fontSize: '11px', color: '#ff9800', fontWeight: 600, marginTop: '2px' }}>
-                                Mínimo: {vendor.min_qty} {vendor.unit === 'unit' ? 'un' : 'kg'}
+                            {product.selectedVendor.variant_label && (
+                              <div style={{ 
+                                display: 'inline-block',
+                                background: '#88C4A8',
+                                color: 'white',
+                                padding: '2px 8px',
+                                borderRadius: 6,
+                                fontSize: 11,
+                                fontWeight: 600,
+                                marginBottom: 4
+                              }}>
+                                {product.selectedVendor.variant_label}
+                              </div>
+                            )}
+                            {product.selectedVendor.min_qty && product.selectedVendor.min_qty > 1 && (
+                              <div style={{ fontSize: '11px', color: '#ff9800', fontWeight: 600, marginTop: 4 }}>
+                                📦 Mínimo: {product.selectedVendor.min_qty} {product.selectedVendor.unit === 'unit' ? 'unidades' : 'kg'}
                               </div>
                             )}
                           </div>
                           <button
-                            onClick={() => addToCart(product, vendor)}
+                            onClick={() => addToCart(product, product.selectedVendor)}
                             style={{
                               padding: '8px 16px',
                               background: '#88C4A8',
@@ -386,11 +354,72 @@ export default function MerchantDashboard() {
                               fontSize: 12,
                               fontWeight: 700,
                               color: '#fff',
-                              whiteSpace: 'nowrap'
+                              whiteSpace: 'nowrap',
+                              marginLeft: 8
                             }}
                           >
                             + Agregar
                           </button>
+                        </div>
+                      </div>
+                    ) : (
+                      // Modo categoría: mostrar todos los vendors
+                      product.vendors.map((vendor, vidx) => (
+                        <div
+                          key={vidx}
+                          style={{
+                            padding: 12,
+                            background: '#f0f0f0',
+                            borderRadius: 12,
+                            fontSize: 13
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div style={{ flex: 1 }}>
+                              <div style={{ fontWeight: 700, marginBottom: 4, fontSize: 14 }}>
+                                🏢 {vendor.vendor_name}
+                              </div>
+                              <div style={{ fontWeight: 700, fontSize: 15, color: '#88C4A8', marginBottom: 4 }}>
+                                ${vendor.price.toLocaleString('es-CL')} / {vendor.unit === 'unit' ? 'unidad' : vendor.unit}
+                              </div>
+                              {vendor.variant_label && (
+                                <div style={{ 
+                                  display: 'inline-block',
+                                  background: '#88C4A8',
+                                  color: 'white',
+                                  padding: '2px 8px',
+                                  borderRadius: 6,
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  marginBottom: 4
+                                }}>
+                                  📦 {vendor.variant_label}
+                                </div>
+                              )}
+                              {vendor.min_qty && vendor.min_qty > 1 && (
+                                <div style={{ fontSize: '11px', color: '#ff9800', fontWeight: 600, marginTop: 4 }}>
+                                  Mínimo: {vendor.min_qty} {vendor.unit === 'unit' ? 'unidades' : 'kg'}
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={() => addToCart(product, vendor)}
+                              style={{
+                                padding: '8px 16px',
+                                background: '#88C4A8',
+                                border: 'none',
+                                borderRadius: 999,
+                                cursor: 'pointer',
+                                fontSize: 12,
+                                fontWeight: 700,
+                                color: '#fff',
+                                whiteSpace: 'nowrap',
+                                marginLeft: 8
+                              }}
+                            >
+                              + Agregar
+                            </button>
+                          </div>
                         </div>
                       ))
                     )}
@@ -498,19 +527,32 @@ export default function MerchantDashboard() {
                       gap: 12
                     }}>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 700, marginBottom: 4 }}>
+                        <div style={{ fontWeight: 700, marginBottom: 6, fontSize: 15 }}>
                           {item.product_name}
                         </div>
-                        <div style={{ fontSize: 12, color: '#666' }}>
-                          {item.vendor_name}
-                          {item.variant_label && ` • ${item.variant_label}`}
+                        <div style={{ fontSize: 12, color: '#666', marginBottom: 4 }}>
+                          🏢 {item.vendor_name}
                         </div>
-                        <div style={{ fontSize: 13, color: '#666', marginTop: 4 }}>
+                        {item.variant_label && (
+                          <div style={{ 
+                            display: 'inline-block',
+                            background: '#88C4A8',
+                            color: 'white',
+                            padding: '2px 8px',
+                            borderRadius: 6,
+                            fontSize: 11,
+                            fontWeight: 600,
+                            marginBottom: 6
+                          }}>
+                            📦 {item.variant_label}
+                          </div>
+                        )}
+                        <div style={{ fontSize: 13, fontWeight: 600, color: '#88C4A8', marginTop: 4 }}>
                           ${item.price.toLocaleString('es-CL')} / {item.unit === 'unit' ? 'unidad' : item.unit}
                         </div>
                         {item.min_qty && item.min_qty > 1 && (
-                          <div style={{ fontSize: 11, color: '#ff9800', fontWeight: 600, marginTop: 2 }}>
-                            Mínimo: {item.min_qty} {item.unit === 'unit' ? 'un' : 'kg'}
+                          <div style={{ fontSize: 10, color: '#ff9800', fontWeight: 600, marginTop: 4 }}>
+                            Mínimo: {item.min_qty} {item.unit === 'unit' ? 'unidades' : 'kg'}
                           </div>
                         )}
                       </div>
