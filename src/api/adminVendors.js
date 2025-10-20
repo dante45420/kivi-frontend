@@ -47,12 +47,27 @@ export function toggleVendorPriceAvailability(priceId) {
 
 // Batch update (Vuelta de Reconocimiento)
 export function batchUpdateVendorPrices(vendorId, prices) {
+  console.log('🌐 [API-1] batchUpdateVendorPrices llamada')
+  console.log('🌐 [API-2] vendorId recibido:', vendorId, '| tipo:', typeof vendorId)
+  console.log('🌐 [API-3] prices recibido:', prices, '| tipo:', typeof prices, '| isArray:', Array.isArray(prices))
+  
+  const body = {
+    vendor_id: vendorId,
+    prices: prices
+  }
+  
+  console.log('🌐 [API-4] Body a enviar:', JSON.stringify(body, null, 2))
+  
   return apiFetch('/admin/vendors/prices/batch', {
     method: 'POST',
-    body: {
-      vendor_id: vendorId,
-      prices: prices
-    }
+    body: body
+  }).then(response => {
+    console.log('🌐 [API-5] Respuesta recibida:', response)
+    return response
+  }).catch(error => {
+    console.error('🌐 [API-ERROR] Error capturado:', error)
+    console.error('🌐 [API-ERROR] Error message:', error.message)
+    throw error
   })
 }
 

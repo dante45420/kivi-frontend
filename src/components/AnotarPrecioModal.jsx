@@ -33,6 +33,12 @@ export default function AnotarPrecioModal({ open, onClose, product, vendorId, ve
   }
 
   async function handleSave() {
+    console.log('🔍 [1] handleSave iniciado')
+    console.log('🔍 [2] vendorId:', vendorId, '| tipo:', typeof vendorId)
+    console.log('🔍 [3] product:', product)
+    console.log('🔍 [4] prices.base:', prices.base)
+    console.log('🔍 [5] prices.variants:', prices.variants)
+    
     if (!vendorId || vendorId === '') {
       alert('⚠️ Debes seleccionar un proveedor en el dropdown de abajo primero')
       return
@@ -44,6 +50,7 @@ export default function AnotarPrecioModal({ open, onClose, product, vendorId, ve
     const variantPrices = []
     if (prices.variants && typeof prices.variants === 'object') {
       Object.entries(prices.variants).forEach(([variantId, variantData]) => {
+        console.log(`🔍 [6] Procesando variante ${variantId}:`, variantData)
         if (variantData && variantData.price && parseFloat(variantData.price) > 0) {
           variantPrices.push({
             product_id: product.product_id,
@@ -56,6 +63,8 @@ export default function AnotarPrecioModal({ open, onClose, product, vendorId, ve
         }
       })
     }
+
+    console.log('🔍 [7] variantPrices construido:', variantPrices)
 
     // Si hay precios de variantes, usar solo esos
     if (variantPrices.length > 0) {
@@ -73,6 +82,9 @@ export default function AnotarPrecioModal({ open, onClose, product, vendorId, ve
       })
     }
 
+    console.log('🔍 [8] pricesArray FINAL:', pricesArray)
+    console.log('🔍 [9] pricesArray.length:', pricesArray.length)
+
     if (pricesArray.length === 0) {
       alert('⚠️ Debes ingresar al menos un precio')
       return
@@ -81,17 +93,28 @@ export default function AnotarPrecioModal({ open, onClose, product, vendorId, ve
     setSaving(true)
     try {
       const vendorIdInt = parseInt(vendorId)
+      console.log('🔍 [10] vendorIdInt:', vendorIdInt)
+      
       if (isNaN(vendorIdInt)) {
         throw new Error('ID de proveedor inválido')
       }
       
-      await batchUpdateVendorPrices(vendorIdInt, pricesArray)
+      console.log('🔍 [11] Llamando a batchUpdateVendorPrices con:', {
+        vendorIdInt,
+        pricesArray
+      })
+      
+      const result = await batchUpdateVendorPrices(vendorIdInt, pricesArray)
+      console.log('🔍 [12] Respuesta exitosa:', result)
+      
       alert(`✓ Precio${pricesArray.length > 1 ? 's' : ''} guardado${pricesArray.length > 1 ? 's' : ''}`)
       onSuccess?.()
       onClose()
     } catch (e) {
+      console.error('❌ [ERROR COMPLETO]:', e)
+      console.error('❌ [ERROR MESSAGE]:', e.message)
+      console.error('❌ [ERROR STACK]:', e.stack)
       alert('❌ Error al guardar: ' + e.message)
-      console.error('Error:', e)
     } finally {
       setSaving(false)
     }
