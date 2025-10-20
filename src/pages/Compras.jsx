@@ -7,7 +7,7 @@ import { listVendors } from '../api/vendors'
 import { batchUpdateVendorPrices } from '../api/adminVendors'
 import QualityModal from '../components/QualityModal'
 import PurchaseEditModal from '../components/PurchaseEditModal'
-import VueltaReconocimientoModal from '../components/VueltaReconocimientoModal'
+import AnotarPrecioModal from '../components/AnotarPrecioModal'
 import '../styles/globals.css'
 
 const toCLP = (n) => {
@@ -39,11 +39,11 @@ export default function Compras() {
   const [filterCategory, setFilterCategory] = useState('all') // all, fruta, verdura
   const [filterPurchaseType, setFilterPurchaseType] = useState('all') // all, cajon, detalle
   
-  // Modal Vuelta de Reconocimiento
-  const [reconModalOpen, setReconModalOpen] = useState(false)
+  // Anotar Precio
+  const [anotarPrecioOpen, setAnotarPrecioOpen] = useState(false)
+  const [selectedProductToPrice, setSelectedProductToPrice] = useState(null)
   const [vendors, setVendors] = useState([])
   const [selectedVendor, setSelectedVendor] = useState('')
-  const [reconPrices, setReconPrices] = useState({}) // {product_id: {price, unit}}
 
   useEffect(() => { 
     listOrders().then(os => { 
@@ -51,7 +51,8 @@ export default function Compras() {
       const lastEmitted = os.find(o => o.status === 'emitido') || os[0]; 
       if (lastEmitted) setSelectedOrder(lastEmitted.id) 
     }).catch(() => {}) 
-    listProducts().then(setProducts).catch(() => {}) 
+    listProducts().then(setProducts).catch(() => {})
+    listVendors().then(setVendors).catch(() => {})
   }, [])
 
   useEffect(() => { 
@@ -415,11 +416,22 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
 
                     <div>
                       <button 
-                        onClick={()=>openModalFor(g)} 
-                        className="button" 
-                        style={{ padding:'10px 20px', borderRadius:12, fontWeight:600 }}
+                        onClick={() => {
+                          setSelectedProductToPrice(g)
+                          setAnotarPrecioOpen(true)
+                        }} 
+                        style={{ 
+                          padding:'10px 20px', 
+                          borderRadius:12, 
+                          fontWeight:600,
+                          background: '#88C4A8',
+                          color: 'white',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: 14
+                        }}
                       >
-                        Ver detalle
+                        💰 Anotar Precio
                       </button>
                     </div>
                   </div>
@@ -781,22 +793,61 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
         />
       )}
 
-      {/* Modal Vuelta de Reconocimiento */}
-      {reconModalOpen && (
-        <VueltaReconocimientoModal
-          open={reconModalOpen}
-          onClose={() => setReconModalOpen(false)}
-          products={products.map(p => ({
-            product_id: p.id,
-            product_name: p.name,
-            default_unit: p.default_unit || 'kg',
-            category: p.category
-          }))}
-          onSuccess={() => {
-            alert('✓ Precios actualizados correctamente')
-            setReconModalOpen(false)
-          }}
-        />
+      {/* Modal Anotar Precio */}
+      <AnotarPrecioModal
+        open={anotarPrecioOpen}
+        onClose={() => setAnotarPrecioOpen(false)}
+        product={selectedProductToPrice}
+        vendorId={selectedVendor}
+        vendorName={vendors.find(v => v.id === parseInt(selectedVendor))?.name || ''}
+        onSuccess={refreshOrderDetail}
+      />
+
+      {/* Selector de Proveedor Fijo */}
+      {selectedOrder && (
+        <div style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          background: 'linear-gradient(135deg, #88C4A8 0%, #6FA891 100%)',
+          padding: '16px 20px',
+          boxShadow: '0 -4px 12px rgba(0,0,0,0.15)',
+          zIndex: 999,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12
+        }}>
+          <div style={{ 
+            fontSize: 14, 
+            fontWeight: 700, 
+            color: 'white',
+            whiteSpace: 'nowrap'
+          }}>
+            📍 Proveedor:
+          </div>
+          <select
+            value={selectedVendor}
+            onChange={e => setSelectedVendor(e.target.value)}
+            style={{
+              flex: 1,
+              padding: '12px 14px',
+              border: 'none',
+              borderRadius: '12px',
+              fontSize: 14,
+              fontWeight: 600,
+              background: 'white',
+              cursor: 'pointer',
+              outline: 'none',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+            }}
+          >
+            <option value="">Seleccionar proveedor...</option>
+            {vendors.map(v => (
+              <option key={v.id} value={v.id}>{v.name}</option>
+            ))}
+          </select>
+        </div>
       )}
     </div>
   )
