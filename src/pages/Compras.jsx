@@ -2,12 +2,8 @@ import { useEffect, useState, useMemo } from 'react'
 import { listOrders, getOrderDetail } from '../api/orders'
 import { apiFetch } from '../api/client'
 import { listProducts } from '../api/products'
-import { listPrices } from '../api/prices'
-import { listVendors } from '../api/vendors'
-import { batchUpdateVendorPrices } from '../api/adminVendors'
 import QualityModal from '../components/QualityModal'
 import PurchaseEditModal from '../components/PurchaseEditModal'
-import AnotarPrecioModal from '../components/AnotarPrecioModal'
 import '../styles/globals.css'
 
 const toCLP = (n) => {
@@ -38,13 +34,6 @@ export default function Compras() {
   const [filterStatus, setFilterStatus] = useState('all') // all, complete, incomplete
   const [filterCategory, setFilterCategory] = useState('all') // all, fruta, verdura
   const [filterPurchaseType, setFilterPurchaseType] = useState('all') // all, cajon, detalle
-  
-  // Anotar Precio
-  const [anotarPrecioOpen, setAnotarPrecioOpen] = useState(false)
-  const [selectedProductToPrice, setSelectedProductToPrice] = useState(null)
-  const [vendors, setVendors] = useState([])
-  const [selectedVendor, setSelectedVendor] = useState('')
-  const [modoAnotarPrecio, setModoAnotarPrecio] = useState(false) // false = Ver Detalle, true = Anotar Precio
 
   useEffect(() => { 
     listOrders().then(os => { 
@@ -53,7 +42,6 @@ export default function Compras() {
       if (lastEmitted) setSelectedOrder(lastEmitted.id) 
     }).catch(() => {}) 
     listProducts().then(setProducts).catch(() => {})
-    listVendors().then(setVendors).catch(() => {})
   }, [])
 
   useEffect(() => { 
@@ -68,7 +56,6 @@ export default function Compras() {
 
   useEffect(() => { 
     if (!modalOpen || !purchase.product_id) { setPriceList([]); setExistingPurchases([]); return } 
-    listPrices(Number(purchase.product_id)).then(setPriceList).catch(() => {})
     // Cargar compras existentes para este producto en este pedido
     if (selectedOrder) {
       apiFetch('/purchases').then(allPurchases => {
@@ -285,27 +272,6 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
           {orders.map(o=> (<option key={o.id} value={o.id}>{o.title || `Pedido #${o.id}`}</option>))}
         </select>
         
-        {/* Toggle entre Ver Detalle (compras) y Anotar Precio */}
-        {selectedOrder && (
-          <button
-            onClick={() => setModoAnotarPrecio(!modoAnotarPrecio)}
-            style={{
-              padding: '12px 20px',
-              background: modoAnotarPrecio ? '#88C4A8' : '#f5f5f5',
-              color: modoAnotarPrecio ? 'white' : '#000',
-              border: 'none',
-              borderRadius: 12,
-              cursor: 'pointer',
-              fontSize: 14,
-              fontWeight: 700,
-              whiteSpace: 'nowrap',
-              transition: 'all 0.2s',
-              boxShadow: modoAnotarPrecio ? '0 2px 8px rgba(136, 196, 168, 0.3)' : '0 1px 3px rgba(0,0,0,0.1)'
-            }}
-          >
-            {modoAnotarPrecio ? '💰 Modo: Precios' : '📝 Modo: Compras'}
-          </button>
-        )}
       </div>
 
       {!selectedOrder ? (
@@ -370,7 +336,7 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
               No hay productos que coincidan con los filtros seleccionados
             </div>
           ) : (
-            <div style={{ display:'grid', gap:16, paddingBottom: modoAnotarPrecio ? 100 : 20 }}>
+            <div style={{ display:'grid', gap:16, paddingBottom: 20 }}>
               {filteredProducts.map(g=> {
                 const product = products.find(p => p.id === g.product_id)
                 return (
@@ -416,34 +382,13 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
                     </div>
 
                     <div>
-                      {modoAnotarPrecio ? (
-                        <button 
-                          onClick={() => {
-                            setSelectedProductToPrice(g)
-                            setAnotarPrecioOpen(true)
-                          }} 
-                          style={{ 
-                            padding:'10px 20px', 
-                            borderRadius:12, 
-                            fontWeight:600,
-                            background: '#88C4A8',
-                            color: 'white',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontSize: 14
-                          }}
-                        >
-                          💰 Anotar Precio
-                        </button>
-                      ) : (
-                        <button 
-                          onClick={()=>openModalFor(g)} 
-                          className="button" 
-                          style={{ padding:'10px 20px', borderRadius:12, fontWeight:600 }}
-                        >
-                          Ver detalle
-                        </button>
-                      )}
+                      <button 
+                        onClick={()=>openModalFor(g)} 
+                        className="button" 
+                        style={{ padding:'10px 20px', borderRadius:12, fontWeight:600 }}
+                      >
+                        Ver detalle
+                      </button>
                     </div>
                   </div>
                 )
@@ -802,63 +747,6 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
           onClose={() => setEditingPurchase(null)} 
           onSaved={refreshOrderDetail}
         />
-      )}
-
-      {/* Modal Anotar Precio */}
-      <AnotarPrecioModal
-        open={anotarPrecioOpen}
-        onClose={() => setAnotarPrecioOpen(false)}
-        product={selectedProductToPrice}
-        vendorId={selectedVendor}
-        vendorName={vendors.find(v => v.id === parseInt(selectedVendor))?.name || ''}
-        onSuccess={refreshOrderDetail}
-      />
-
-      {/* Selector de Proveedor Fijo - Solo en modo Anotar Precio */}
-      {selectedOrder && modoAnotarPrecio && (
-        <div style={{
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          background: 'linear-gradient(135deg, #88C4A8 0%, #6FA891 100%)',
-          padding: '16px 20px',
-          boxShadow: '0 -4px 12px rgba(0,0,0,0.15)',
-          zIndex: 999,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12
-        }}>
-          <div style={{ 
-            fontSize: 14, 
-            fontWeight: 700, 
-            color: 'white',
-            whiteSpace: 'nowrap'
-          }}>
-            📍 Proveedor:
-          </div>
-          <select
-            value={selectedVendor}
-            onChange={e => setSelectedVendor(e.target.value)}
-            style={{
-              flex: 1,
-              padding: '12px 14px',
-              border: 'none',
-              borderRadius: '12px',
-              fontSize: 14,
-              fontWeight: 600,
-              background: 'white',
-              cursor: 'pointer',
-              outline: 'none',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-            }}
-          >
-            <option value="">Seleccionar proveedor...</option>
-            {vendors.map(v => (
-              <option key={v.id} value={v.id}>{v.name}</option>
-            ))}
-          </select>
-        </div>
       )}
     </div>
   )
