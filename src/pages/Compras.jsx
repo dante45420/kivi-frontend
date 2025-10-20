@@ -381,13 +381,43 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
                       {stateBadge(g)}
                     </div>
 
-                    <div>
+                    <div style={{ display:'flex', gap:8, alignItems:'center' }}>
                       <button 
                         onClick={()=>openModalFor(g)} 
                         className="button" 
-                        style={{ padding:'10px 20px', borderRadius:12, fontWeight:600 }}
+                        style={{ padding:'10px 20px', borderRadius:12, fontWeight:600, background:'#88C4A8', color:'white', border:'none' }}
                       >
-                        Ver detalle
+                        📝 Anotar compra
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          const product = products.find(p => p.id === g.product_id)
+                          const info = `
+📦 ${g.product_name}
+
+👥 CLIENTES:
+${g.customers.map(c => `• ${c.customer_name}: ${c.qty} ${c.unit}${c.has_note ? ' (tiene nota)' : ''}`).join('\n')}
+
+📊 TOTALES:
+${Object.entries(g.totals).filter(([_, v]) => v > 0).map(([u, v]) => `• ${v} ${u}`).join('\n')}
+
+${product?.notes ? `📝 NOTAS:\n${product.notes}\n\n` : ''}${product?.quality_notes ? `⭐ PRO TIP:\n${product.quality_notes}` : ''}
+                          `.trim()
+                          alert(info)
+                        }}
+                        style={{
+                          padding:'10px 16px',
+                          borderRadius:12,
+                          background:'#f0f0f0',
+                          border:'1px solid #ddd',
+                          cursor:'pointer',
+                          fontSize:18,
+                          transition:'all 0.2s'
+                        }}
+                        title="Ver información del producto y clientes"
+                      >
+                        ℹ️
                       </button>
                     </div>
                   </div>

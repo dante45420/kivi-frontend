@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { returnChargeToExcess, changeChargeOrder } from '../api/accounting'
+import { changeChargeOrder } from '../api/accounting'
 import { generateInvoicePDF } from '../utils/pdfGenerator'
 
 export default function CustomerModal({ 
@@ -31,16 +31,10 @@ export default function CustomerModal({
     }
   }
 
-  async function handleReturnToExcess(chargeId) {
-    if (!confirm('¿Devolver este producto a excedentes?')) return
-    try {
-      await returnChargeToExcess(chargeId, {})
-      await onUpdate()
-      alert('✓ Producto devuelto a excedentes')
-    } catch(err) {
-      alert('Error: ' + (err.message || 'No se pudo devolver'))
-    }
-  }
+  // Función de excedentes deshabilitada (sistema simplificado)
+  // async function handleReturnToExcess(chargeId) {
+  //   Funcionalidad eliminada
+  // }
 
 
   return (
