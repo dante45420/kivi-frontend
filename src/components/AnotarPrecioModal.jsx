@@ -77,15 +77,13 @@ export default function AnotarPrecioModal({ open, onClose, product, vendorId, ve
 
     setSaving(true)
     try {
-      await batchUpdateVendorPrices({
-        vendor_id: parseInt(vendorId),
-        prices: pricesArray
-      })
+      await batchUpdateVendorPrices(parseInt(vendorId), pricesArray)
       alert(`✓ Precio${pricesArray.length > 1 ? 's' : ''} guardado${pricesArray.length > 1 ? 's' : ''}`)
       onSuccess?.()
       onClose()
     } catch (e) {
-      alert('Error: ' + e.message)
+      alert('Error al guardar: ' + e.message)
+      console.error('Error:', e)
     } finally {
       setSaving(false)
     }
