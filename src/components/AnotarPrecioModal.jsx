@@ -33,8 +33,8 @@ export default function AnotarPrecioModal({ open, onClose, product, vendorId, ve
   }
 
   async function handleSave() {
-    if (!vendorId) {
-      alert('Selecciona un proveedor primero')
+    if (!vendorId || vendorId === '') {
+      alert('⚠️ Debes seleccionar un proveedor en el dropdown de abajo primero')
       return
     }
 
