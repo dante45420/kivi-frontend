@@ -284,27 +284,7 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
           {orders.map(o=> (<option key={o.id} value={o.id}>{o.title || `Pedido #${o.id}`}</option>))}
         </select>
         
-        {selectedOrder && (
-          <button
-            onClick={() => setReconModalOpen(true)}
-            style={{
-              padding:'12px 24px',
-              background:'var(--kivi-green)',
-              border:'none',
-              borderRadius:12,
-              cursor:'pointer',
-              fontSize:15,
-              fontWeight:700,
-              color:'#000',
-              transition:'all 0.2s',
-              whiteSpace:'nowrap'
-            }}
-            onMouseOver={e => e.target.style.transform = 'scale(1.05)'}
-            onMouseOut={e => e.target.style.transform = 'scale(1)'}
-          >
-            🚚 Vuelta de Reconocimiento
-          </button>
-        )}
+        {/* Sistema de anotación de precios ahora está en cada producto con el botón "💰 Anotar Precio" */}
       </div>
 
       {!selectedOrder ? (
