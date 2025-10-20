@@ -349,7 +349,7 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
               No hay productos que coincidan con los filtros seleccionados
             </div>
           ) : (
-            <div style={{ display:'grid', gap:16 }}>
+            <div style={{ display:'grid', gap:16, paddingBottom: 100 }}>
               {filteredProducts.map(g=> {
                 const product = products.find(p => p.id === g.product_id)
                 return (
