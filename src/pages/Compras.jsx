@@ -285,7 +285,27 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
           {orders.map(o=> (<option key={o.id} value={o.id}>{o.title || `Pedido #${o.id}`}</option>))}
         </select>
         
-        {/* Sistema de anotación de precios ahora está en cada producto con el botón "💰 Anotar Precio" */}
+        {/* Toggle entre Ver Detalle (compras) y Anotar Precio */}
+        {selectedOrder && (
+          <button
+            onClick={() => setModoAnotarPrecio(!modoAnotarPrecio)}
+            style={{
+              padding: '12px 20px',
+              background: modoAnotarPrecio ? '#88C4A8' : '#f5f5f5',
+              color: modoAnotarPrecio ? 'white' : '#000',
+              border: 'none',
+              borderRadius: 12,
+              cursor: 'pointer',
+              fontSize: 14,
+              fontWeight: 700,
+              whiteSpace: 'nowrap',
+              transition: 'all 0.2s',
+              boxShadow: modoAnotarPrecio ? '0 2px 8px rgba(136, 196, 168, 0.3)' : '0 1px 3px rgba(0,0,0,0.1)'
+            }}
+          >
+            {modoAnotarPrecio ? '💰 Modo: Precios' : '📝 Modo: Compras'}
+          </button>
+        )}
       </div>
 
       {!selectedOrder ? (
