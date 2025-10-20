@@ -44,6 +44,7 @@ export default function Compras() {
   const [selectedProductToPrice, setSelectedProductToPrice] = useState(null)
   const [vendors, setVendors] = useState([])
   const [selectedVendor, setSelectedVendor] = useState('')
+  const [modoAnotarPrecio, setModoAnotarPrecio] = useState(false) // false = Ver Detalle, true = Anotar Precio
 
   useEffect(() => { 
     listOrders().then(os => { 
@@ -349,7 +350,7 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
               No hay productos que coincidan con los filtros seleccionados
             </div>
           ) : (
-            <div style={{ display:'grid', gap:16, paddingBottom: 100 }}>
+            <div style={{ display:'grid', gap:16, paddingBottom: modoAnotarPrecio ? 100 : 20 }}>
               {filteredProducts.map(g=> {
                 const product = products.find(p => p.id === g.product_id)
                 return (
@@ -395,24 +396,34 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
                     </div>
 
                     <div>
-                      <button 
-                        onClick={() => {
-                          setSelectedProductToPrice(g)
-                          setAnotarPrecioOpen(true)
-                        }} 
-                        style={{ 
-                          padding:'10px 20px', 
-                          borderRadius:12, 
-                          fontWeight:600,
-                          background: '#88C4A8',
-                          color: 'white',
-                          border: 'none',
-                          cursor: 'pointer',
-                          fontSize: 14
-                        }}
-                      >
-                        💰 Anotar Precio
-                      </button>
+                      {modoAnotarPrecio ? (
+                        <button 
+                          onClick={() => {
+                            setSelectedProductToPrice(g)
+                            setAnotarPrecioOpen(true)
+                          }} 
+                          style={{ 
+                            padding:'10px 20px', 
+                            borderRadius:12, 
+                            fontWeight:600,
+                            background: '#88C4A8',
+                            color: 'white',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: 14
+                          }}
+                        >
+                          💰 Anotar Precio
+                        </button>
+                      ) : (
+                        <button 
+                          onClick={()=>openModalFor(g)} 
+                          className="button" 
+                          style={{ padding:'10px 20px', borderRadius:12, fontWeight:600 }}
+                        >
+                          Ver detalle
+                        </button>
+                      )}
                     </div>
                   </div>
                 )
@@ -783,8 +794,8 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
         onSuccess={refreshOrderDetail}
       />
 
-      {/* Selector de Proveedor Fijo */}
-      {selectedOrder && (
+      {/* Selector de Proveedor Fijo - Solo en modo Anotar Precio */}
+      {selectedOrder && modoAnotarPrecio && (
         <div style={{
           position: 'fixed',
           bottom: 0,
