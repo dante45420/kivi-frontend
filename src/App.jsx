@@ -1,24 +1,14 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import Navbar from './components/Navbar'
-import MerchantNavbar from './components/MerchantNavbar'
 import Productos from './pages/Productos'
 import Pedidos from './pages/Pedidos'
 import Compras from './pages/Compras'
-import Despachos from './pages/Despachos'
 import Kpis from './pages/Kpis'
-import Precios from './pages/Precios'
-import PreciosCompetidores from './pages/PreciosCompetidores'
 import Contabilidad from './pages/ContabilidadNew'
 import Login from './pages/Login'
 import Catalogo from './pages/Catalogo'
 import About from './pages/About'
-import AdminKPIs from './pages/admin/KPIs'
-import AdminProveedores from './pages/admin/Proveedores'
-import AdminMerchants from './pages/admin/Merchants'
-import AdminPedidosB2B from './pages/admin/PedidosB2B'
-import MerchantDashboard from './pages/merchant/Dashboard'
-import MerchantOrders from './pages/merchant/Orders'
 import { getToken, getUserType, verifyCurrentToken, clearToken } from './api/auth'
 
 // Componente para rutas protegidas
@@ -32,8 +22,7 @@ function ProtectedRoute({ children }) {
 
 // Función helper para obtener la ruta por defecto según el tipo de usuario
 function getDefaultRoute() {
-  const userType = getUserType()
-  return userType === 'merchant' ? '/merchant/dashboard' : '/productos'
+  return '/productos'
 }
 
 export default function App() {
@@ -96,8 +85,7 @@ export default function App() {
 
   return (
     <div style={{ fontFamily: 'sans-serif', padding: isAuthenticated ? 12 : 0 }}>
-      {isAuthenticated && getUserType() === 'merchant' && <MerchantNavbar />}
-      {isAuthenticated && getUserType() !== 'merchant' && <Navbar />}
+      {isAuthenticated && <Navbar />}
       <Routes>
         {/* Rutas públicas */}
         <Route path="/" element={isAuthenticated ? <Navigate to={getDefaultRoute()} replace /> : <Catalogo />} />
@@ -108,19 +96,8 @@ export default function App() {
         <Route path="/productos" element={<ProtectedRoute><Productos /></ProtectedRoute>} />
         <Route path="/pedidos" element={<ProtectedRoute><Pedidos /></ProtectedRoute>} />
         <Route path="/compras" element={<ProtectedRoute><Compras /></ProtectedRoute>} />
-        <Route path="/despachos" element={<ProtectedRoute><Despachos /></ProtectedRoute>} />
         <Route path="/kpis" element={<ProtectedRoute><Kpis /></ProtectedRoute>} />
-        <Route path="/precios" element={<ProtectedRoute><Precios /></ProtectedRoute>} />
-        <Route path="/precios/competidores" element={<ProtectedRoute><PreciosCompetidores /></ProtectedRoute>} />
         <Route path="/contabilidad" element={<ProtectedRoute><Contabilidad /></ProtectedRoute>} />
-        <Route path="/admin/kpis" element={<ProtectedRoute><AdminKPIs /></ProtectedRoute>} />
-        <Route path="/admin/proveedores" element={<ProtectedRoute><AdminProveedores /></ProtectedRoute>} />
-        <Route path="/admin/merchants" element={<ProtectedRoute><AdminMerchants /></ProtectedRoute>} />
-        <Route path="/admin/pedidos-b2b" element={<ProtectedRoute><AdminPedidosB2B /></ProtectedRoute>} />
-        
-        {/* Rutas de merchant */}
-        <Route path="/merchant/dashboard" element={<ProtectedRoute><MerchantDashboard /></ProtectedRoute>} />
-        <Route path="/merchant/orders" element={<ProtectedRoute><MerchantOrders /></ProtectedRoute>} />
         
         {/* Redirección por defecto */}
         <Route path="*" element={<Navigate to={isAuthenticated ? getDefaultRoute() : "/"} replace />} />
