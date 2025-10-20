@@ -75,13 +75,6 @@ export default function AnotarPrecioModal({ open, onClose, product, vendorId, ve
       return
     }
 
-    // Debug logging
-    console.log('========== ENVIANDO AL BACKEND ==========')
-    console.log('vendorId:', vendorId, 'type:', typeof vendorId)
-    console.log('pricesArray:', JSON.stringify(pricesArray, null, 2))
-    console.log('pricesArray length:', pricesArray.length)
-    console.log('==========================================')
-
     setSaving(true)
     try {
       await batchUpdateVendorPrices(parseInt(vendorId), pricesArray)
@@ -90,7 +83,7 @@ export default function AnotarPrecioModal({ open, onClose, product, vendorId, ve
       onClose()
     } catch (e) {
       alert('Error al guardar: ' + e.message)
-      console.error('Error completo:', e)
+      console.error('Error:', e)
     } finally {
       setSaving(false)
     }

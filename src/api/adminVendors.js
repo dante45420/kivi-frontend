@@ -47,17 +47,11 @@ export function toggleVendorPriceAvailability(priceId) {
 
 // Batch update (Vuelta de Reconocimiento)
 export function batchUpdateVendorPrices(vendorId, prices) {
-  console.log('========== BATCH UPDATE API CALL ==========')
-  console.log('vendorId:', vendorId, 'type:', typeof vendorId)
-  console.log('prices:', prices, 'type:', typeof prices, 'isArray:', Array.isArray(prices))
-  console.log('body que se enviará:', JSON.stringify({vendor_id: vendorId, prices: prices}, null, 2))
-  console.log('==========================================')
-  
   return apiFetch('/admin/vendors/prices/batch', {
     method: 'POST',
     body: {
       vendor_id: vendorId,
-      prices: prices  // [{product_id, unit, base_price, markup_percentage}]
+      prices: prices
     }
   })
 }
