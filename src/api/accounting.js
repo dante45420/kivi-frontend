@@ -18,20 +18,6 @@ export function listPayments(params={}){
   return apiFetch(`/payments?${usp.toString()}`)
 }
 
-export function listLots(productId){
-  const usp = new URLSearchParams()
-  if (productId) usp.set('product_id', productId)
-  return apiFetch(`/inventory/lots?${usp.toString()}`)
-}
-
-export function createLot(payload){
-  return apiFetch('/inventory/lots', { method:'POST', body: payload })
-}
-
-export function processLot(payload){
-  return apiFetch('/inventory/process', { method:'POST', body: payload })
-}
-
 export function ordersSummary(includeDetails){
   const usp = new URLSearchParams(); if (includeDetails) usp.set('include_details', '1')
   return apiFetch(`/accounting/orders?${usp.toString()}`)
@@ -56,29 +42,9 @@ export function updateChargeQuantity(chargeId, chargedQty) {
   })
 }
 
-export function assignLotToCustomer(lotId, data) {
-  return apiFetch(`/inventory/lots/${lotId}/assign`, {
-    method: 'POST',
-    body: data
-  })
-}
-
-export function returnChargeToExcess(chargeId, data) {
-  return apiFetch(`/charges/${chargeId}/return`, {
-    method: 'POST',
-    body: data
-  })
-}
-
 export function changeChargeOrder(chargeId, orderId) {
   return apiFetch(`/charges/${chargeId}/order`, {
     method: 'PATCH',
     body: { order_id: orderId }
-  })
-}
-
-export function markLotAsWaste(lotId) {
-  return apiFetch(`/inventory/lots/${lotId}/waste`, {
-    method: 'POST'
   })
 }

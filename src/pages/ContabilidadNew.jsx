@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, listLots, assignLotToCustomer, markLotAsWaste, createPayment, processLot } from '../api/accounting'
+import { ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, createPayment } from '../api/accounting'
 import { listCustomers } from '../api/customers'
 import { listProducts } from '../api/products'
 import { listOrders } from '../api/orders'
@@ -13,7 +13,6 @@ export default function ContabilidadNew(){
   const [customers, setCustomers] = useState([])
   const [products, setProducts] = useState([])
   const [orders, setOrders] = useState([])
-  const [lots, setLots] = useState([])
   
   // Modales
   const [orderModal, setOrderModal] = useState(null)
@@ -30,9 +29,6 @@ export default function ContabilidadNew(){
   // Módulo de pagos
   const [showPayments, setShowPayments] = useState(true)
   const [paymentForm, setPaymentForm] = useState({ customer_id:'', order_id:'', amount:'', date:'' })
-  
-  // Formulario de asignación de excedentes
-  const [assignForm, setAssignForm] = useState({ lot_id:'', customer_id:'', order_id:'', unit_price:'', qty:'' })
 
   useEffect(()=>{ 
     loadAll()
@@ -47,8 +43,6 @@ export default function ContabilidadNew(){
       setOrderCards(ordersData)
       const customersData = await customersSummary(true)
       setCustomerCards(customersData)
-      const lotsData = await listLots()
-      setLots(lotsData)
     } catch(err) {
       console.error(err)
     }
@@ -82,22 +76,6 @@ export default function ContabilidadNew(){
     }
   }
 
-  async function assignExcess() {
-    if (!assignForm.lot_id || !assignForm.customer_id) return
-    try {
-      await assignLotToCustomer(Number(assignForm.lot_id), {
-        customer_id: Number(assignForm.customer_id),
-        order_id: assignForm.order_id ? Number(assignForm.order_id) : null,
-        unit_price: assignForm.unit_price ? Number(assignForm.unit_price) : null,
-        qty: assignForm.qty ? Number(assignForm.qty) : null
-      })
-      setAssignForm({ lot_id:'', customer_id:'', order_id:'', unit_price:'', qty:'' })
-      await loadAll()
-      alert('✓ Excedente asignado correctamente')
-    } catch(err) {
-      alert('Error: ' + (err.message || 'No se pudo asignar'))
-    }
-  }
 
   async function handleRegisterPayment() {
     if (!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount) {
