@@ -22,12 +22,7 @@ export default function Compras() {
   const [rowChargeType, setRowChargeType] = useState({})
 
   const [modalOpen, setModalOpen] = useState(false)
-  const [showPurchaseForm, setShowPurchaseForm] = useState(false)
-  const [showSpecsPopup, setShowSpecsPopup] = useState(false)
-  const [specSeen, setSpecSeen] = useState(false)
   const [purchase, setPurchase] = useState({ product_id: '', qty_kg: '', qty_unit: '', charged_unit: 'kg', price_total: '', price_per_unit: '', vendor: '', notes: '', customers: '', units_kg_total: '', kg_units_total: '' })
-  const [priceList, setPriceList] = useState([])
-  const [existingPurchases, setExistingPurchases] = useState([])
   const [editingPurchase, setEditingPurchase] = useState(null)
   const [showInfoModal, setShowInfoModal] = useState(false)
   const [infoModalProduct, setInfoModalProduct] = useState(null)
@@ -56,18 +51,6 @@ export default function Compras() {
     }).catch(()=>{}) 
   }, [selectedOrder])
 
-  useEffect(() => { 
-    if (!modalOpen || !purchase.product_id) { setPriceList([]); setExistingPurchases([]); return } 
-    // Cargar compras existentes para este producto en este pedido
-    if (selectedOrder) {
-      apiFetch('/purchases').then(allPurchases => {
-        const filtered = allPurchases.filter(p => 
-          p.order_id === selectedOrder && p.product_id === Number(purchase.product_id)
-        )
-        setExistingPurchases(filtered)
-      }).catch(() => {})
-    }
-  }, [modalOpen, purchase.product_id, selectedOrder])
 
   function openQuality(pid){ const p=products.find(x=>x.id===Number(pid)); setQualityProduct(p||null); setShowQuality(true) }
   const parseNum = (v)=>{ const n=parseFloat(v); return isNaN(n)?0:n }
@@ -132,8 +115,7 @@ export default function Compras() {
     }catch{}
     await apiFetch('/purchases',{method:'POST',body:payload}); 
     await refreshOrderDetail()
-    setModalOpen(false); 
-    setShowPurchaseForm(false)
+    setModalOpen(false)
   }
 
   async function refreshOrderDetail() {
@@ -141,14 +123,6 @@ export default function Compras() {
     try {
       const d = await getOrderDetail(selectedOrder)
       setDetail(d)
-      // Recargar compras existentes si el modal está abierto
-      if (modalOpen && purchase.product_id) {
-        const allPurchases = await apiFetch('/purchases')
-        const filtered = allPurchases.filter(p => 
-          p.order_id === selectedOrder && p.product_id === Number(purchase.product_id)
-        )
-        setExistingPurchases(filtered)
-      }
     } catch (err) {
       console.error('Error recargando detalle:', err)
     }
@@ -210,26 +184,9 @@ export default function Compras() {
       units_kg_total:'', 
       kg_units_total:'' 
     })
-    setSpecSeen(false)
     setModalOpen(true)
-    setShowPurchaseForm(false) 
   }
 
-  function specsForCurrentProduct(){ 
-    if(!detail || !purchase.product_id) return []
-    const pid=Number(purchase.product_id)
-    return (detail.items||[]).filter(it=>it.product_id===pid && (it.notes||'').trim()).map(it=>`${it.customer_name||'Cliente'}: ${it.notes}`) 
-  }
-
-function hasSpecs(){ return (specsForCurrentProduct().length>0) }
-  function tryTogglePurchase(){ 
-    if (hasSpecs() && !specSeen){ 
-      setShowSpecsPopup(true); 
-      setSpecSeen(true); 
-      return 
-    } 
-    setShowPurchaseForm(v=>!v) 
-  }
 
   // Productos filtrados
   const filteredProducts = useMemo(() => {
@@ -423,355 +380,174 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
         </>
       )}
 
-      {/* Modal de detalle/compra */}
+      {/* Modal de compra simplificado */}
       {modalOpen && currentProduct && (
         <div className="modal-backdrop">
-          <div className="modal" style={{ maxWidth:600, borderRadius:20, maxHeight:'90vh', overflow:'auto' }}>
-            <div style={{ borderBottom:'1px solid #f0f0f0', paddingBottom:16, marginBottom:16 }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
-                <h3 style={{ margin:0, fontSize:22, fontWeight:700 }}>{currentProduct.name}</h3>
-                <button onClick={()=>setModalOpen(false)} style={{ background:'none', border:'none', fontSize:24, cursor:'pointer', opacity:0.6 }}>✕</button>
-            </div>
-              
-              {(currentProduct.category || currentProduct.purchase_type) && (
-                <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                  {currentProduct.category && (
-                    <span style={{ background:'#f0f0f0', padding:'6px 12px', borderRadius:8, fontSize:13 }}>
-                      {currentProduct.category === 'fruta' ? '🍎 Fruta' : '🥬 Verdura'}
-                    </span>
-                  )}
-                  {currentProduct.purchase_type && (
-                    <span style={{ background:'#f0f0f0', padding:'6px 12px', borderRadius:8, fontSize:13 }}>
-                      {currentProduct.purchase_type === 'cajon' ? '📦 Cajón' : '🛒 Detalle'}
-                    </span>
-                  )}
-                </div>
-              )}
+          <div className="modal" style={{ maxWidth:500, borderRadius:20, maxHeight:'90vh', overflow:'auto' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, paddingBottom:16, borderBottom:'2px solid #f0f0f0' }}>
+              <h3 style={{ margin:0, fontSize:20, fontWeight:700 }}>📝 {currentProduct.name}</h3>
+              <button onClick={()=>setModalOpen(false)} style={{ background:'none', border:'none', fontSize:24, cursor:'pointer', opacity:0.6 }}>✕</button>
             </div>
 
-            {/* Información de cantidades */}
-            <div style={{ background:'#f8f9fa', borderRadius:12, padding:16, marginBottom:16 }}>
-              <div style={{ fontSize:14, fontWeight:600, marginBottom:12, opacity:0.7 }}>📊 Cantidades</div>
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, fontSize:14 }}>
-                {(() => {
-                  const g = (detail.group_by_product||[]).find(x=>x.product_id===Number(purchase.product_id))
-                  if (!g) return null
-                  const segments = qtySegments(g)
-                  const missing = missingSegments(g)
-                  return (
-                    <>
-                      <div>
-                        <div style={{ opacity:0.6, fontSize:12, marginBottom:4 }}>Comprado</div>
-                        <div style={{ fontWeight:600 }}>{segments[0]}</div>
-                        <div style={{ fontWeight:600 }}>{segments[1]}</div>
-                      </div>
-                      <div>
-                        <div style={{ opacity:0.6, fontSize:12, marginBottom:4 }}>Faltante</div>
-                        {missing.map((m,i)=>(
-                          <div key={i} style={{ fontWeight:600, color:'#d32f2f' }}>{m}</div>
-                        ))}
-                      </div>
-                    </>
-                  )
-                })()}
+            {/* Cantidades */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
+              <div>
+                <label style={{ display:'block', fontSize:13, marginBottom:6, fontWeight:600 }}>Cantidad (kg)</label>
+                <input 
+                  className="input" 
+                  type="number" 
+                  value={purchase.qty_kg} 
+                  onChange={e=>setPurchase({...purchase, qty_kg:e.target.value})}
+                  placeholder="0"
+                  style={{ width:'100%', padding:'12px', borderRadius:10, fontSize:15 }}
+                />
+              </div>
+              <div>
+                <label style={{ display:'block', fontSize:13, marginBottom:6, fontWeight:600 }}>Cantidad (unidades)</label>
+                <input 
+                  className="input" 
+                  type="number" 
+                  value={purchase.qty_unit} 
+                  onChange={e=>setPurchase({...purchase, qty_unit:e.target.value})}
+                  placeholder="0"
+                  style={{ width:'100%', padding:'12px', borderRadius:10, fontSize:15 }}
+                />
               </div>
             </div>
 
-            {/* Clientes que pidieron este producto */}
-            {(() => {
-              const pid = Number(purchase.product_id)
-              const items = (detail?.items||[]).filter(it=>it.product_id===pid)
-              if (items.length === 0) return null
-              return (
-                <div style={{ background:'#f8f9fa', borderRadius:12, padding:16, marginBottom:16 }}>
-                  <div style={{ fontSize:14, fontWeight:600, marginBottom:12, opacity:0.7 }}>👥 Clientes</div>
-                  <div style={{ display:'grid', gap:8 }}>
-                    {items.map((it,i)=>(
-                      <div key={i} style={{ fontSize:14, padding:'8px 12px', background:'white', borderRadius:8 }}>
-                        <div style={{ fontWeight:600 }}>{it.customer_name}</div>
-                        <div style={{ fontSize:13, opacity:0.7 }}>{it.qty} {it.unit}</div>
-                        {it.notes && <div style={{ fontSize:12, opacity:0.6, marginTop:4 }}>📝 {it.notes}</div>}
-                    </div>
-                    ))}
-                  </div>
-                </div>
-              )
-            })()}
-
-            {/* Compras existentes */}
-            {existingPurchases.length > 0 && (
-              <div style={{ background:'#e8f5e9', borderRadius:12, padding:16, marginBottom:16, border:'1px solid #c8e6c9' }}>
-                <div style={{ fontSize:14, fontWeight:700, marginBottom:12, color:'#2e7d32' }}>📦 Compras Registradas</div>
-                <div style={{ display:'grid', gap:8 }}>
-                  {existingPurchases.map((p,i)=>(
-                    <div key={i} style={{ fontSize:13, padding:'10px 12px', background:'white', borderRadius:8, border:'1px solid #e0e0e0' }}>
-                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:6 }}>
-                        <div style={{ fontWeight:700, color:'var(--kivi-text-dark)' }}>
-                          {p.vendor || 'Sin proveedor'}
-                        </div>
-                        <button
-                          onClick={() => setEditingPurchase(p)}
-                          style={{
-                            background:'var(--kivi-green)',
-                            color:'white',
-                            border:'none',
-                            padding:'4px 12px',
-                            borderRadius:6,
-                            fontSize:12,
-                            fontWeight:600,
-                            cursor:'pointer'
-                          }}
-                        >
-                          Editar
-                        </button>
-                      </div>
-                      <div style={{ fontSize:12, opacity:0.7, marginBottom:4 }}>
-                        <strong>Cantidad:</strong> {p.qty_kg ? `${p.qty_kg} kg` : ''} {p.qty_unit ? `${p.qty_unit} unidades` : ''}
-                      </div>
-                      <div style={{ fontSize:12, opacity:0.7, marginBottom:4 }}>
-                        <strong>Precio:</strong> {toCLP(p.price_total)} ({toCLP(p.price_per_unit)} / {p.charged_unit})
-                    </div>
-                      {p.notes && (
-                        <div style={{ fontSize:12, opacity:0.6, marginTop:4 }}>
-                          📝 {p.notes}
-                        </div>
-                      )}
-                  </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Precios históricos */}
-            {priceList.length > 0 && (
-              <div style={{ background:'#f8f9fa', borderRadius:12, padding:16, marginBottom:16 }}>
-                <div style={{ fontSize:14, fontWeight:600, marginBottom:12, opacity:0.7 }}>💰 Precios históricos</div>
-                <div style={{ display:'grid', gap:6 }}>
-                  {priceList.slice(0,3).map((p,i)=>(
-                    <div key={i} style={{ fontSize:13, padding:'6px 10px', background:'white', borderRadius:6 }}>
-                      {toCLP(p.price_per_unit || 0)} / {p.unit} — {p.vendor || 'Sin proveedor'}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Especificaciones/notas */}
-            {hasSpecs() && (
-              <div style={{ background:'#fff3e0', borderRadius:12, padding:16, marginBottom:16, border:'1px solid #ffe0b2' }}>
-                <div style={{ fontSize:14, fontWeight:600, marginBottom:8, color:'#f57c00' }}>📝 Especificaciones de clientes</div>
-                <div style={{ fontSize:13, opacity:0.8 }}>
-                  {specsForCurrentProduct().map((s,i)=>(
-                    <div key={i} style={{ marginBottom:4 }}>• {s}</div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Botón para abrir formulario de compra */}
-            {!showPurchaseForm && (
-              <button 
-                className="button" 
-                onClick={tryTogglePurchase}
-                style={{ width:'100%', padding:14, borderRadius:12, fontWeight:600, fontSize:15 }}
+            {/* Unidad de cobro */}
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:'block', fontSize:13, marginBottom:6, fontWeight:600 }}>Unidad de cobro</label>
+              <select 
+                className="input" 
+                value={purchase.charged_unit} 
+                onChange={e=>setPurchase({...purchase, charged_unit:e.target.value})}
+                style={{ width:'100%', padding:'12px', borderRadius:10, fontSize:15 }}
               >
-                ➕ Registrar compra
-              </button>
-            )}
+                <option value="kg">Kilogramo</option>
+                <option value="unit">Unidad</option>
+              </select>
+            </div>
 
-            {/* Formulario de compra */}
-            {showPurchaseForm && (
-              <div style={{ borderTop:'1px solid #e0e0e0', paddingTop:16 }}>
-                <div style={{ fontSize:16, fontWeight:700, marginBottom:16 }}>📝 Nueva compra</div>
-                
-                {/* Cantidades */}
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
+            {/* Equivalencias (SOLO si se necesitan) */}
+            {convRequired && (
+              <div style={{ background:'#fff3e0', borderRadius:10, padding:16, marginBottom:16, border:'2px solid #ffe0b2' }}>
+                <div style={{ fontSize:14, fontWeight:700, marginBottom:12, color:'#f57c00' }}>⚠️ Equivalencia necesaria</div>
+                {chargeUnit === 'kg' && qtyUnit > 0 && (
                   <div>
-                    <label style={{ display:'block', fontSize:13, marginBottom:6, opacity:0.7 }}>Cantidad (kg)</label>
+                    <label style={{ display:'block', fontSize:13, marginBottom:6, fontWeight:600 }}>
+                      ¿Cuántos kilos son {qtyUnit} unidades?
+                    </label>
                     <input 
                       className="input" 
-                      type="number" 
-                      value={purchase.qty_kg} 
-                      onChange={e=>setPurchase({...purchase, qty_kg:e.target.value})}
-                      style={{ width:'100%', padding:'10px 12px', borderRadius:10 }}
+                      type="text"
+                      inputMode="decimal"
+                      value={purchase.kg_units_total || ''} 
+                      onChange={e=>{
+                        const val = e.target.value
+                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                          setPurchase({...purchase, kg_units_total:val})
+                        }
+                      }}
+                      placeholder="Ej: 12.5"
+                      style={{ width:'100%', padding:'12px', borderRadius:10, fontSize:15, border:'2px solid #ffe0b2' }}
                     />
-                  </div>
-                  <div>
-                    <label style={{ display:'block', fontSize:13, marginBottom:6, opacity:0.7 }}>Cantidad (unidades)</label>
-                    <input 
-                      className="input" 
-                      type="number" 
-                      value={purchase.qty_unit} 
-                      onChange={e=>setPurchase({...purchase, qty_unit:e.target.value})}
-                      style={{ width:'100%', padding:'10px 12px', borderRadius:10 }}
-                    />
-                  </div>
-                </div>
-
-                {/* Unidad de cobro */}
-                <div style={{ marginBottom:16 }}>
-                  <label style={{ display:'block', fontSize:13, marginBottom:6, opacity:0.7 }}>Unidad de cobro</label>
-                  <select 
-                    className="input" 
-                    value={purchase.charged_unit} 
-                    onChange={e=>setPurchase({...purchase, charged_unit:e.target.value})}
-                    style={{ width:'100%', padding:'10px 12px', borderRadius:10 }}
-                  >
-                    <option value="kg">Kilogramo</option>
-                    <option value="unit">Unidad</option>
-                  </select>
-                </div>
-
-                {/* Equivalencias (si se necesitan) */}
-                {convRequired && (
-                  <div style={{ background:'#fff3e0', borderRadius:10, padding:12, marginBottom:16, border:'1px solid #ffe0b2' }}>
-                    <div style={{ fontSize:13, fontWeight:600, marginBottom:8, color:'#f57c00' }}>⚠️ Equivalencia necesaria</div>
-                    {chargeUnit === 'kg' && qtyUnit > 0 && (
-                      <div>
-                        <label style={{ display:'block', fontSize:13, marginBottom:6, opacity:0.7 }}>
-                          Kilos totales de las {qtyUnit} unidades
-                        </label>
-                        <input 
-                          className="input" 
-                          type="text"
-                          inputMode="decimal"
-                          value={purchase.kg_units_total || ''} 
-                          onChange={e=>{
-                            const val = e.target.value
-                            // Permitir números, punto decimal y vacío
-                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                              setPurchase({...purchase, kg_units_total:val})
-                            }
-                          }}
-                          placeholder="Ej: 12.5"
-                          style={{ width:'100%', padding:'10px 12px', borderRadius:10, fontSize:15 }}
-                        />
-                      </div>
-                    )}
-                    {chargeUnit === 'unit' && qtyKg > 0 && (
-                      <div>
-                        <label style={{ display:'block', fontSize:13, marginBottom:6, opacity:0.7 }}>
-                          Unidades totales de los {qtyKg} kg
-                        </label>
-                        <input 
-                          className="input" 
-                          type="text"
-                          inputMode="decimal"
-                          value={purchase.units_kg_total || ''} 
-                          onChange={e=>{
-                            const val = e.target.value
-                            // Permitir números, punto decimal y vacío
-                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
-                              setPurchase({...purchase, units_kg_total:val})
-                            }
-                          }}
-                          placeholder="Ej: 50"
-                          style={{ width:'100%', padding:'10px 12px', borderRadius:10, fontSize:15 }}
-                        />
-                      </div>
-                    )}
                   </div>
                 )}
-
-                {/* Precio */}
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
+                {chargeUnit === 'unit' && qtyKg > 0 && (
                   <div>
-                    <label style={{ display:'block', fontSize:13, marginBottom:6, opacity:0.7 }}>Precio por {chargeUnit==='kg'?'kg':'unidad'}</label>
+                    <label style={{ display:'block', fontSize:13, marginBottom:6, fontWeight:600 }}>
+                      ¿Cuántas unidades son {qtyKg} kg?
+                    </label>
                     <input 
                       className="input" 
-                      type="number" 
-                      value={purchase.price_per_unit} 
-                      onChange={e=>onChangePricePerUnit(e.target.value)}
-                      style={{ width:'100%', padding:'10px 12px', borderRadius:10 }}
+                      type="text"
+                      inputMode="decimal"
+                      value={purchase.units_kg_total || ''} 
+                      onChange={e=>{
+                        const val = e.target.value
+                        if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                          setPurchase({...purchase, units_kg_total:val})
+                        }
+                      }}
+                      placeholder="Ej: 50"
+                      style={{ width:'100%', padding:'12px', borderRadius:10, fontSize:15, border:'2px solid #ffe0b2' }}
                     />
                   </div>
-                  <div>
-                    <label style={{ display:'block', fontSize:13, marginBottom:6, opacity:0.7 }}>Precio total</label>
-                    <input 
-                      className="input" 
-                      type="text" 
-                      value={toCLP(purchase.price_total)} 
-                      onChange={e=>onChangePriceTotal(e.target.value)}
-                      style={{ width:'100%', padding:'10px 12px', borderRadius:10 }}
-                    />
-                  </div>
-                </div>
-
-                {/* Proveedor */}
-                <div style={{ marginBottom:16 }}>
-                  <label style={{ display:'block', fontSize:13, marginBottom:6, opacity:0.7 }}>Proveedor</label>
-                  <input 
-                    className="input" 
-                    value={purchase.vendor} 
-                    onChange={e=>setPurchase({...purchase, vendor:e.target.value})}
-                    style={{ width:'100%', padding:'10px 12px', borderRadius:10 }}
-                  />
-                </div>
-
-                {/* Clientes (si aplica) */}
-                <div style={{ marginBottom:16 }}>
-                  <label style={{ display:'block', fontSize:13, marginBottom:6, opacity:0.7 }}>Clientes (separados por coma, si aplica)</label>
-                  <input 
-                    className="input" 
-                    value={purchase.customers} 
-                    onChange={e=>setPurchase({...purchase, customers:e.target.value})}
-                    placeholder="Ej: Juan, María"
-                    style={{ width:'100%', padding:'10px 12px', borderRadius:10 }}
-                  />
-                </div>
-
-                {/* Notas */}
-                <div style={{ marginBottom:16 }}>
-                  <label style={{ display:'block', fontSize:13, marginBottom:6, opacity:0.7 }}>Notas</label>
-                  <textarea 
-                    className="input" 
-                    value={purchase.notes} 
-                    onChange={e=>setPurchase({...purchase, notes:e.target.value})}
-                    rows={3}
-                    style={{ width:'100%', padding:'10px 12px', borderRadius:10, resize:'vertical' }}
-                  />
-                </div>
-
-                {/* Botones */}
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-                  <button 
-                    className="button ghost" 
-                    onClick={()=>setShowPurchaseForm(false)}
-                    style={{ padding:12, borderRadius:12, fontWeight:600 }}
-                  >
-                    Cancelar
-                  </button>
-                  <button 
-                    className="button" 
-                    onClick={savePurchase}
-                    style={{ padding:12, borderRadius:12, fontWeight:600 }}
-                  >
-                    ✓ Guardar
-                  </button>
-                </div>
+                )}
               </div>
             )}
-          </div>
-        </div>
-      )}
 
-      {/* Modal de especificaciones */}
-      {showSpecsPopup && (
-        <div className="modal-backdrop" onClick={()=>setShowSpecsPopup(false)}>
-          <div className="modal" onClick={e=>e.stopPropagation()} style={{ maxWidth:400, borderRadius:20 }}>
-            <h3 style={{ margin:'0 0 16px 0', fontSize:18, fontWeight:700 }}>📝 Especificaciones</h3>
-            <div style={{ fontSize:14, marginBottom:16, opacity:0.8 }}>
-              {specsForCurrentProduct().map((s,i)=>(
-                <div key={i} style={{ marginBottom:8 }}>• {s}</div>
-              ))}
+            {/* Precio */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
+              <div>
+                <label style={{ display:'block', fontSize:13, marginBottom:6, fontWeight:600 }}>
+                  Precio/{chargeUnit==='kg'?'kg':'unid'}
+                </label>
+                <input 
+                  className="input" 
+                  type="number" 
+                  value={purchase.price_per_unit} 
+                  onChange={e=>onChangePricePerUnit(e.target.value)}
+                  placeholder="0"
+                  style={{ width:'100%', padding:'12px', borderRadius:10, fontSize:15 }}
+                />
+              </div>
+              <div>
+                <label style={{ display:'block', fontSize:13, marginBottom:6, fontWeight:600 }}>Precio total</label>
+                <input 
+                  className="input" 
+                  type="text" 
+                  value={toCLP(purchase.price_total)} 
+                  onChange={e=>onChangePriceTotal(e.target.value)}
+                  placeholder="$0"
+                  style={{ width:'100%', padding:'12px', borderRadius:10, fontSize:15 }}
+                />
+              </div>
             </div>
-            <button 
-              className="button" 
-              onClick={()=>{setShowSpecsPopup(false); setShowPurchaseForm(true)}}
-              style={{ width:'100%', padding:12, borderRadius:12, fontWeight:600 }}
-            >
-              Continuar con la compra
-            </button>
+
+            {/* Proveedor */}
+            <div style={{ marginBottom:16 }}>
+              <label style={{ display:'block', fontSize:13, marginBottom:6, fontWeight:600 }}>Proveedor</label>
+              <input 
+                className="input" 
+                value={purchase.vendor} 
+                onChange={e=>setPurchase({...purchase, vendor:e.target.value})}
+                placeholder="Nombre del proveedor"
+                style={{ width:'100%', padding:'12px', borderRadius:10, fontSize:15 }}
+              />
+            </div>
+
+            {/* Notas */}
+            <div style={{ marginBottom:20 }}>
+              <label style={{ display:'block', fontSize:13, marginBottom:6, fontWeight:600 }}>Notas</label>
+              <textarea 
+                className="input" 
+                value={purchase.notes} 
+                onChange={e=>setPurchase({...purchase, notes:e.target.value})}
+                rows={2}
+                placeholder="Observaciones..."
+                style={{ width:'100%', padding:'12px', borderRadius:10, resize:'vertical', fontSize:15 }}
+              />
+            </div>
+
+            {/* Botones */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 2fr', gap:12 }}>
+              <button 
+                className="button ghost" 
+                onClick={()=>setModalOpen(false)}
+                style={{ padding:14, borderRadius:12, fontWeight:600, fontSize:15 }}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="button" 
+                onClick={savePurchase}
+                style={{ padding:14, borderRadius:12, fontWeight:700, fontSize:15, background:'#88C4A8' }}
+              >
+                ✓ Guardar compra
+              </button>
+            </div>
           </div>
         </div>
       )}
