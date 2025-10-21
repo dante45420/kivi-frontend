@@ -92,7 +92,7 @@ export default function ContabilidadNew(){
         order_id: Number(paymentForm.order_id),
         amount: Number(paymentForm.amount),
         method: 'efectivo',
-        reference: paymentForm.date || null
+        date: paymentForm.date || new Date().toISOString()
       })
       setPaymentForm({ customer_id:'', order_id:'', amount:'', date:'' })
       await loadAll()
