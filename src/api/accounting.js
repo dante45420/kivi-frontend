@@ -80,3 +80,15 @@ export function returnChargeToExcess(chargeId, data) {
     body: data
   })
 }
+
+// Reasignar cargo a otro cliente (para excedentes/errores)
+export function reassignCharge(data) {
+  return apiFetch('/charges', {
+    method: 'POST',
+    body: data
+  })
+}
+
+export function listChargesByOrder(orderId) {
+  return apiFetch(`/charges?order_id=${orderId}`)
+}

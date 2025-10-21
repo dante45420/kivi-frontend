@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, createPayment } from '../api/accounting'
+import { ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, createPayment, reassignCharge, listChargesByOrder } from '../api/accounting'
 import { listCustomers } from '../api/customers'
 import { listProducts } from '../api/products'
 import { listOrders } from '../api/orders'
@@ -29,6 +29,11 @@ export default function ContabilidadNew(){
   // Módulo de pagos
   const [showPayments, setShowPayments] = useState(true)
   const [paymentForm, setPaymentForm] = useState({ customer_id:'', order_id:'', amount:'', date:'' })
+  
+  // Módulo de reasignación
+  const [showReassign, setShowReassign] = useState(false)
+  const [reassignForm, setReassignForm] = useState({ order_id:'', product_id:'', from_customer:'', to_customer:'', qty:'', unit_price:'' })
+  const [availableCharges, setAvailableCharges] = useState([])
 
   useEffect(()=>{ 
     loadAll()
@@ -108,6 +113,50 @@ export default function ContabilidadNew(){
     if (!customerId) return []
     const customer = customerCards.find(c=> c.customer.id === Number(customerId))
     return customer?.orders || []
+  }
+
+  async function loadChargesForOrder(orderId) {
+    if (!orderId) return
+    try {
+      const charges = await listChargesByOrder(orderId)
+      setAvailableCharges(charges)
+    } catch(err) {
+      console.error(err)
+    }
+  }
+
+  async function handleReassign() {
+    if (!reassignForm.product_id || !reassignForm.to_customer || !reassignForm.qty || !reassignForm.unit_price) {
+      alert('Completa todos los campos: producto, cliente nuevo, cantidad y precio')
+      return
+    }
+    
+    try {
+      // Crear nuevo charge para el cliente destino
+      const selectedCharge = availableCharges.find(c=> c.product_id === Number(reassignForm.product_id))
+      if (!selectedCharge) {
+        alert('No se encontró el producto seleccionado')
+        return
+      }
+
+      await reassignCharge({
+        customer_id: Number(reassignForm.to_customer),
+        order_id: Number(reassignForm.order_id),
+        product_id: Number(reassignForm.product_id),
+        qty: Number(reassignForm.qty),
+        unit: selectedCharge.unit,
+        unit_price: Number(reassignForm.unit_price),
+        total: Number(reassignForm.qty) * Number(reassignForm.unit_price),
+        status: 'pending'
+      })
+      
+      setReassignForm({ order_id:'', product_id:'', from_customer:'', to_customer:'', qty:'', unit_price:'' })
+      setAvailableCharges([])
+      await loadAll()
+      alert('✓ Producto reasignado correctamente')
+    } catch(err) {
+      alert('Error: ' + (err.message || 'No se pudo reasignar'))
+    }
   }
 
   return (
@@ -268,6 +317,239 @@ export default function ContabilidadNew(){
                 ✓ Registrar Pago
               </button>
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Módulo de Reasignación (Excedentes) */}
+      <div style={{ marginBottom:40 }}>
+        <button
+          onClick={() => setShowReassign(!showReassign)}
+          style={{
+            width:'100%',
+            padding:'20px',
+            background:'#88C4A8',
+            border:'none',
+            borderRadius:20,
+            color:'white',
+            fontSize:20,
+            fontWeight:700,
+            cursor:'pointer',
+            display:'flex',
+            justifyContent:'space-between',
+            alignItems:'center',
+            boxShadow:'0 4px 12px rgba(136, 196, 168, 0.3)',
+            transition:'all 0.2s'
+          }}
+        >
+          <span>🔄 Reasignar Producto (Excedentes)</span>
+          <span style={{
+            padding: '6px 12px',
+            background: 'rgba(255,255,255,0.2)',
+            borderRadius: '10px',
+            fontSize: '14px'
+          }}>
+            {showReassign ? 'Ocultar' : 'Mostrar'}
+          </span>
+        </button>
+
+        {showReassign && (
+          <div style={{
+            background: 'white',
+            borderRadius: 16,
+            padding: 24,
+            marginTop: 16,
+            boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
+          }}>
+            <p style={{ fontSize:14, color:'#666', marginBottom:20 }}>
+              Usa esta función cuando compres de más o necesites reasignar un producto de un cliente a otro
+            </p>
+
+            {/* Paso 1: Seleccionar pedido */}
+            <div style={{ marginBottom:20 }}>
+              <label style={{ fontSize:13, fontWeight:600, color:'#333', display:'block', marginBottom:8 }}>
+                1️⃣ Selecciona el pedido con excedente
+              </label>
+              <select
+                value={reassignForm.order_id}
+                onChange={e=> {
+                  setReassignForm(f=> ({...f, order_id:e.target.value, product_id:'', from_customer:'', to_customer:'', qty:'', unit_price:''}))
+                  loadChargesForOrder(e.target.value)
+                }}
+                style={{ 
+                  width:'100%', 
+                  padding:12, 
+                  borderRadius:10, 
+                  border:'1px solid #ddd', 
+                  fontSize:15,
+                  background:'white'
+                }}
+              >
+                <option value="">Selecciona un pedido...</option>
+                {orderCards.map(o=> (
+                  <option key={o.order.id} value={o.order.id}>
+                    Pedido #{o.order.id} - {new Date(o.order.created_at).toLocaleDateString('es-CL')} - ${o.billed.toLocaleString('es-CL')}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {reassignForm.order_id && (
+              <>
+                {/* Paso 2: Producto y cantidad */}
+                <div style={{ 
+                  display:'grid', 
+                  gridTemplateColumns: window.innerWidth > 768 ? '1fr 1fr' : '1fr', 
+                  gap:16, 
+                  marginBottom:20 
+                }}>
+                  <div>
+                    <label style={{ fontSize:13, fontWeight:600, color:'#333', display:'block', marginBottom:8 }}>
+                      2️⃣ Producto sobrante
+                    </label>
+                    <select
+                      value={reassignForm.product_id}
+                      onChange={e=> {
+                        const charge = availableCharges.find(c=> c.product_id === Number(e.target.value))
+                        setReassignForm(f=> ({
+                          ...f, 
+                          product_id:e.target.value,
+                          qty: charge ? charge.qty.toString() : '',
+                          unit_price: charge ? charge.unit_price.toString() : ''
+                        }))
+                      }}
+                      style={{ 
+                        width:'100%', 
+                        padding:12, 
+                        borderRadius:10, 
+                        border:'1px solid #ddd', 
+                        fontSize:15,
+                        background:'white'
+                      }}
+                    >
+                      <option value="">Selecciona...</option>
+                      {availableCharges.map(c=> {
+                        const prod = products.find(p=> p.id === c.product_id)
+                        return (
+                          <option key={c.id} value={c.product_id}>
+                            {prod?.name || 'Producto'} - {c.qty} {c.unit}
+                          </option>
+                        )
+                      })}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize:13, fontWeight:600, color:'#333', display:'block', marginBottom:8 }}>
+                      Cantidad a reasignar
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={reassignForm.qty}
+                      onChange={e=> setReassignForm(f=> ({...f, qty:e.target.value}))}
+                      style={{ 
+                        width:'100%', 
+                        padding:12, 
+                        borderRadius:10, 
+                        border:'1px solid #ddd', 
+                        fontSize:15 
+                      }}
+                      placeholder="kg o unidades"
+                    />
+                  </div>
+                </div>
+
+                {/* Paso 3: Cliente destino y precio */}
+                <div style={{ 
+                  display:'grid', 
+                  gridTemplateColumns: window.innerWidth > 768 ? '1fr 1fr' : '1fr', 
+                  gap:16, 
+                  marginBottom:20 
+                }}>
+                  <div>
+                    <label style={{ fontSize:13, fontWeight:600, color:'#333', display:'block', marginBottom:8 }}>
+                      3️⃣ Cliente nuevo (destino)
+                    </label>
+                    <select
+                      value={reassignForm.to_customer}
+                      onChange={e=> setReassignForm(f=> ({...f, to_customer:e.target.value}))}
+                      style={{ 
+                        width:'100%', 
+                        padding:12, 
+                        borderRadius:10, 
+                        border:'1px solid #ddd', 
+                        fontSize:15,
+                        background:'white'
+                      }}
+                    >
+                      <option value="">Selecciona cliente...</option>
+                      {customers.map(c=> (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize:13, fontWeight:600, color:'#333', display:'block', marginBottom:8 }}>
+                      Precio por unidad ($)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={reassignForm.unit_price}
+                      onChange={e=> setReassignForm(f=> ({...f, unit_price:e.target.value}))}
+                      style={{ 
+                        width:'100%', 
+                        padding:12, 
+                        borderRadius:10, 
+                        border:'1px solid #ddd', 
+                        fontSize:15 
+                      }}
+                      placeholder="Precio"
+                    />
+                  </div>
+                </div>
+
+                {/* Preview del total */}
+                {reassignForm.qty && reassignForm.unit_price && (
+                  <div style={{ 
+                    background:'linear-gradient(135deg, #f0f9f5 0%, #e8f5e9 100%)', 
+                    padding:16, 
+                    borderRadius:12, 
+                    border:'2px solid #88C4A8',
+                    fontSize:16,
+                    fontWeight:600,
+                    color:'#2e7d32',
+                    marginBottom:20,
+                    textAlign:'center'
+                  }}>
+                    Total a facturar: ${(Number(reassignForm.qty) * Number(reassignForm.unit_price)).toLocaleString('es-CL')}
+                  </div>
+                )}
+
+                {/* Botón de reasignación */}
+                <button
+                  onClick={handleReassign}
+                  disabled={!reassignForm.product_id || !reassignForm.to_customer || !reassignForm.qty || !reassignForm.unit_price}
+                  style={{
+                    width:'100%',
+                    padding:'14px',
+                    borderRadius:12,
+                    background: (!reassignForm.product_id || !reassignForm.to_customer || !reassignForm.qty || !reassignForm.unit_price) ? '#e0e0e0' : '#88C4A8',
+                    color:'white',
+                    border:'none',
+                    fontSize:16,
+                    fontWeight:700,
+                    cursor: (!reassignForm.product_id || !reassignForm.to_customer || !reassignForm.qty || !reassignForm.unit_price) ? 'not-allowed' : 'pointer',
+                    boxShadow: (!reassignForm.product_id || !reassignForm.to_customer || !reassignForm.qty || !reassignForm.unit_price) ? 'none' : '0 4px 12px rgba(136, 196, 168, 0.3)',
+                    transition:'all 0.2s'
+                  }}
+                >
+                  ✓ Reasignar Producto
+                </button>
+              </>
+            )}
           </div>
         )}
       </div>
