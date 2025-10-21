@@ -64,7 +64,8 @@ export default function Compras() {
   const chargeQty = chargeUnit === 'kg'
     ? (qtyKg + kgUnitsTotal)
     : (qtyUnit + unitsKgTotal)
-  const convRequired = (chargeUnit==='kg' && qtyUnit>0 && kgUnitsTotal<=0) || (chargeUnit==='unit' && qtyKg>0 && unitsKgTotal<=0)
+  // Mostrar equivalencia SI cobro en una unidad diferente a lo comprado
+  const convRequired = (chargeUnit==='kg' && qtyUnit>0) || (chargeUnit==='unit' && qtyKg>0)
 
   function onChangePricePerUnit(val){
     const p = parseNum(val)
@@ -80,7 +81,17 @@ export default function Compras() {
 
   async function savePurchase(){
     if(!selectedOrder||!purchase.product_id) return;
-    if (convRequired){ alert('Falta ingresar la equivalencia entre unidades y kilos'); return }
+    // Validar que si se requiere equivalencia, esté rellenada
+    if (convRequired) {
+      if (chargeUnit==='kg' && qtyUnit>0 && kgUnitsTotal<=0) {
+        alert('⚠️ Debes indicar cuántos kilos son las unidades compradas')
+        return
+      }
+      if (chargeUnit==='unit' && qtyKg>0 && unitsKgTotal<=0) {
+        alert('⚠️ Debes indicar cuántas unidades son los kilos comprados')
+        return
+      }
+    }
     try{
       if(!detail || !purchase.product_id){}
       else{
@@ -479,7 +490,7 @@ export default function Compras() {
             )}
 
             {/* Precio */}
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:16 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginBottom:20 }}>
               <div>
                 <label style={{ display:'block', fontSize:13, marginBottom:6, fontWeight:600 }}>
                   Precio/{chargeUnit==='kg'?'kg':'unid'}
@@ -504,31 +515,6 @@ export default function Compras() {
                   style={{ width:'100%', padding:'12px', borderRadius:10, fontSize:15 }}
                 />
               </div>
-            </div>
-
-            {/* Proveedor */}
-            <div style={{ marginBottom:16 }}>
-              <label style={{ display:'block', fontSize:13, marginBottom:6, fontWeight:600 }}>Proveedor</label>
-              <input 
-                className="input" 
-                value={purchase.vendor} 
-                onChange={e=>setPurchase({...purchase, vendor:e.target.value})}
-                placeholder="Nombre del proveedor"
-                style={{ width:'100%', padding:'12px', borderRadius:10, fontSize:15 }}
-              />
-            </div>
-
-            {/* Notas */}
-            <div style={{ marginBottom:20 }}>
-              <label style={{ display:'block', fontSize:13, marginBottom:6, fontWeight:600 }}>Notas</label>
-              <textarea 
-                className="input" 
-                value={purchase.notes} 
-                onChange={e=>setPurchase({...purchase, notes:e.target.value})}
-                rows={2}
-                placeholder="Observaciones..."
-                style={{ width:'100%', padding:'12px', borderRadius:10, resize:'vertical', fontSize:15 }}
-              />
             </div>
 
             {/* Botones */}
