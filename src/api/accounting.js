@@ -48,3 +48,35 @@ export function changeChargeOrder(chargeId, orderId) {
     body: { order_id: orderId }
   })
 }
+
+// Excedentes (Lots)
+export function listLots() {
+  return apiFetch('/lots')
+}
+
+export function assignLotToCustomer(lotId, data) {
+  return apiFetch(`/lots/${lotId}/assign`, {
+    method: 'POST',
+    body: data
+  })
+}
+
+export function markLotAsWaste(lotId) {
+  return apiFetch(`/lots/${lotId}/waste`, {
+    method: 'POST'
+  })
+}
+
+export function processLot(data) {
+  return apiFetch('/lots/process', {
+    method: 'POST',
+    body: data
+  })
+}
+
+export function returnChargeToExcess(chargeId, data) {
+  return apiFetch(`/charges/${chargeId}/return`, {
+    method: 'POST',
+    body: data
+  })
+}

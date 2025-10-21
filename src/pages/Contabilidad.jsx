@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { listCharges, listPayments, createPayment, ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, changeChargeOrder } from '../api/accounting'
+import { listCharges, listPayments, createPayment, ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, changeChargeOrder, listLots, assignLotToCustomer, markLotAsWaste, processLot, returnChargeToExcess } from '../api/accounting'
 import { getOrderDetail } from '../api/orders'
 import { listCustomers } from '../api/customers'
 import { listProducts } from '../api/products'
