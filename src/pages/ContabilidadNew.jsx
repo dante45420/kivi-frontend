@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, createPayment, listLots, assignLotToCustomer, markLotAsWaste, processLot, returnChargeToExcess } from '../api/accounting'
+import { ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, createPayment } from '../api/accounting'
 import { listCustomers } from '../api/customers'
 import { listProducts } from '../api/products'
 import { listOrders } from '../api/orders'
@@ -21,10 +21,6 @@ export default function ContabilidadNew(){
   // Estados de edición
   const [editingCharge, setEditingCharge] = useState(null)
   
-  // Estados para excedentes
-  const [lots, setLots] = useState([])
-  const [assignForm, setAssignForm] = useState({ lot_id:'', customer_id:'', order_id:'', unit_price:'', qty:'' })
-  const [processForm, setProcessForm] = useState({ from_lot:'', to_product:'', input_kg:'', output_qty:'', unit:'unit' })
   
   // Filtros
   const [orderFilter, setOrderFilter] = useState('')
@@ -40,7 +36,7 @@ export default function ContabilidadNew(){
     listCustomers().then(setCustomers).catch(()=>{}) 
     listProducts().then(setProducts).catch(()=>{})
     listOrders().then(setOrders).catch(()=>{})
-    listLots().then(setLots).catch(()=>{})
+    // listLots().then(setLots).catch(()=>{}) // Temporalmente deshabilitado - endpoint no existe
   },[])
 
   async function loadAll() {
@@ -51,43 +47,6 @@ export default function ContabilidadNew(){
       setCustomerCards(customersData)
     } catch(err) {
       console.error(err)
-    }
-  }
-
-  async function assignExcess() {
-    if (!assignForm.lot_id || !assignForm.customer_id) return
-    try {
-      await assignLotToCustomer(Number(assignForm.lot_id), {
-        customer_id: Number(assignForm.customer_id),
-        order_id: assignForm.order_id ? Number(assignForm.order_id) : null,
-        unit_price: assignForm.unit_price ? Number(assignForm.unit_price) : null,
-        qty: assignForm.qty ? Number(assignForm.qty) : null
-      })
-      setAssignForm({ lot_id:'', customer_id:'', order_id:'', unit_price:'', qty:'' })
-      setLots(await listLots())
-      loadAll()
-      alert('✓ Excedente asignado correctamente')
-    } catch(err) {
-      alert('Error: ' + (err.message || 'No se pudo asignar el excedente'))
-    }
-  }
-
-  async function doProcess(){ 
-    const lot = lots.find(l=> String(l.id)===String(processForm.from_lot))
-    if(!lot) return
-    try {
-      await processLot({ 
-        from_product_id: lot.product_id, 
-        to_product_id: Number(processForm.to_product), 
-        input_qty_kg: Number(processForm.input_kg||lot.qty_kg||0), 
-        output_qty: Number(processForm.output_qty||0), 
-        unit: processForm.unit||'unit' 
-      })
-      setProcessForm({ from_lot:'', to_product:'', input_kg:'', output_qty:'', unit:'unit' })
-      setLots(await listLots())
-      alert('✓ Excedente procesado correctamente')
-    } catch(err) {
-      alert('Error: ' + (err.message || 'No se pudo procesar'))
     }
   }
 
