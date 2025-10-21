@@ -21,7 +21,6 @@ export default function ContabilidadNew(){
   // Estados de edición
   const [editingCharge, setEditingCharge] = useState(null)
   
-  
   // Filtros
   const [orderFilter, setOrderFilter] = useState('')
   const [orderStatusFilter, setOrderStatusFilter] = useState('all')
@@ -36,7 +35,6 @@ export default function ContabilidadNew(){
     listCustomers().then(setCustomers).catch(()=>{}) 
     listProducts().then(setProducts).catch(()=>{})
     listOrders().then(setOrders).catch(()=>{})
-    // listLots().then(setLots).catch(()=>{}) // Temporalmente deshabilitado - endpoint no existe
   },[])
 
   async function loadAll() {
@@ -77,7 +75,6 @@ export default function ContabilidadNew(){
       alert('Error: ' + (err.message || 'No se pudo actualizar'))
     }
   }
-
 
   async function handleRegisterPayment() {
     if (!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount) {
@@ -138,24 +135,19 @@ export default function ContabilidadNew(){
             display:'flex',
             justifyContent:'space-between',
             alignItems:'center',
-            boxShadow:'0 4px 12px rgba(102, 126, 234, 0.3)',
+            boxShadow:'0 4px 12px rgba(136, 196, 168, 0.3)',
             transition:'all 0.2s'
           }}
         >
           <span>💰 Registrar Pago</span>
-          <button
-            style={{
-              padding: '4px 10px',
-              background: showPayments ? '#88C4A8' : '#f5f5f5',
-              color: showPayments ? 'white' : '#666',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '12px',
-              fontWeight: 600
-            }}
-          >
-            {showPayments ? 'Ocultar' : 'Ver pagos'}
-          </button>
+          <span style={{
+            padding: '6px 12px',
+            background: 'rgba(255,255,255,0.2)',
+            borderRadius: '10px',
+            fontSize: '14px'
+          }}>
+            {showPayments ? 'Ocultar' : 'Mostrar'}
+          </span>
         </button>
 
         {showPayments && (
@@ -241,7 +233,7 @@ export default function ContabilidadNew(){
                         whiteSpace:'nowrap'
                       }}
                     >
-                      💯 Pagar Todo
+                      💯 Todo
                     </button>
                   )}
                 </div>
@@ -270,7 +262,7 @@ export default function ContabilidadNew(){
                   fontSize:16,
                   fontWeight:700,
                   cursor: (!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount) ? 'not-allowed' : 'pointer',
-                  boxShadow: (!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount) ? 'none' : '0 4px 12px rgba(102, 126, 234, 0.3)'
+                  boxShadow: (!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount) ? 'none' : '0 4px 12px rgba(136, 196, 168, 0.3)'
                 }}
               >
                 ✓ Registrar Pago
@@ -293,13 +285,13 @@ export default function ContabilidadNew(){
               placeholder="Buscar pedido..."
               value={orderFilter}
               onChange={e=> setOrderFilter(e.target.value)}
-              style={{ width:200, padding:'8px 14px' }}
+              style={{ width:200, padding:'8px 14px', borderRadius:10 }}
             />
             <select 
               className="input"
               value={orderStatusFilter}
               onChange={e=> setOrderStatusFilter(e.target.value)}
-              style={{ width:150, padding:'8px 14px' }}
+              style={{ width:150, padding:'8px 14px', borderRadius:10 }}
             >
               <option value="all">Todos</option>
               <option value="complete">✓ Completos</option>
@@ -326,6 +318,8 @@ export default function ContabilidadNew(){
                 transition:'all 0.2s',
                 cursor:'pointer'
               }}
+              onMouseEnter={e=> e.currentTarget.style.boxShadow='0 6px 16px rgba(0,0,0,0.12)'}
+              onMouseLeave={e=> e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
             >
               <div style={{ padding:'24px' }}>
                 <div style={{ marginBottom:16 }}>
@@ -390,7 +384,7 @@ export default function ContabilidadNew(){
             placeholder="Buscar cliente..."
             value={customerFilter}
             onChange={e=> setCustomerFilter(e.target.value)}
-            style={{ width:200, padding:'8px 14px' }}
+            style={{ width:200, padding:'8px 14px', borderRadius:10 }}
           />
         </div>
         
@@ -411,6 +405,8 @@ export default function ContabilidadNew(){
                 transition:'all 0.2s',
                 cursor:'pointer'
               }}
+              onMouseEnter={e=> e.currentTarget.style.boxShadow='0 6px 16px rgba(0,0,0,0.12)'}
+              onMouseLeave={e=> e.currentTarget.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)'}
             >
               <div style={{ padding:'24px' }}>
                 <div style={{ marginBottom:16 }}>
@@ -463,161 +459,6 @@ export default function ContabilidadNew(){
         orders={orders}
         onUpdate={loadAll}
       />
-
-      {/* Gestión de Excedentes */}
-      <div style={{ marginBottom:32 }}>
-        <h3 style={{ fontSize:22, fontWeight:700, marginBottom:16 }}>🔄 Gestionar Excedentes</h3>
-        
-        {/* Asignar a Cliente */}
-        <div style={{ background:'white', borderRadius:16, border:'1px solid #e0e0e0', padding:20, marginBottom:16 }}>
-          <div style={{ fontSize:18, fontWeight:600, marginBottom:16 }}>📤 Asignar a Cliente</div>
-          <div style={{ display:'grid', gap:12 }}>
-            <select 
-              className="input" 
-              value={assignForm.lot_id}
-              onChange={e=> setAssignForm(f=> ({...f, lot_id:e.target.value}))}
-              style={{ width:'100%', padding:'12px 16px', borderRadius:12 }}
-            >
-              <option value="">Seleccionar excedente...</option>
-              {lots.filter(l=> (l.status||'')==='unassigned').map(l=> {
-                const product = products.find(p=> p.id === l.product_id)
-                const productName = product ? product.name : `Producto #${l.product_id}`
-                return (
-                  <option key={l.id} value={l.id}>
-                    {productName} — {l.qty_kg||l.qty_unit} {(l.qty_kg?'kg':'unid')}
-                  </option>
-                )
-              })}
-            </select>
-            <select 
-              className="input" 
-              value={assignForm.customer_id}
-              onChange={e=> setAssignForm(f=> ({...f, customer_id:e.target.value}))}
-              style={{ width:'100%', padding:'12px 16px', borderRadius:12 }}
-            >
-              <option value="">Seleccionar cliente...</option>
-              {customers.map(c=> <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            <select 
-              className="input" 
-              value={assignForm.order_id}
-              onChange={e=> setAssignForm(f=> ({...f, order_id:e.target.value}))}
-              style={{ width:'100%', padding:'12px 16px', borderRadius:12 }}
-            >
-              <option value="">Seleccionar pedido (opcional)...</option>
-              {orders.map(o=> <option key={o.id} value={o.id}>{o.title || `Pedido #${o.id}`}</option>)}
-            </select>
-            <input 
-              className="input" 
-              type="number" 
-              placeholder="Precio de venta por unidad/kg"
-              value={assignForm.unit_price}
-              onChange={e=> setAssignForm(f=> ({...f, unit_price:e.target.value}))}
-              style={{ width:'100%', padding:'12px 16px', borderRadius:12 }}
-            />
-            <input 
-              className="input" 
-              type="number" 
-              placeholder="Cantidad (opcional, por defecto todo)"
-              value={assignForm.qty}
-              onChange={e=> setAssignForm(f=> ({...f, qty:e.target.value}))}
-              style={{ width:'100%', padding:'12px 16px', borderRadius:12 }}
-            />
-            <button 
-              className="button" 
-              onClick={assignExcess}
-              style={{ width:'100%', padding:'12px', borderRadius:12, fontWeight:600 }}
-            >
-              ✓ Asignar Excedente
-            </button>
-          </div>
-        </div>
-
-        {/* Procesar (Transformar) */}
-        <div style={{ background:'white', borderRadius:16, border:'1px solid #e0e0e0', padding:20, marginBottom:16 }}>
-          <div style={{ fontSize:18, fontWeight:600, marginBottom:16 }}>🔄 Procesar (Transformar)</div>
-          <div style={{ display:'grid', gap:12 }}>
-            <select 
-              className="input" 
-              id="process-lot-select"
-              style={{ width:'100%', padding:'12px 16px', borderRadius:12 }}
-            >
-              <option value="">Seleccionar excedente para procesar...</option>
-              {lots.filter(l=> (l.status||'')==='unassigned').map(l=> {
-                const product = products.find(p=> p.id === l.product_id)
-                const productName = product ? product.name : `Producto #${l.product_id}`
-                return (
-                  <option key={l.id} value={l.id}>
-                    {productName} — {l.qty_kg||l.qty_unit} {(l.qty_kg?'kg':'unid')}
-                  </option>
-                )
-              })}
-            </select>
-            <button 
-              className="button" 
-              onClick={async()=>{
-                const select = document.getElementById('process-lot-select')
-                const lotId = select.value
-                if (!lotId) return
-                try {
-                  await processLot({ lot_id: Number(lotId) })
-                  await loadAll()
-                  select.value = ''
-                  alert('✓ Excedente procesado correctamente')
-                } catch(err) {
-                  alert('Error: ' + (err.message || 'No se pudo procesar'))
-                }
-              }}
-              style={{ width:'100%', padding:'12px', borderRadius:12, fontWeight:600 }}
-            >
-              🔄 Procesar
-            </button>
-          </div>
-        </div>
-
-        {/* Marcar como Merma */}
-        <div style={{ background:'white', borderRadius:16, border:'1px solid #e0e0e0', padding:20, marginBottom:16 }}>
-          <div style={{ fontSize:18, fontWeight:600, marginBottom:16 }}>🗑️ Marcar como Merma</div>
-          <div style={{ display:'grid', gap:12 }}>
-            <select 
-              className="input" 
-              id="waste-lot-select"
-              style={{ width:'100%', padding:'12px 16px', borderRadius:12 }}
-            >
-              <option value="">Seleccionar excedente para merma...</option>
-              {lots.filter(l=> (l.status||'')==='unassigned').map(l=> {
-                const product = products.find(p=> p.id === l.product_id)
-                const productName = product ? product.name : `Producto #${l.product_id}`
-                return (
-                  <option key={l.id} value={l.id}>
-                    {productName} — {l.qty_kg||l.qty_unit} {(l.qty_kg?'kg':'unid')}
-                  </option>
-                )
-              })}
-            </select>
-            <button 
-              className="button" 
-              onClick={async()=>{
-                const select = document.getElementById('waste-lot-select')
-                const lotId = select.value
-                if (!lotId) return
-                if (!confirm('¿Marcar este excedente como merma (pérdida)?')) return
-                try {
-                  await markLotAsWaste(Number(lotId))
-                  setLots(await listLots())
-                  select.value = ''
-                  alert('✓ Excedente marcado como merma')
-                } catch(err) {
-                  alert('Error: ' + (err.message || 'No se pudo marcar como merma'))
-                }
-              }}
-              style={{ width:'100%', padding:'12px', borderRadius:12, fontWeight:600, background:'#d32f2f', color:'white' }}
-            >
-              🗑️ Marcar como Merma
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   )
 }
