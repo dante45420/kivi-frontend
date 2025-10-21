@@ -29,6 +29,8 @@ export default function Compras() {
   const [priceList, setPriceList] = useState([])
   const [existingPurchases, setExistingPurchases] = useState([])
   const [editingPurchase, setEditingPurchase] = useState(null)
+  const [showInfoModal, setShowInfoModal] = useState(false)
+  const [infoModalProduct, setInfoModalProduct] = useState(null)
 
   // Estados de filtros
   const [filterStatus, setFilterStatus] = useState('all') // all, complete, incomplete
@@ -393,31 +395,24 @@ function hasSpecs(){ return (specsForCurrentProduct().length>0) }
                         onClick={(e) => {
                           e.stopPropagation()
                           const product = products.find(p => p.id === g.product_id)
-                          const info = `
-📦 ${g.product_name}
-
-👥 CLIENTES:
-${g.customers.map(c => `• ${c.customer_name}: ${c.qty} ${c.unit}${c.has_note ? ' (tiene nota)' : ''}`).join('\n')}
-
-📊 TOTALES:
-${Object.entries(g.totals).filter(([_, v]) => v > 0).map(([u, v]) => `• ${v} ${u}`).join('\n')}
-
-${product?.notes ? `📝 NOTAS:\n${product.notes}\n\n` : ''}${product?.quality_notes ? `⭐ PRO TIP:\n${product.quality_notes}` : ''}
-                          `.trim()
-                          alert(info)
+                          setInfoModalProduct({ ...g, product })
+                          setShowInfoModal(true)
                         }}
                         style={{
-                          padding:'10px 16px',
+                          padding:'10px 18px',
                           borderRadius:12,
-                          background:'#f0f0f0',
-                          border:'1px solid #ddd',
+                          background:'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          color:'white',
+                          border:'none',
                           cursor:'pointer',
-                          fontSize:18,
-                          transition:'all 0.2s'
+                          fontSize:15,
+                          fontWeight:600,
+                          transition:'all 0.2s',
+                          boxShadow:'0 2px 8px rgba(102, 126, 234, 0.3)'
                         }}
                         title="Ver información del producto y clientes"
                       >
-                        ℹ️
+                        💡 Info
                       </button>
                     </div>
                   </div>
@@ -638,10 +633,18 @@ ${product?.notes ? `📝 NOTAS:\n${product.notes}\n\n` : ''}${product?.quality_n
                         </label>
                         <input 
                           className="input" 
-                          type="number" 
-                          value={purchase.kg_units_total} 
-                          onChange={e=>setPurchase({...purchase, kg_units_total:e.target.value})}
-                          style={{ width:'100%', padding:'10px 12px', borderRadius:10 }}
+                          type="text"
+                          inputMode="decimal"
+                          value={purchase.kg_units_total || ''} 
+                          onChange={e=>{
+                            const val = e.target.value
+                            // Permitir números, punto decimal y vacío
+                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                              setPurchase({...purchase, kg_units_total:val})
+                            }
+                          }}
+                          placeholder="Ej: 12.5"
+                          style={{ width:'100%', padding:'10px 12px', borderRadius:10, fontSize:15 }}
                         />
                       </div>
                     )}
@@ -652,10 +655,18 @@ ${product?.notes ? `📝 NOTAS:\n${product.notes}\n\n` : ''}${product?.quality_n
                         </label>
                         <input 
                           className="input" 
-                          type="number" 
-                          value={purchase.units_kg_total} 
-                          onChange={e=>setPurchase({...purchase, units_kg_total:e.target.value})}
-                          style={{ width:'100%', padding:'10px 12px', borderRadius:10 }}
+                          type="text"
+                          inputMode="decimal"
+                          value={purchase.units_kg_total || ''} 
+                          onChange={e=>{
+                            const val = e.target.value
+                            // Permitir números, punto decimal y vacío
+                            if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                              setPurchase({...purchase, units_kg_total:val})
+                            }
+                          }}
+                          placeholder="Ej: 50"
+                          style={{ width:'100%', padding:'10px 12px', borderRadius:10, fontSize:15 }}
                         />
                       </div>
                     )}
@@ -777,6 +788,175 @@ ${product?.notes ? `📝 NOTAS:\n${product.notes}\n\n` : ''}${product?.quality_n
           onClose={() => setEditingPurchase(null)} 
           onSaved={refreshOrderDetail}
         />
+      )}
+
+      {/* Modal de información del producto */}
+      {showInfoModal && infoModalProduct && (
+        <div className="modal-backdrop" onClick={()=>setShowInfoModal(false)}>
+          <div 
+            className="modal" 
+            onClick={e=>e.stopPropagation()} 
+            style={{ 
+              maxWidth:500, 
+              borderRadius:20,
+              background:'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              padding:0,
+              overflow:'hidden'
+            }}
+          >
+            {/* Header */}
+            <div style={{ 
+              padding:'24px 24px 20px 24px',
+              background:'rgba(255,255,255,0.95)',
+              borderBottom:'3px solid rgba(102, 126, 234, 0.3)'
+            }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+                <h3 style={{ margin:0, fontSize:22, fontWeight:800, color:'#764ba2' }}>
+                  📦 {infoModalProduct.product_name}
+                </h3>
+                <button 
+                  onClick={()=>setShowInfoModal(false)} 
+                  style={{ 
+                    background:'none', 
+                    border:'none', 
+                    fontSize:28, 
+                    cursor:'pointer', 
+                    opacity:0.6,
+                    padding:'0 4px',
+                    color:'#764ba2'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div style={{ 
+              maxHeight:'70vh', 
+              overflow:'auto', 
+              background:'white'
+            }}>
+              {/* Clientes */}
+              <div style={{ padding:'20px 24px', borderBottom:'1px solid #f0f0f0' }}>
+                <div style={{ fontSize:16, fontWeight:700, marginBottom:12, color:'#667eea' }}>
+                  👥 Clientes
+                </div>
+                <div style={{ display:'grid', gap:8 }}>
+                  {infoModalProduct.customers.map((c,i)=>(
+                    <div 
+                      key={i} 
+                      style={{ 
+                        background:'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)', 
+                        borderRadius:10, 
+                        padding:'12px 16px',
+                        borderLeft:'3px solid #667eea'
+                      }}
+                    >
+                      <div style={{ fontWeight:600, fontSize:15, marginBottom:4 }}>
+                        {c.customer_name}
+                      </div>
+                      <div style={{ fontSize:14, opacity:0.8 }}>
+                        {c.qty} {c.unit}
+                        {c.has_note && <span style={{ marginLeft:8, fontSize:12, background:'#fff3e0', padding:'2px 8px', borderRadius:6 }}>📝 Con nota</span>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Totales */}
+              <div style={{ padding:'20px 24px', borderBottom:'1px solid #f0f0f0' }}>
+                <div style={{ fontSize:16, fontWeight:700, marginBottom:12, color:'#667eea' }}>
+                  📊 Totales
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                  {Object.entries(infoModalProduct.totals).filter(([_, v]) => v > 0).map(([unit, value])=>(
+                    <div 
+                      key={unit}
+                      style={{ 
+                        background:'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)', 
+                        borderRadius:10, 
+                        padding:'16px',
+                        textAlign:'center'
+                      }}
+                    >
+                      <div style={{ fontSize:24, fontWeight:800, color:'#2e7d32' }}>
+                        {value}
+                      </div>
+                      <div style={{ fontSize:13, fontWeight:600, color:'#2e7d32', marginTop:4 }}>
+                        {unit}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Notas y Pro Tips */}
+              {(infoModalProduct.product?.notes || infoModalProduct.product?.quality_notes) && (
+                <div style={{ padding:'20px 24px' }}>
+                  {infoModalProduct.product?.notes && (
+                    <div style={{ marginBottom:16 }}>
+                      <div style={{ fontSize:16, fontWeight:700, marginBottom:8, color:'#667eea' }}>
+                        📝 Notas
+                      </div>
+                      <div style={{ 
+                        fontSize:14, 
+                        opacity:0.9, 
+                        background:'#f8f9fa', 
+                        padding:'12px 16px', 
+                        borderRadius:10,
+                        lineHeight:'1.5'
+                      }}>
+                        {infoModalProduct.product.notes}
+                      </div>
+                    </div>
+                  )}
+
+                  {infoModalProduct.product?.quality_notes && (
+                    <div>
+                      <div style={{ fontSize:16, fontWeight:700, marginBottom:8, color:'#f57c00' }}>
+                        ⭐ Pro Tip
+                      </div>
+                      <div style={{ 
+                        fontSize:14, 
+                        opacity:0.9, 
+                        background:'#fff3e0', 
+                        padding:'12px 16px', 
+                        borderRadius:10,
+                        lineHeight:'1.5',
+                        border:'1px solid #ffe0b2'
+                      }}>
+                        {infoModalProduct.product.quality_notes}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div style={{ padding:'16px 24px', background:'rgba(255,255,255,0.95)' }}>
+              <button 
+                onClick={()=>setShowInfoModal(false)}
+                style={{ 
+                  width:'100%', 
+                  padding:14, 
+                  borderRadius:12, 
+                  fontWeight:700,
+                  fontSize:15,
+                  background:'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color:'white',
+                  border:'none',
+                  cursor:'pointer',
+                  boxShadow:'0 4px 12px rgba(102, 126, 234, 0.4)'
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
