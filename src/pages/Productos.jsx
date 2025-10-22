@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { listProducts, createProduct, updateProduct } from '../api/products'
 import { listVariants, createVariant, updateVariant, deleteVariant, listVariantTiers, createVariantTier } from '../api/variants'
 import ImageUploader from '../components/ImageUploader'
+import { generateCatalogWithProfitPDF } from '../utils/pdfGenerator'
 import '../styles/globals.css'
 
 export default function Productos() {
@@ -80,13 +81,85 @@ export default function Productos() {
   return (
     <div style={{ padding:'20px', maxWidth:1400, margin:'0 auto' }}>
       {/* Header */}
-      <div style={{ marginBottom:28, display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:16 }}>
+      <div style={{ marginBottom:28, display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:16, flexWrap:'wrap' }}>
         <div>
           <h1 style={{ fontSize:32, fontWeight:800, margin:'0 0 8px 0', color:'var(--kivi-text-dark)' }}>
             🛍️ Productos
           </h1>
           <p style={{ margin:0, opacity:0.7, fontSize:16 }}>Gestiona tu catálogo de productos</p>
         </div>
+        
+        <button
+          onClick={async () => {
+            if (items.length === 0) {
+              alert('No hay productos para descargar')
+              return
+            }
+            try {
+              // Cargar productos con costos
+              const productsWithCost = await listProducts(true)
+              
+              // Cargar variantes y tiers para cada producto
+              const productsWithVariants = await Promise.all(
+                productsWithCost.map(async (product) => {
+                  try {
+                    const variants = await listVariants(product.id)
+                    const variantsWithTiers = await Promise.all(
+                      variants.map(async (variant) => {
+                        try {
+                          const tiers = await listVariantTiers(product.id, variant.id)
+                          return { ...variant, price_tiers: tiers }
+                        } catch {
+                          return { ...variant, price_tiers: [] }
+                        }
+                      })
+                    )
+                    return { ...product, variants: variantsWithTiers }
+                  } catch {
+                    return { ...product, variants: [] }
+                  }
+                })
+              )
+              
+              generateCatalogWithProfitPDF(productsWithVariants)
+            } catch (err) {
+              alert('Error al generar el catálogo: ' + (err.message || 'Error desconocido'))
+            }
+          }}
+          disabled={loading || items.length === 0}
+          style={{
+            padding: '12px 24px',
+            borderRadius: 16,
+            border: 'none',
+            background: (loading || items.length === 0) ? '#ccc' : '#e74c3c',
+            color: (loading || items.length === 0) ? '#666' : 'white',
+            fontWeight: 700,
+            fontSize: 15,
+            cursor: (loading || items.length === 0) ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            opacity: (loading || items.length === 0) ? 0.6 : 1,
+            boxShadow: (loading || items.length === 0) ? 'none' : '0 4px 12px rgba(231, 76, 60, 0.3)'
+          }}
+          onMouseOver={e => {
+            if (!loading && items.length > 0) {
+              e.currentTarget.style.transform = 'scale(1.05)'
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(231, 76, 60, 0.4)'
+            }
+          }}
+          onMouseOut={e => {
+            if (!loading && items.length > 0) {
+              e.currentTarget.style.transform = 'scale(1)'
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(231, 76, 60, 0.3)'
+            }
+          }}
+          title="Descargar catálogo con costos y utilidades (USO INTERNO)"
+        >
+          <span>💰</span>
+          Catálogo Vendedores
+        </button>
       </div>
 
       {/* Crear Producto */}

@@ -1,9 +1,12 @@
 import { useState } from 'react'
 import { generateInvoicePDF } from '../utils/pdfGenerator'
+import { apiFetch } from '../api/client'
 
-export default function OrderModal({ orderData, onClose, editingCharge, setEditingCharge, saveChargeEdit, products }) {
+export default function OrderModal({ orderData, onClose, editingCharge, setEditingCharge, saveChargeEdit, products, onUpdate }) {
   const [expandedCustomers, setExpandedCustomers] = useState({})
   const [expandedProducts, setExpandedProducts] = useState({})
+  const [expandedPurchases, setExpandedPurchases] = useState(false)
+  const [editingPurchase, setEditingPurchase] = useState(null)
 
   if (!orderData) return null
 
@@ -30,6 +33,23 @@ export default function OrderModal({ orderData, onClose, editingCharge, setEditi
     }
 
     generateInvoicePDF(orderData.order, items, null)
+  }
+
+  async function handleSavePurchaseCost() {
+    if (!editingPurchase) return
+    try {
+      await apiFetch(`/purchases/${editingPurchase.purchaseId}/cost`, {
+        method: 'PATCH',
+        body: { 
+          price_total: Number(editingPurchase.price_total)
+        }
+      })
+      setEditingPurchase(null)
+      if (onUpdate) await onUpdate()
+      alert('✓ Costo actualizado correctamente')
+    } catch(err) {
+      alert('Error: ' + (err.message || 'No se pudo actualizar el costo'))
+    }
   }
 
   return (
@@ -169,6 +189,132 @@ export default function OrderModal({ orderData, onClose, editingCharge, setEditi
               {orderData.purchase_status==='complete'?'✓ Pedido Completo':(orderData.purchase_status==='over'?'⚠ Exceso en Compras':'⏳ Compras Incompletas')}
             </div>
           </div>
+
+          {/* Costos de Compras */}
+          {orderData.purchases && orderData.purchases.length > 0 && (
+            <div style={{ marginBottom:28 }}>
+              <button
+                onClick={() => setExpandedPurchases(!expandedPurchases)}
+                style={{ 
+                  width:'100%', 
+                  padding:'16px 20px', 
+                  background:'#fff3e0', 
+                  border:'none', 
+                  borderRadius:16,
+                  textAlign:'left',
+                  cursor:'pointer',
+                  display:'flex',
+                  justifyContent:'space-between',
+                  alignItems:'center',
+                  fontSize:18,
+                  fontWeight:700,
+                  transition:'all 0.2s'
+                }}
+                onMouseOver={e=> e.target.style.background='#ffe0b2'}
+                onMouseOut={e=> e.target.style.background='#fff3e0'}
+              >
+                <span>💰 Costos de Compras</span>
+                <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                  <span style={{ fontWeight:700, color:'#f57c00', fontSize:18 }}>
+                    ${orderData.cost.toLocaleString('es-CL')}
+                  </span>
+                  <button
+                    style={{
+                      padding: '2px 8px',
+                      background: expandedPurchases ? '#f57c00' : '#f5f5f5',
+                      color: expandedPurchases ? 'white' : '#666',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontSize: '11px',
+                      fontWeight: 600
+                    }}
+                  >
+                    {expandedPurchases ? 'Ocultar' : 'Ver'}
+                  </button>
+                </div>
+              </button>
+
+              {expandedPurchases && (
+                <div style={{ marginTop:12, marginLeft:16 }}>
+                  {orderData.purchases.map((purchase)=> (
+                    <div key={purchase.id} style={{ marginBottom:12 }}>
+                      {editingPurchase?.purchaseId === purchase.id ? (
+                        <div style={{ 
+                          padding:'16px', 
+                          background:'white', 
+                          border:'1px solid #e0e0e0', 
+                          borderRadius:12 
+                        }}>
+                          <div style={{ marginBottom:12, fontWeight:600, fontSize:15 }}>
+                            {purchase.product_name}
+                          </div>
+                          <div style={{ display:'grid', gap:10 }}>
+                            <div>
+                              <label style={{ display:'block', fontSize:13, marginBottom:4, opacity:0.7 }}>
+                                Costo Total ($)
+                              </label>
+                              <input 
+                                type="number"
+                                placeholder="Costo total"
+                                value={editingPurchase.price_total}
+                                onChange={e=> setEditingPurchase({...editingPurchase, price_total:e.target.value})}
+                                className="input"
+                                style={{ padding:'10px 14px', fontSize:15, width:'100%' }}
+                              />
+                            </div>
+                            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                              <button onClick={handleSavePurchaseCost} className="button" style={{ padding:'10px', fontSize:15 }}>
+                                ✓ Guardar
+                              </button>
+                              <button onClick={()=>setEditingPurchase(null)} className="button ghost" style={{ padding:'10px', fontSize:15 }}>
+                                ✕ Cancelar
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ 
+                          display:'flex', 
+                          justifyContent:'space-between', 
+                          alignItems:'center', 
+                          padding:'12px 16px', 
+                          background:'white', 
+                          border:'1px solid #e0e0e0', 
+                          borderRadius:12 
+                        }}>
+                          <div style={{ flex:1 }}>
+                            <div style={{ fontWeight:600, fontSize:15, marginBottom:4 }}>
+                              {purchase.product_name}
+                            </div>
+                            <div style={{ fontSize:13, opacity:0.7 }}>
+                              {purchase.qty_kg ? `${purchase.qty_kg.toFixed(1)} kg` : ''}
+                              {purchase.qty_kg && purchase.qty_unit ? ' + ' : ''}
+                              {purchase.qty_unit ? `${purchase.qty_unit.toFixed(0)} unidades` : ''}
+                            </div>
+                          </div>
+                          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                            <span style={{ fontWeight:700, fontSize:16 }}>
+                              ${(purchase.price_total || 0).toLocaleString('es-CL')}
+                            </span>
+                            <button 
+                              onClick={()=>setEditingPurchase({
+                                purchaseId:purchase.id, 
+                                price_total:purchase.price_total || 0
+                              })}
+                              className="button ghost"
+                              style={{ padding:'6px 14px', fontSize:14 }}
+                            >
+                              ✏️ Editar
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Clientes */}
           <div style={{ fontSize:18, fontWeight:700, marginBottom:16 }}>👥 Clientes</div>

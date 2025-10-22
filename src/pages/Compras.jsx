@@ -92,20 +92,7 @@ export default function Compras() {
         return
       }
     }
-    try{
-      if(!detail || !purchase.product_id){}
-      else{
-        const pid = Number(purchase.product_id)
-        const g = (detail.group_by_product||[]).find(x=>x.product_id===pid)
-        const purchased = (detail.purchased_by_product||{})[pid]||{ kg:0, unit:0 }
-        const needKg = (g?.totals?.kg||0), needUnit=(g?.totals?.unit||0)
-        const afterKg = (purchased.kg||0) + qtyKg
-        const afterUnit = (purchased.unit||0) + qtyUnit
-        const incomplete = (needKg>afterKg) || (needUnit>afterUnit)
-        const hasCustomers = !!((purchase.customers||'').trim())
-        if (incomplete && !hasCustomers){ alert('Clientes son obligatorios si no completas el producto'); return }
-      }
-    }catch{}
+    // Ya no es requisito especificar clientes en caso de compra incompleta
     let price_per_unit = purchase.price_per_unit ? Number(purchase.price_per_unit) : 0
     let price_total = purchase.price_total ? Number(purchase.price_total) : 0
     if (!price_per_unit && chargeQty>0 && price_total){ price_per_unit = price_total / chargeQty }

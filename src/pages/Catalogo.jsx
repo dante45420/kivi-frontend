@@ -17,9 +17,9 @@ export default function Catalogo() {
     loadProducts()
   }, [])
 
-  async function loadProducts() {
+  async function loadProducts(includeCost = false) {
     try {
-      const data = await listProducts()
+      const data = await listProducts(includeCost)
       
       // Cargar variantes y price tiers para cada producto
       const productsWithVariants = await Promise.all(

@@ -322,6 +322,210 @@ export async function generateCatalogPDF(products) {
 }
 
 /**
+ * Genera un PDF del catálogo con utilidades (para vendedores)
+ */
+export async function generateCatalogWithProfitPDF(products) {
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  })
+
+  const pageWidth = doc.internal.pageSize.getWidth()
+  const pageHeight = doc.internal.pageSize.getHeight()
+  const margin = 15
+  const contentWidth = pageWidth - (margin * 2)
+
+  // Cargar logo
+  const loadImage = (src) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      img.crossOrigin = 'Anonymous'
+      img.onload = () => resolve(img)
+      img.onerror = reject
+      img.src = src
+    })
+  }
+
+  let logoImg
+  try {
+    logoImg = await loadImage('/kivi-logo.png')
+  } catch (e) {
+    console.log('No se pudo cargar el logo')
+  }
+
+  // Función para agregar encabezado
+  const addHeader = () => {
+    if (logoImg) {
+      try {
+        const logoWidth = 40
+        const logoHeight = (logoImg.height * logoWidth) / logoImg.width
+        doc.addImage(logoImg, 'PNG', (pageWidth - logoWidth) / 2, 10, logoWidth, logoHeight)
+        
+        doc.setFontSize(14)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(200, 50, 50) // Rojo para indicar documento interno
+        doc.text('CATÁLOGO VENDEDORES - USO INTERNO', pageWidth / 2, 10 + logoHeight + 8, { align: 'center' })
+        
+        return 10 + logoHeight + 14
+      } catch (e) {
+        console.log('Error agregando logo:', e)
+      }
+    }
+    
+    doc.setFontSize(18)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.textDark)
+    doc.text('Kivi - Catálogo Vendedores', pageWidth / 2, 20, { align: 'center' })
+    
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(200, 50, 50)
+    doc.text('USO INTERNO', pageWidth / 2, 28, { align: 'center' })
+    
+    return 35
+  }
+
+  // Separar productos por categoría
+  const frutas = products.filter(p => p.category === 'fruta').sort((a, b) => a.name.localeCompare(b.name))
+  const verduras = products.filter(p => p.category === 'verdura').sort((a, b) => a.name.localeCompare(b.name))
+  const otros = products.filter(p => !p.category || (p.category !== 'fruta' && p.category !== 'verdura')).sort((a, b) => a.name.localeCompare(b.name))
+
+  let currentY = addHeader()
+  let pageNum = 1
+
+  // Función para agregar una categoría
+  const addCategory = (title, items, isFirst = false) => {
+    if (!isFirst) {
+      doc.addPage()
+      pageNum++
+      currentY = addHeader()
+    }
+
+    // Título de categoría
+    doc.setFontSize(16)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.textDark)
+    doc.text(title, margin, currentY)
+    currentY += 3
+    
+    doc.setDrawColor(168, 213, 186)
+    doc.setLineWidth(0.5)
+    doc.line(margin, currentY, pageWidth - margin, currentY)
+    currentY += 8
+
+    items.forEach((product) => {
+      const price = product.catalog && product.catalog[0]
+      const cost = product.latest_cost
+      
+      // Verificar si necesitamos una nueva página
+      if (currentY > pageHeight - 40) {
+        doc.addPage()
+        pageNum++
+        currentY = addHeader()
+      }
+
+      // Nombre del producto
+      doc.setFontSize(13)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(COLORS.textDark)
+      doc.text(product.name, margin, currentY)
+      currentY += 7
+
+      // Información de precios y utilidad
+      const hasVariants = product.variants && product.variants.filter(v => v.active).length > 0
+      
+      if (hasVariants) {
+        const activeVariants = product.variants
+          .filter(v => v.active)
+          .sort((a, b) => {
+            const priceA = a.price_tiers?.[0]?.sale_price || 0
+            const priceB = b.price_tiers?.[0]?.sale_price || 0
+            return priceA - priceB
+          })
+        
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'normal')
+        
+        activeVariants.forEach((variant) => {
+          if (variant.price_tiers && variant.price_tiers.length > 0) {
+            variant.price_tiers.forEach(tier => {
+              const salePrice = tier.sale_price || 0
+              const unit = tier.unit === 'unit' ? 'unidad' : tier.unit
+              let profitInfo = ''
+              
+              if (cost && product.latest_cost_unit === tier.unit) {
+                const profit = salePrice - cost
+                const profitPct = cost > 0 ? ((profit / salePrice) * 100).toFixed(1) : 0
+                profitInfo = ` | Costo: $${cost.toLocaleString('es-CL')} | Utilidad: $${profit.toLocaleString('es-CL')} (${profitPct}%)`
+              }
+              
+              doc.setTextColor(80, 80, 80)
+              doc.text(`${variant.label}: $${salePrice.toLocaleString('es-CL')}/${unit}${profitInfo}`, margin + 3, currentY)
+              currentY += 5
+            })
+          }
+        })
+      } else {
+        if (price) {
+          const salePrice = price.sale_price || 0
+          const unit = price.unit === 'unit' ? 'unidad' : price.unit
+          let profitInfo = ''
+          
+          if (cost && product.latest_cost_unit === price.unit) {
+            const profit = salePrice - cost
+            const profitPct = cost > 0 ? ((profit / salePrice) * 100).toFixed(1) : 0
+            profitInfo = ` | Costo: $${cost.toLocaleString('es-CL')} | Utilidad: $${profit.toLocaleString('es-CL')} (${profitPct}%)`
+          }
+          
+          doc.setFontSize(10)
+          doc.setFont('helvetica', 'normal')
+          doc.setTextColor(80, 80, 80)
+          doc.text(`$${salePrice.toLocaleString('es-CL')}/${unit}${profitInfo}`, margin + 3, currentY)
+          currentY += 5
+        }
+      }
+
+      // Línea divisoria
+      doc.setDrawColor(220, 220, 220)
+      doc.setLineWidth(0.2)
+      doc.line(margin, currentY + 1, pageWidth - margin, currentY + 1)
+      currentY += 6
+    })
+
+    currentY += 3
+  }
+
+  // Agregar cada categoría
+  let isFirst = true
+  
+  if (frutas.length > 0) {
+    addCategory('Frutas', frutas, isFirst)
+    isFirst = false
+  }
+
+  if (verduras.length > 0) {
+    addCategory('Verduras', verduras, isFirst)
+    isFirst = false
+  }
+
+  if (otros.length > 0) {
+    addCategory('Otros', otros, isFirst)
+  }
+
+  // Número de página en todas las páginas
+  for (let i = 1; i <= pageNum; i++) {
+    doc.setPage(i)
+    doc.setFontSize(8)
+    doc.setTextColor(150, 150, 150)
+    doc.text(`Página ${i} de ${pageNum}`, pageWidth / 2, pageHeight - 5, { align: 'center' })
+  }
+
+  // Descargar el PDF
+  doc.save('Catalogo_Vendedores_Kivi.pdf')
+}
+
+/**
  * Genera un PDF de factura para un pedido
  */
 export async function generateInvoicePDF(order, items, customer) {

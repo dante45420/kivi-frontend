@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, createPayment, reassignCharge, listChargesByOrder } from '../api/accounting'
+import { ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, createPayment, reassignCharge, listChargesByOrder, listExcess } from '../api/accounting'
 import { listCustomers } from '../api/customers'
 import { listProducts } from '../api/products'
 import { listOrders } from '../api/orders'
@@ -34,12 +34,14 @@ export default function ContabilidadNew(){
   const [showReassign, setShowReassign] = useState(false)
   const [reassignForm, setReassignForm] = useState({ order_id:'', product_id:'', from_customer:'', to_customer:'', qty:'', unit_price:'' })
   const [availableCharges, setAvailableCharges] = useState([])
+  const [excessData, setExcessData] = useState([])
 
   useEffect(()=>{ 
     loadAll()
     listCustomers().then(setCustomers).catch(()=>{}) 
     listProducts().then(setProducts).catch(()=>{})
     listOrders().then(setOrders).catch(()=>{})
+    loadExcess()
   },[])
 
   async function loadAll() {
@@ -48,6 +50,15 @@ export default function ContabilidadNew(){
       setOrderCards(ordersData)
       const customersData = await customersSummary(true)
       setCustomerCards(customersData)
+    } catch(err) {
+      console.error(err)
+    }
+  }
+
+  async function loadExcess() {
+    try {
+      const excess = await listExcess()
+      setExcessData(excess)
     } catch(err) {
       console.error(err)
     }
@@ -153,6 +164,7 @@ export default function ContabilidadNew(){
       setReassignForm({ order_id:'', product_id:'', from_customer:'', to_customer:'', qty:'', unit_price:'' })
       setAvailableCharges([])
       await loadAll()
+      await loadExcess()
       alert('✓ Producto reasignado correctamente')
     } catch(err) {
       alert('Error: ' + (err.message || 'No se pudo reasignar'))
@@ -365,7 +377,7 @@ export default function ContabilidadNew(){
               Usa esta función cuando compres de más o necesites reasignar un producto de un cliente a otro
             </p>
 
-            {/* Paso 1: Seleccionar pedido */}
+            {/* Paso 1: Seleccionar pedido con excedente */}
             <div style={{ marginBottom:20 }}>
               <label style={{ fontSize:13, fontWeight:600, color:'#333', display:'block', marginBottom:8 }}>
                 1️⃣ Selecciona el pedido con excedente
@@ -386,9 +398,9 @@ export default function ContabilidadNew(){
                 }}
               >
                 <option value="">Selecciona un pedido...</option>
-                {orderCards.map(o=> (
-                  <option key={o.order.id} value={o.order.id}>
-                    Pedido #{o.order.id} - {new Date(o.order.created_at).toLocaleDateString('es-CL')} - ${o.billed.toLocaleString('es-CL')}
+                {excessData.map(ex=> (
+                  <option key={ex.order.id} value={ex.order.id}>
+                    Pedido #{ex.order.id} - {ex.order.title} - ({ex.excesses.length} producto{ex.excesses.length !== 1 ? 's' : ''} con excedente)
                   </option>
                 ))}
               </select>
@@ -396,7 +408,7 @@ export default function ContabilidadNew(){
 
             {reassignForm.order_id && (
               <>
-                {/* Paso 2: Producto y cantidad */}
+                {/* Paso 2: Producto excedente y cantidad */}
                 <div style={{ 
                   display:'grid', 
                   gridTemplateColumns: window.innerWidth > 768 ? '1fr 1fr' : '1fr', 
@@ -405,16 +417,18 @@ export default function ContabilidadNew(){
                 }}>
                   <div>
                     <label style={{ fontSize:13, fontWeight:600, color:'#333', display:'block', marginBottom:8 }}>
-                      2️⃣ Producto sobrante
+                      2️⃣ Producto con excedente
                     </label>
                     <select
                       value={reassignForm.product_id}
                       onChange={e=> {
+                        const selectedOrder = excessData.find(ex=> ex.order.id === Number(reassignForm.order_id))
+                        const excess = selectedOrder?.excesses.find(ex=> ex.product_id === Number(e.target.value))
                         const charge = availableCharges.find(c=> c.product_id === Number(e.target.value))
                         setReassignForm(f=> ({
                           ...f, 
                           product_id:e.target.value,
-                          qty: charge ? charge.qty.toString() : '',
+                          qty: excess ? excess.excess_qty.toString() : (charge ? charge.qty.toString() : ''),
                           unit_price: charge ? charge.unit_price.toString() : ''
                         }))
                       }}
@@ -428,14 +442,14 @@ export default function ContabilidadNew(){
                       }}
                     >
                       <option value="">Selecciona...</option>
-                      {availableCharges.map(c=> {
-                        const prod = products.find(p=> p.id === c.product_id)
-                        return (
-                          <option key={c.id} value={c.product_id}>
-                            {prod?.name || 'Producto'} - {c.qty} {c.unit}
+                      {(() => {
+                        const selectedOrder = excessData.find(ex=> ex.order.id === Number(reassignForm.order_id))
+                        return selectedOrder?.excesses.map(ex=> (
+                          <option key={ex.product_id} value={ex.product_id}>
+                            {ex.product_name} - Excedente: {ex.excess_qty} {ex.unit}
                           </option>
-                        )
-                      })}
+                        )) || []
+                      })()}
                     </select>
                   </div>
 
@@ -730,6 +744,7 @@ export default function ContabilidadNew(){
         setEditingCharge={setEditingCharge}
         saveChargeEdit={saveChargeEdit}
         products={products}
+        onUpdate={loadAll}
       />
       
       <CustomerModal 

@@ -1,7 +1,8 @@
 import { apiFetch } from './client'
 
-export function listProducts() {
-  return apiFetch('/products')
+export function listProducts(includeCost = false) {
+  const params = includeCost ? '?include_cost=1' : ''
+  return apiFetch(`/products${params}`)
 }
 
 export function createProduct(payload) {
