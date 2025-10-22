@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { listOrders, getOrderDetail, addItemsToOrder, deleteOrderItem } from '../api/orders'
 import { apiFetch } from '../api/client'
 import { listProducts } from '../api/products'
+import { listCustomers } from '../api/customers'
 import QualityModal from '../components/QualityModal'
 import PurchaseEditModal from '../components/PurchaseEditModal'
 import '../styles/globals.css'
@@ -17,6 +18,8 @@ export default function Compras() {
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [detail, setDetail] = useState(null)
   const [products, setProducts] = useState([])
+  const [customers, setCustomers] = useState([])
+  const [orderPurchases, setOrderPurchases] = useState([])
   const [showQuality, setShowQuality] = useState(false)
   const [qualityProduct, setQualityProduct] = useState(null)
   const [rowChargeType, setRowChargeType] = useState({})
@@ -29,7 +32,7 @@ export default function Compras() {
   
   // Nuevos estados
   const [showAddItemModal, setShowAddItemModal] = useState(false)
-  const [newItem, setNewItem] = useState({ product_id: '', qty: '', unit: 'kg', price: '' })
+  const [newItem, setNewItem] = useState({ product_id: '', customer_id: '', qty: '', unit: 'kg', price: '' })
   const [showEditItemModal, setShowEditItemModal] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
   const [isSavingPurchase, setIsSavingPurchase] = useState(false)
@@ -46,6 +49,7 @@ export default function Compras() {
       if (lastEmitted) setSelectedOrder(lastEmitted.id) 
     }).catch(() => {}) 
     listProducts().then(setProducts).catch(() => {})
+    listCustomers().then(setCustomers).catch(() => {})
   }, [])
 
   useEffect(() => { 
@@ -55,7 +59,11 @@ export default function Compras() {
       const m={}; 
       (d.group_by_product||[]).forEach(g=>{m[g.product_id]=(g.totals?.kg||0)>0?'kg':'unit'}); 
       setRowChargeType(m) 
-    }).catch(()=>{}) 
+    }).catch(()=>{})
+    // Cargar compras del pedido
+    apiFetch(`/purchases?order_id=${selectedOrder}`).then(purchases => {
+      setOrderPurchases(purchases || [])
+    }).catch(() => setOrderPurchases([]))
   }, [selectedOrder])
 
 
@@ -142,6 +150,9 @@ export default function Compras() {
     try {
       const d = await getOrderDetail(selectedOrder)
       setDetail(d)
+      // También recargar compras
+      const purchases = await apiFetch(`/purchases?order_id=${selectedOrder}`)
+      setOrderPurchases(purchases || [])
     } catch (err) {
       console.error('Error recargando detalle:', err)
     }
@@ -149,14 +160,15 @@ export default function Compras() {
 
   // Función para agregar item al pedido
   async function handleAddItem() {
-    if (!selectedOrder || !newItem.product_id || !newItem.qty) {
-      alert('⚠️ Debes seleccionar un producto y especificar la cantidad')
+    if (!selectedOrder || !newItem.product_id || !newItem.customer_id || !newItem.qty) {
+      alert('⚠️ Debes seleccionar un producto, un cliente y especificar la cantidad')
       return
     }
     
     try {
       const items = [{
         product_id: Number(newItem.product_id),
+        customer_id: Number(newItem.customer_id),
         qty: parseFloat(newItem.qty),
         unit: newItem.unit,
         price: newItem.price ? parseFloat(newItem.price) : null
@@ -165,7 +177,7 @@ export default function Compras() {
       await addItemsToOrder(selectedOrder, items)
       await refreshOrderDetail()
       setShowAddItemModal(false)
-      setNewItem({ product_id: '', qty: '', unit: 'kg', price: '' })
+      setNewItem({ product_id: '', customer_id: '', qty: '', unit: 'kg', price: '' })
       alert('✓ Producto agregado al pedido')
     } catch (err) {
       alert('Error al agregar producto: ' + (err.message || 'Error desconocido'))
@@ -402,40 +414,77 @@ export default function Compras() {
             </div>
           ) : (
             <div style={{ display:'grid', gap:16, paddingBottom: 20 }}>
-              {filteredProducts.map(g=> {
-                const product = products.find(p => p.id === g.product_id)
-                return (
-                  <div 
-                    key={g.product_id} 
-                    style={{ 
-                      background:'white', 
-                      borderRadius:16, 
-                      padding:20, 
-                      border:'1px solid #e0e0e0',
-                      display:'flex',
-                      justifyContent:'space-between',
-                      alignItems:'center',
-                      gap:16,
-                      flexWrap:'wrap'
-                    }}
-                  >
-                    <div style={{ flex:1, minWidth:180 }}>
-                      <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>
-                        {g.product_name}
-                </div>
-                      <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center', fontSize:14, opacity:0.7 }}>
-                        {product?.category && (
-                          <span style={{ background:'#f0f0f0', padding:'4px 10px', borderRadius:6, fontSize:12 }}>
-                            {product.category === 'fruta' ? '🍎 Fruta' : '🥬 Verdura'}
-                          </span>
-                        )}
-                        {product?.purchase_type && (
-                          <span style={{ background:'#f0f0f0', padding:'4px 10px', borderRadius:6, fontSize:12 }}>
-                            {product.purchase_type === 'cajon' ? '📦 Cajón' : '🛒 Detalle'}
-                          </span>
-                        )}
-                </div>
-              </div>
+              {(() => {
+                // Agrupar por categoría
+                const byCategory = { 'fruta': [], 'verdura': [], 'otros': [] }
+                filteredProducts.forEach(g => {
+                  const product = products.find(p => p.id === g.product_id)
+                  const category = product?.category || 'otros'
+                  byCategory[category].push(g)
+                })
+
+                // Renderizar cada categoría con su header
+                const categoryLabels = {
+                  'fruta': '🍎 Frutas',
+                  'verdura': '🥬 Verduras',
+                  'otros': '📦 Otros'
+                }
+                const categoryColors = {
+                  'fruta': '#ffebee',
+                  'verdura': '#e8f5e9',
+                  'otros': '#f3e5f5'
+                }
+
+                return ['fruta', 'verdura', 'otros'].map(category => {
+                  if (byCategory[category].length === 0) return null
+                  
+                  return (
+                    <div key={category}>
+                      {/* Header de categoría */}
+                      <div style={{
+                        background: categoryColors[category],
+                        padding: '12px 20px',
+                        borderRadius: 12,
+                        marginBottom: 12,
+                        fontWeight: 700,
+                        fontSize: 16,
+                        color: '#333',
+                        borderLeft: '4px solid ' + (category === 'fruta' ? '#f44336' : category === 'verdura' ? '#4caf50' : '#9c27b0')
+                      }}>
+                        {categoryLabels[category]}
+                      </div>
+                      
+                      {/* Productos de esta categoría */}
+                      {byCategory[category].map(g => {
+                        const product = products.find(p => p.id === g.product_id)
+                        return (
+                          <div 
+                            key={g.product_id} 
+                            style={{ 
+                              background:'white', 
+                              borderRadius:16, 
+                              padding:20, 
+                              border:'1px solid #e0e0e0',
+                              display:'flex',
+                              justifyContent:'space-between',
+                              alignItems:'center',
+                              gap:16,
+                              flexWrap:'wrap',
+                              marginBottom: 12
+                            }}
+                          >
+                            <div style={{ flex:1, minWidth:180 }}>
+                              <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>
+                                {g.product_name}
+                              </div>
+                              <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center', fontSize:14, opacity:0.7 }}>
+                                {product?.purchase_type && (
+                                  <span style={{ background:'#f0f0f0', padding:'4px 10px', borderRadius:6, fontSize:12 }}>
+                                    {product.purchase_type === 'cajon' ? '📦 Cajón' : '🛒 Detalle'}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
 
                     <div style={{ display:'flex', flexDirection:'column', gap:8, alignItems:'center' }}>
                       <div style={{ display:'flex', gap:12, fontSize:15 }}>
@@ -454,6 +503,43 @@ export default function Compras() {
                       >
                         📝 Anotar compra
                       </button>
+                      {(() => {
+                        // Buscar compras de este producto
+                        const productPurchases = orderPurchases.filter(p => p.product_id === g.product_id)
+                        if (productPurchases.length > 0) {
+                          return (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                // Si hay solo una compra, editarla directamente
+                                if (productPurchases.length === 1) {
+                                  setEditingPurchase(productPurchases[0])
+                                } else {
+                                  // Si hay varias, mostrar la más reciente
+                                  const latest = productPurchases.sort((a, b) => b.id - a.id)[0]
+                                  setEditingPurchase(latest)
+                                }
+                              }}
+                              style={{
+                                padding:'10px 18px',
+                                borderRadius:12,
+                                background:'linear-gradient(135deg, #ffa8e4 0%, #ff69b4 100%)',
+                                color:'white',
+                                border:'none',
+                                cursor:'pointer',
+                                fontSize:15,
+                                fontWeight:600,
+                                transition:'all 0.2s',
+                                boxShadow:'0 2px 8px rgba(255, 105, 180, 0.3)'
+                              }}
+                              title="Editar compra registrada"
+                            >
+                              🛍️ Ver compras ({productPurchases.length})
+                            </button>
+                          )
+                        }
+                        return null
+                      })()}
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
@@ -500,10 +586,14 @@ export default function Compras() {
                         💡 Info
                       </button>
                     </div>
-                  </div>
-                )
-              })}
-        </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )
+                })
+              })()}
+            </div>
           )}
         </>
       )}
@@ -904,6 +994,23 @@ export default function Compras() {
                   <option value="">Seleccionar producto...</option>
                   {products.map(p => (
                     <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 14, marginBottom: 8, fontWeight: 600 }}>
+                  Cliente
+                </label>
+                <select
+                  className="input"
+                  value={newItem.customer_id}
+                  onChange={e => setNewItem({ ...newItem, customer_id: e.target.value })}
+                  style={{ width: '100%', padding: '12px', borderRadius: 12, fontSize: 15 }}
+                >
+                  <option value="">Seleccionar cliente...</option>
+                  {customers.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
               </div>
