@@ -470,46 +470,62 @@ export async function generateCatalogWithProfitPDF(products) {
         const salePrice = price.sale_price || 0
         const unit = price.unit === 'unit' ? 'U.' : price.unit
         
-        doc.setFontSize(10)
+        // Precio de venta
+        doc.setFontSize(11)
         doc.setFont('helvetica', 'bold')
         doc.setTextColor(COLORS.textDark)
-        doc.text(`$${salePrice.toLocaleString('es-CL')}/${unit}`, xPos, varY)
+        doc.text(`Precio: $${salePrice.toLocaleString('es-CL')}/${unit}`, xPos, varY)
         varY += 5
         
-        if (cost && product.latest_cost_unit === price.unit) {
-          const totalProfit = salePrice - cost
-          const vendorProfit = totalProfit * 0.75
-          const kiviProfit = totalProfit * 0.25
-          const profitPct = cost > 0 ? ((totalProfit / salePrice) * 100).toFixed(1) : 0
-          
-          doc.setFontSize(8)
-          doc.setFont('helvetica', 'normal')
-          doc.setTextColor(100, 100, 100)
-          doc.text(`Costo: $${cost.toLocaleString('es-CL')}`, xPos, varY)
-          varY += 4
-          
-          doc.setTextColor(40, 167, 69)
-          doc.setFont('helvetica', 'bold')
-          doc.text(`Utilidad total: $${totalProfit.toLocaleString('es-CL')} (${profitPct}%)`, xPos, varY)
-          varY += 4
-          
-          doc.setFontSize(9)
-          doc.setTextColor(0, 123, 255)
-          doc.setFont('helvetica', 'bold')
-          doc.text(`Tu ganancia: $${vendorProfit.toLocaleString('es-CL')}`, xPos, varY)
-          varY += 4
-          
-          doc.setFontSize(7)
-          doc.setTextColor(120, 120, 120)
-          doc.setFont('helvetica', 'normal')
-          doc.text(`(Kivi: $${kiviProfit.toLocaleString('es-CL')})`, xPos, varY)
-          varY += 2
+        // Determinar si hay costo registrado o usar estimado
+        const hasCost = cost && product.latest_cost_unit === price.unit
+        const actualCost = hasCost ? cost : (salePrice * 0.8) // 20% de margen = costo es 80% del precio
+        const isEstimated = !hasCost
+        
+        // Mostrar costo
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'normal')
+        doc.setTextColor(100, 100, 100)
+        if (isEstimated) {
+          doc.text(`Costo: $${Math.round(actualCost).toLocaleString('es-CL')} (estimado*)`, xPos, varY)
         } else {
-          doc.setFontSize(8)
+          doc.text(`Costo: $${actualCost.toLocaleString('es-CL')}`, xPos, varY)
+        }
+        varY += 4
+        
+        // Calcular utilidades
+        const totalProfit = salePrice - actualCost
+        const vendorProfit = totalProfit * 0.75
+        const kiviProfit = totalProfit * 0.25
+        const profitPct = actualCost > 0 ? ((totalProfit / salePrice) * 100).toFixed(1) : 0
+        
+        // Utilidad total
+        doc.setTextColor(40, 167, 69)
+        doc.setFont('helvetica', 'bold')
+        doc.text(`Utilidad: $${Math.round(totalProfit).toLocaleString('es-CL')} (${profitPct}%)`, xPos, varY)
+        varY += 4
+        
+        // Ganancia del vendedor (75%)
+        doc.setFontSize(9)
+        doc.setTextColor(0, 123, 255)
+        doc.setFont('helvetica', 'bold')
+        doc.text(`Tu ganancia (75%): $${Math.round(vendorProfit).toLocaleString('es-CL')}`, xPos, varY)
+        varY += 4
+        
+        // Ganancia de Kivi (25%)
+        doc.setFontSize(7)
+        doc.setTextColor(120, 120, 120)
+        doc.setFont('helvetica', 'normal')
+        doc.text(`(Kivi 25%: $${Math.round(kiviProfit).toLocaleString('es-CL')})`, xPos, varY)
+        varY += 3
+        
+        // Si es estimado, agregar nota
+        if (isEstimated) {
+          doc.setFontSize(7)
           doc.setFont('helvetica', 'italic')
-          doc.setTextColor(150, 150, 150)
-          doc.text('Costo no registrado', xPos, varY)
-          varY += 4
+          doc.setTextColor(180, 100, 0)
+          doc.text(`*Costo estimado (20% margen)`, xPos, varY)
+          varY += 2
         }
       }
 

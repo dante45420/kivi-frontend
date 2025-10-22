@@ -153,6 +153,7 @@ export default function ContabilidadNew(){
       await reassignCharge({
         customer_id: Number(reassignForm.to_customer),
         order_id: Number(reassignForm.order_id),
+        original_order_id: Number(reassignForm.order_id),  // Marcar el pedido original para rastrear excedente
         product_id: Number(reassignForm.product_id),
         qty: Number(reassignForm.qty),
         unit: selectedCharge.unit,
