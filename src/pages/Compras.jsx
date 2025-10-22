@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { listOrders, getOrderDetail } from '../api/orders'
+import { listOrders, getOrderDetail, addItemsToOrder, deleteOrderItem } from '../api/orders'
 import { apiFetch } from '../api/client'
 import { listProducts } from '../api/products'
 import QualityModal from '../components/QualityModal'
@@ -26,6 +26,13 @@ export default function Compras() {
   const [editingPurchase, setEditingPurchase] = useState(null)
   const [showInfoModal, setShowInfoModal] = useState(false)
   const [infoModalProduct, setInfoModalProduct] = useState(null)
+  
+  // Nuevos estados
+  const [showAddItemModal, setShowAddItemModal] = useState(false)
+  const [newItem, setNewItem] = useState({ product_id: '', qty: '', unit: 'kg', price: '' })
+  const [showEditItemModal, setShowEditItemModal] = useState(false)
+  const [editingItem, setEditingItem] = useState(null)
+  const [isSavingPurchase, setIsSavingPurchase] = useState(false)
 
   // Estados de filtros
   const [filterStatus, setFilterStatus] = useState('all') // all, complete, incomplete
@@ -80,7 +87,7 @@ export default function Compras() {
   }
 
   async function savePurchase(){
-    if(!selectedOrder||!purchase.product_id) return;
+    if(!selectedOrder||!purchase.product_id || isSavingPurchase) return;
     // Validar que si se requiere equivalencia, esté rellenada
     if (convRequired) {
       if (chargeUnit==='kg' && qtyUnit>0 && kgUnitsTotal<=0) {
@@ -111,9 +118,23 @@ export default function Compras() {
         payload.eq_qty_unit = Number(purchase.units_kg_total)
       }
     }catch{}
-    await apiFetch('/purchases',{method:'POST',body:payload}); 
-    await refreshOrderDetail()
-    setModalOpen(false)
+    
+    // Activar estado de loading
+    setIsSavingPurchase(true)
+    
+    try {
+      await apiFetch('/purchases',{method:'POST',body:payload}); 
+      await refreshOrderDetail()
+      
+      // Mantener el loading por 3 segundos para evitar duplicados
+      setTimeout(() => {
+        setIsSavingPurchase(false)
+        setModalOpen(false)
+      }, 3000)
+    } catch (err) {
+      alert('Error al guardar compra: ' + (err.message || 'Error desconocido'))
+      setIsSavingPurchase(false)
+    }
   }
 
   async function refreshOrderDetail() {
@@ -123,6 +144,45 @@ export default function Compras() {
       setDetail(d)
     } catch (err) {
       console.error('Error recargando detalle:', err)
+    }
+  }
+
+  // Función para agregar item al pedido
+  async function handleAddItem() {
+    if (!selectedOrder || !newItem.product_id || !newItem.qty) {
+      alert('⚠️ Debes seleccionar un producto y especificar la cantidad')
+      return
+    }
+    
+    try {
+      const items = [{
+        product_id: Number(newItem.product_id),
+        qty: parseFloat(newItem.qty),
+        unit: newItem.unit,
+        price: newItem.price ? parseFloat(newItem.price) : null
+      }]
+      
+      await addItemsToOrder(selectedOrder, items)
+      await refreshOrderDetail()
+      setShowAddItemModal(false)
+      setNewItem({ product_id: '', qty: '', unit: 'kg', price: '' })
+      alert('✓ Producto agregado al pedido')
+    } catch (err) {
+      alert('Error al agregar producto: ' + (err.message || 'Error desconocido'))
+    }
+  }
+
+  // Función para eliminar item del pedido
+  async function handleDeleteItem(itemId) {
+    if (!confirm('¿Estás seguro de eliminar este producto del pedido?')) return
+    
+    try {
+      await deleteOrderItem(selectedOrder, itemId)
+      await refreshOrderDetail()
+      setShowEditItemModal(false)
+      alert('✓ Producto eliminado del pedido')
+    } catch (err) {
+      alert('Error al eliminar producto: ' + (err.message || 'Error desconocido'))
     }
   }
 
@@ -186,10 +246,11 @@ export default function Compras() {
   }
 
 
-  // Productos filtrados
+  // Productos filtrados y ordenados
   const filteredProducts = useMemo(() => {
     if (!detail || !detail.group_by_product) return []
-    return detail.group_by_product.filter(g => {
+    
+    const filtered = detail.group_by_product.filter(g => {
       const product = products.find(p => p.id === g.product_id)
       const status = getProductStatus(g)
       
@@ -204,6 +265,27 @@ export default function Compras() {
       if (filterPurchaseType !== 'all' && product?.purchase_type !== filterPurchaseType) return false
       
       return true
+    })
+    
+    // Ordenar por categoría (fruta, verdura, otros) y luego alfabéticamente
+    return filtered.sort((a, b) => {
+      const productA = products.find(p => p.id === a.product_id)
+      const productB = products.find(p => p.id === b.product_id)
+      
+      const categoryA = productA?.category || 'otros'
+      const categoryB = productB?.category || 'otros'
+      
+      // Orden de categorías: fruta, verdura, otros
+      const categoryOrder = { 'fruta': 1, 'verdura': 2, 'otros': 3 }
+      const orderA = categoryOrder[categoryA] || 3
+      const orderB = categoryOrder[categoryB] || 3
+      
+      if (orderA !== orderB) {
+        return orderA - orderB
+      }
+      
+      // Si son de la misma categoría, ordenar alfabéticamente
+      return (a.product_name || '').localeCompare(b.product_name || '')
     })
   }, [detail, products, filterStatus, filterCategory, filterPurchaseType])
 
@@ -239,6 +321,32 @@ export default function Compras() {
         <div style={{ textAlign:'center', marginTop:40 }}>Cargando...</div>
       ) : (
         <>
+          {/* Botón para agregar producto al pedido */}
+          <div style={{ marginBottom:20, display:'flex', justifyContent:'center' }}>
+            <button
+              onClick={() => setShowAddItemModal(true)}
+              style={{
+                padding:'14px 28px',
+                borderRadius:16,
+                background:'linear-gradient(135deg, #a8e6cf 0%, #88c4a8 100%)',
+                color:'white',
+                border:'none',
+                cursor:'pointer',
+                fontSize:16,
+                fontWeight:700,
+                boxShadow:'0 4px 12px rgba(136, 196, 168, 0.4)',
+                transition:'all 0.2s',
+                display:'flex',
+                alignItems:'center',
+                gap:8
+              }}
+              onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              ➕ Agregar producto al pedido
+            </button>
+          </div>
+
           {/* Filtros */}
           <div style={{ marginBottom:24, background:'white', borderRadius:16, padding:16, border:'1px solid #e0e0e0' }}>
             <div style={{ fontSize:15, fontWeight:600, marginBottom:12, opacity:0.7 }}>🔍 Filtros</div>
@@ -338,13 +446,35 @@ export default function Compras() {
                       {stateBadge(g)}
                     </div>
 
-                    <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+                    <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
                       <button 
                         onClick={()=>openModalFor(g)} 
                         className="button" 
                         style={{ padding:'10px 20px', borderRadius:12, fontWeight:600, background:'#88C4A8', color:'white', border:'none' }}
                       >
                         📝 Anotar compra
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setEditingItem(g)
+                          setShowEditItemModal(true)
+                        }}
+                        style={{
+                          padding:'10px 18px',
+                          borderRadius:12,
+                          background:'linear-gradient(135deg, #ffd89b 0%, #ffb347 100%)',
+                          color:'white',
+                          border:'none',
+                          cursor:'pointer',
+                          fontSize:15,
+                          fontWeight:600,
+                          transition:'all 0.2s',
+                          boxShadow:'0 2px 8px rgba(255, 179, 71, 0.3)'
+                        }}
+                        title="Editar producto del pedido"
+                      >
+                        ✏️ Editar
                       </button>
                       <button
                         onClick={(e) => {
@@ -509,16 +639,27 @@ export default function Compras() {
               <button 
                 className="button ghost" 
                 onClick={()=>setModalOpen(false)}
-                style={{ padding:14, borderRadius:12, fontWeight:600, fontSize:15 }}
+                disabled={isSavingPurchase}
+                style={{ padding:14, borderRadius:12, fontWeight:600, fontSize:15, opacity: isSavingPurchase ? 0.5 : 1 }}
               >
                 Cancelar
               </button>
               <button 
                 className="button" 
                 onClick={savePurchase}
-                style={{ padding:14, borderRadius:12, fontWeight:700, fontSize:15, background:'#88C4A8' }}
+                disabled={isSavingPurchase}
+                style={{ 
+                  padding:14, 
+                  borderRadius:12, 
+                  fontWeight:700, 
+                  fontSize:15, 
+                  background: isSavingPurchase ? '#ccc' : '#88C4A8',
+                  opacity: isSavingPurchase ? 0.6 : 1,
+                  cursor: isSavingPurchase ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.3s'
+                }}
               >
-                ✓ Guardar compra
+                {isSavingPurchase ? '⏳ Guardando...' : '✓ Guardar compra'}
               </button>
             </div>
           </div>
@@ -699,6 +840,279 @@ export default function Compras() {
                   border:'none',
                   cursor:'pointer',
                   boxShadow:'0 4px 12px rgba(102, 126, 234, 0.4)'
+                }}
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para agregar producto al pedido */}
+      {showAddItemModal && (
+        <div className="modal-backdrop" onClick={() => setShowAddItemModal(false)}>
+          <div 
+            className="modal" 
+            onClick={e => e.stopPropagation()}
+            style={{ 
+              maxWidth: 500, 
+              borderRadius: 20,
+              background: 'linear-gradient(135deg, #a8e6cf 0%, #88c4a8 100%)',
+              padding: 0,
+              overflow: 'hidden'
+            }}
+          >
+            {/* Header */}
+            <div style={{ 
+              padding: '24px',
+              background: 'rgba(255,255,255,0.95)',
+              borderBottom: '3px solid rgba(136, 196, 168, 0.3)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#2e7d32' }}>
+                  ➕ Agregar Producto al Pedido
+                </h3>
+                <button 
+                  onClick={() => setShowAddItemModal(false)}
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    fontSize: 28, 
+                    cursor: 'pointer', 
+                    opacity: 0.6,
+                    color: '#2e7d32'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '24px', background: 'white' }}>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'block', fontSize: 14, marginBottom: 8, fontWeight: 600 }}>
+                  Producto
+                </label>
+                <select
+                  className="input"
+                  value={newItem.product_id}
+                  onChange={e => setNewItem({ ...newItem, product_id: e.target.value })}
+                  style={{ width: '100%', padding: '12px', borderRadius: 12, fontSize: 15 }}
+                >
+                  <option value="">Seleccionar producto...</option>
+                  {products.map(p => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: 14, marginBottom: 8, fontWeight: 600 }}>
+                    Cantidad
+                  </label>
+                  <input
+                    className="input"
+                    type="number"
+                    step="0.01"
+                    value={newItem.qty}
+                    onChange={e => setNewItem({ ...newItem, qty: e.target.value })}
+                    placeholder="0"
+                    style={{ width: '100%', padding: '12px', borderRadius: 12, fontSize: 15 }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: 14, marginBottom: 8, fontWeight: 600 }}>
+                    Unidad
+                  </label>
+                  <select
+                    className="input"
+                    value={newItem.unit}
+                    onChange={e => setNewItem({ ...newItem, unit: e.target.value })}
+                    style={{ width: '100%', padding: '12px', borderRadius: 12, fontSize: 15 }}
+                  >
+                    <option value="kg">Kilogramo</option>
+                    <option value="unit">Unidad</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: 'block', fontSize: 14, marginBottom: 8, fontWeight: 600 }}>
+                  Precio (opcional)
+                </label>
+                <input
+                  className="input"
+                  type="number"
+                  step="1"
+                  value={newItem.price}
+                  onChange={e => setNewItem({ ...newItem, price: e.target.value })}
+                  placeholder="$0"
+                  style={{ width: '100%', padding: '12px', borderRadius: 12, fontSize: 15 }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
+                <button
+                  onClick={() => setShowAddItemModal(false)}
+                  style={{
+                    padding: 14,
+                    borderRadius: 12,
+                    fontWeight: 600,
+                    fontSize: 15,
+                    background: 'white',
+                    border: '2px solid #ddd',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleAddItem}
+                  style={{
+                    padding: 14,
+                    borderRadius: 12,
+                    fontWeight: 700,
+                    fontSize: 15,
+                    background: 'linear-gradient(135deg, #a8e6cf 0%, #88c4a8 100%)',
+                    color: 'white',
+                    border: 'none',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(136, 196, 168, 0.4)'
+                  }}
+                >
+                  ✓ Agregar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para editar producto del pedido */}
+      {showEditItemModal && editingItem && (
+        <div className="modal-backdrop" onClick={() => setShowEditItemModal(false)}>
+          <div 
+            className="modal" 
+            onClick={e => e.stopPropagation()}
+            style={{ 
+              maxWidth: 500, 
+              borderRadius: 20,
+              background: 'linear-gradient(135deg, #ffd89b 0%, #ffb347 100%)',
+              padding: 0,
+              overflow: 'hidden'
+            }}
+          >
+            {/* Header */}
+            <div style={{ 
+              padding: '24px',
+              background: 'rgba(255,255,255,0.95)',
+              borderBottom: '3px solid rgba(255, 179, 71, 0.3)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, fontSize: 22, fontWeight: 800, color: '#f57c00' }}>
+                  ✏️ Editar Producto del Pedido
+                </h3>
+                <button 
+                  onClick={() => setShowEditItemModal(false)}
+                  style={{ 
+                    background: 'none', 
+                    border: 'none', 
+                    fontSize: 28, 
+                    cursor: 'pointer', 
+                    opacity: 0.6,
+                    color: '#f57c00'
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '24px', background: 'white' }}>
+              <div style={{ 
+                background: '#fff3e0', 
+                borderRadius: 12, 
+                padding: 16, 
+                marginBottom: 20,
+                borderLeft: '4px solid #ffb347'
+              }}>
+                <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+                  {editingItem.product_name}
+                </div>
+                <div style={{ fontSize: 14, opacity: 0.8 }}>
+                  Pedido: {editingItem.totals?.kg || 0} kg / {editingItem.totals?.unit || 0} unidades
+                </div>
+              </div>
+
+              <div style={{ marginBottom: 20 }}>
+                <h4 style={{ fontSize: 16, fontWeight: 700, marginBottom: 12, color: '#f57c00' }}>
+                  📋 Items del pedido
+                </h4>
+                <div style={{ display: 'grid', gap: 8 }}>
+                  {editingItem.customers?.map((customer, idx) => {
+                    // Encontrar el item correspondiente
+                    const item = detail?.items?.find(i => 
+                      i.product_id === editingItem.product_id && 
+                      i.customer_id === customer.customer_id
+                    )
+                    return item ? (
+                      <div 
+                        key={idx}
+                        style={{
+                          background: 'linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)',
+                          borderRadius: 10,
+                          padding: '12px 16px',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <div>
+                          <div style={{ fontWeight: 600, fontSize: 15 }}>
+                            {customer.customer_name}
+                          </div>
+                          <div style={{ fontSize: 13, opacity: 0.8 }}>
+                            {customer.qty} {customer.unit}
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteItem(item.id)}
+                          style={{
+                            padding: '8px 16px',
+                            borderRadius: 8,
+                            background: '#f44336',
+                            color: 'white',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: 13,
+                            fontWeight: 600
+                          }}
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      </div>
+                    ) : null
+                  })}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowEditItemModal(false)}
+                style={{
+                  width: '100%',
+                  padding: 14,
+                  borderRadius: 12,
+                  fontWeight: 700,
+                  fontSize: 15,
+                  background: 'linear-gradient(135deg, #ffd89b 0%, #ffb347 100%)',
+                  color: 'white',
+                  border: 'none',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 12px rgba(255, 179, 71, 0.4)'
                 }}
               >
                 Cerrar

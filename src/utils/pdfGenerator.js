@@ -358,16 +358,21 @@ export async function generateCatalogWithProfitPDF(products) {
   const addHeader = () => {
     if (logoImg) {
       try {
-        const logoWidth = 40
+        const logoWidth = 50
         const logoHeight = (logoImg.height * logoWidth) / logoImg.width
-        doc.addImage(logoImg, 'PNG', (pageWidth - logoWidth) / 2, 10, logoWidth, logoHeight)
+        doc.addImage(logoImg, 'PNG', (pageWidth - logoWidth) / 2, 12, logoWidth, logoHeight)
         
-        doc.setFontSize(14)
+        doc.setFontSize(12)
         doc.setFont('helvetica', 'bold')
-        doc.setTextColor(200, 50, 50) // Rojo para indicar documento interno
-        doc.text('CATÁLOGO VENDEDORES - USO INTERNO', pageWidth / 2, 10 + logoHeight + 8, { align: 'center' })
+        doc.setTextColor(200, 50, 50)
+        doc.text('CATÁLOGO VENDEDORES - USO INTERNO', pageWidth / 2, 12 + logoHeight + 7, { align: 'center' })
         
-        return 10 + logoHeight + 14
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'italic')
+        doc.setTextColor(150, 150, 150)
+        doc.text('Vendedores ganan 75% de la utilidad', pageWidth / 2, 12 + logoHeight + 12, { align: 'center' })
+        
+        return 12 + logoHeight + 18
       } catch (e) {
         console.log('Error agregando logo:', e)
       }
@@ -383,20 +388,32 @@ export async function generateCatalogWithProfitPDF(products) {
     doc.setTextColor(200, 50, 50)
     doc.text('USO INTERNO', pageWidth / 2, 28, { align: 'center' })
     
-    return 35
+    doc.setFontSize(8)
+    doc.setFont('helvetica', 'italic')
+    doc.setTextColor(150, 150, 150)
+    doc.text('Vendedores ganan 75% de la utilidad', pageWidth / 2, 34, { align: 'center' })
+    
+    return 40
   }
 
-  // Separar productos por categoría
+  // Función para agregar pie de página
+  const addFooter = (pageNum) => {
+    doc.setFontSize(8)
+    doc.setTextColor(150, 150, 150)
+    doc.text(`Página ${pageNum}`, pageWidth / 2, pageHeight - 5, { align: 'center' })
+  }
+
+  // Separar productos por categoría (solo frutas y verduras)
   const frutas = products.filter(p => p.category === 'fruta').sort((a, b) => a.name.localeCompare(b.name))
   const verduras = products.filter(p => p.category === 'verdura').sort((a, b) => a.name.localeCompare(b.name))
-  const otros = products.filter(p => !p.category || (p.category !== 'fruta' && p.category !== 'verdura')).sort((a, b) => a.name.localeCompare(b.name))
 
   let currentY = addHeader()
   let pageNum = 1
 
-  // Función para agregar una categoría
+  // Función para agregar una categoría con 2 columnas
   const addCategory = (title, items, isFirst = false) => {
     if (!isFirst) {
+      addFooter(pageNum)
       doc.addPage()
       pageNum++
       currentY = addHeader()
@@ -414,84 +431,113 @@ export async function generateCatalogWithProfitPDF(products) {
     doc.line(margin, currentY, pageWidth - margin, currentY)
     currentY += 8
 
+    // Agregar productos en formato de 2 columnas
+    const columnWidth = (contentWidth - 8) / 2
+    let column = 0
+    
     items.forEach((product) => {
       const price = product.catalog && product.catalog[0]
       const cost = product.latest_cost
+      const xPos = margin + (column * (columnWidth + 8))
       
       // Verificar si necesitamos una nueva página
-      if (currentY > pageHeight - 40) {
+      const estimatedHeight = 30
+      if (currentY + estimatedHeight > pageHeight - 30) {
+        addFooter(pageNum)
         doc.addPage()
         pageNum++
         currentY = addHeader()
+        column = 0
       }
 
+      const startY = currentY
+
       // Nombre del producto
-      doc.setFontSize(13)
+      doc.setFontSize(12)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(COLORS.textDark)
-      doc.text(product.name, margin, currentY)
-      currentY += 7
-
-      // Información de precios y utilidad
-      const hasVariants = product.variants && product.variants.filter(v => v.active).length > 0
       
-      if (hasVariants) {
-        const activeVariants = product.variants
-          .filter(v => v.active)
-          .sort((a, b) => {
-            const priceA = a.price_tiers?.[0]?.sale_price || 0
-            const priceB = b.price_tiers?.[0]?.sale_price || 0
-            return priceA - priceB
-          })
+      const maxNameLength = 22
+      const displayName = product.name.length > maxNameLength 
+        ? product.name.substring(0, maxNameLength) + '...' 
+        : product.name
+      doc.text(displayName, xPos, currentY + 5)
+
+      let varY = currentY + 10
+
+      // Solo mostrar precio por default (sin variantes)
+      if (price) {
+        const salePrice = price.sale_price || 0
+        const unit = price.unit === 'unit' ? 'U.' : price.unit
         
         doc.setFontSize(10)
-        doc.setFont('helvetica', 'normal')
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(COLORS.textDark)
+        doc.text(`$${salePrice.toLocaleString('es-CL')}/${unit}`, xPos, varY)
+        varY += 5
         
-        activeVariants.forEach((variant) => {
-          if (variant.price_tiers && variant.price_tiers.length > 0) {
-            variant.price_tiers.forEach(tier => {
-              const salePrice = tier.sale_price || 0
-              const unit = tier.unit === 'unit' ? 'unidad' : tier.unit
-              let profitInfo = ''
-              
-              if (cost && product.latest_cost_unit === tier.unit) {
-                const profit = salePrice - cost
-                const profitPct = cost > 0 ? ((profit / salePrice) * 100).toFixed(1) : 0
-                profitInfo = ` | Costo: $${cost.toLocaleString('es-CL')} | Utilidad: $${profit.toLocaleString('es-CL')} (${profitPct}%)`
-              }
-              
-              doc.setTextColor(80, 80, 80)
-              doc.text(`${variant.label}: $${salePrice.toLocaleString('es-CL')}/${unit}${profitInfo}`, margin + 3, currentY)
-              currentY += 5
-            })
-          }
-        })
-      } else {
-        if (price) {
-          const salePrice = price.sale_price || 0
-          const unit = price.unit === 'unit' ? 'unidad' : price.unit
-          let profitInfo = ''
+        if (cost && product.latest_cost_unit === price.unit) {
+          const totalProfit = salePrice - cost
+          const vendorProfit = totalProfit * 0.75
+          const kiviProfit = totalProfit * 0.25
+          const profitPct = cost > 0 ? ((totalProfit / salePrice) * 100).toFixed(1) : 0
           
-          if (cost && product.latest_cost_unit === price.unit) {
-            const profit = salePrice - cost
-            const profitPct = cost > 0 ? ((profit / salePrice) * 100).toFixed(1) : 0
-            profitInfo = ` | Costo: $${cost.toLocaleString('es-CL')} | Utilidad: $${profit.toLocaleString('es-CL')} (${profitPct}%)`
-          }
-          
-          doc.setFontSize(10)
+          doc.setFontSize(8)
           doc.setFont('helvetica', 'normal')
-          doc.setTextColor(80, 80, 80)
-          doc.text(`$${salePrice.toLocaleString('es-CL')}/${unit}${profitInfo}`, margin + 3, currentY)
-          currentY += 5
+          doc.setTextColor(100, 100, 100)
+          doc.text(`Costo: $${cost.toLocaleString('es-CL')}`, xPos, varY)
+          varY += 4
+          
+          doc.setTextColor(40, 167, 69)
+          doc.setFont('helvetica', 'bold')
+          doc.text(`Utilidad total: $${totalProfit.toLocaleString('es-CL')} (${profitPct}%)`, xPos, varY)
+          varY += 4
+          
+          doc.setFontSize(9)
+          doc.setTextColor(0, 123, 255)
+          doc.setFont('helvetica', 'bold')
+          doc.text(`Tu ganancia: $${vendorProfit.toLocaleString('es-CL')}`, xPos, varY)
+          varY += 4
+          
+          doc.setFontSize(7)
+          doc.setTextColor(120, 120, 120)
+          doc.setFont('helvetica', 'normal')
+          doc.text(`(Kivi: $${kiviProfit.toLocaleString('es-CL')})`, xPos, varY)
+          varY += 2
+        } else {
+          doc.setFontSize(8)
+          doc.setFont('helvetica', 'italic')
+          doc.setTextColor(150, 150, 150)
+          doc.text('Costo no registrado', xPos, varY)
+          varY += 4
         }
       }
 
       // Línea divisoria
       doc.setDrawColor(220, 220, 220)
       doc.setLineWidth(0.2)
-      doc.line(margin, currentY + 1, pageWidth - margin, currentY + 1)
-      currentY += 6
+      doc.line(xPos, varY + 1, xPos + columnWidth, varY + 1)
+
+      const productHeight = varY - startY + 6
+
+      // Cambiar de columna
+      if (column === 0) {
+        if (!items.maxHeightThisRow) items.maxHeightThisRow = productHeight
+        else items.maxHeightThisRow = Math.max(items.maxHeightThisRow, productHeight)
+        column = 1
+      } else {
+        items.maxHeightThisRow = Math.max(items.maxHeightThisRow || 0, productHeight)
+        currentY += items.maxHeightThisRow
+        items.maxHeightThisRow = 0
+        column = 0
+      }
     })
+
+    // Si quedamos en la primera columna, avanzar con la altura correcta
+    if (column === 1) {
+      currentY += (items.maxHeightThisRow || 22)
+      items.maxHeightThisRow = 0
+    }
 
     currentY += 3
   }
@@ -500,26 +546,16 @@ export async function generateCatalogWithProfitPDF(products) {
   let isFirst = true
   
   if (frutas.length > 0) {
-    addCategory('Frutas', frutas, isFirst)
+    addCategory('🍎 Frutas', frutas, isFirst)
     isFirst = false
   }
 
   if (verduras.length > 0) {
-    addCategory('Verduras', verduras, isFirst)
-    isFirst = false
+    addCategory('🥬 Verduras', verduras, isFirst)
   }
 
-  if (otros.length > 0) {
-    addCategory('Otros', otros, isFirst)
-  }
-
-  // Número de página en todas las páginas
-  for (let i = 1; i <= pageNum; i++) {
-    doc.setPage(i)
-    doc.setFontSize(8)
-    doc.setTextColor(150, 150, 150)
-    doc.text(`Página ${i} de ${pageNum}`, pageWidth / 2, pageHeight - 5, { align: 'center' })
-  }
+  // Agregar pie de página final
+  addFooter(pageNum)
 
   // Descargar el PDF
   doc.save('Catalogo_Vendedores_Kivi.pdf')
