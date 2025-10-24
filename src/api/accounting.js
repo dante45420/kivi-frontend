@@ -51,7 +51,7 @@ export function changeChargeOrder(chargeId, orderId) {
 
 // Excedentes (calculados correctamente)
 export function listExcess() {
-  return apiFetch('/accounting/excess/simple')
+  return apiFetch('/accounting/excess')
 }
 
 // Excedentes (Lots) - deprecated
@@ -89,6 +89,14 @@ export function returnChargeToExcess(chargeId, data) {
 // Reasignar cargo a otro cliente (para excedentes/errores)
 export function reassignCharge(data) {
   return apiFetch('/charges', {
+    method: 'POST',
+    body: data
+  })
+}
+
+// Reasignar excedente creando OrderItem (nuevo sistema)
+export function reassignExcess(data) {
+  return apiFetch('/charges/reassign-excess', {
     method: 'POST',
     body: data
   })

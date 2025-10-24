@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, createPayment, reassignCharge, listChargesByOrder, listExcess } from '../api/accounting'
+import { ordersSummary, customersSummary, updateChargePrice, updateChargeQuantity, createPayment, reassignCharge, reassignExcess, listChargesByOrder, listExcess } from '../api/accounting'
 import { listCustomers } from '../api/customers'
 import { listProducts } from '../api/products'
 import { listOrders } from '../api/orders'
@@ -143,30 +143,30 @@ export default function ContabilidadNew(){
     }
     
     try {
-      // Crear nuevo charge para el cliente destino
-      const selectedCharge = availableCharges.find(c=> c.product_id === Number(reassignForm.product_id))
-      if (!selectedCharge) {
-        alert('No se encontró el producto seleccionado')
+      // Obtener la unidad del producto desde los excedentes
+      const selectedOrder = excessData.find(ex=> ex.order.id === Number(reassignForm.order_id))
+      const excess = selectedOrder?.excesses.find(ex=> ex.product_id === Number(reassignForm.product_id))
+      
+      if (!excess) {
+        alert('No se encontró el excedente seleccionado')
         return
       }
 
-      await reassignCharge({
-        customer_id: Number(reassignForm.to_customer),
+      // Usar el nuevo sistema de reasignación que crea OrderItem
+      await reassignExcess({
         order_id: Number(reassignForm.order_id),
-        original_order_id: Number(reassignForm.order_id),  // Marcar el pedido original para rastrear excedente
         product_id: Number(reassignForm.product_id),
+        customer_id: Number(reassignForm.to_customer),
         qty: Number(reassignForm.qty),
-        unit: selectedCharge.unit,
-        unit_price: Number(reassignForm.unit_price),
-        total: Number(reassignForm.qty) * Number(reassignForm.unit_price),
-        status: 'pending'
+        unit: excess.unit,
+        unit_price: Number(reassignForm.unit_price)
       })
       
       setReassignForm({ order_id:'', product_id:'', from_customer:'', to_customer:'', qty:'', unit_price:'' })
       setAvailableCharges([])
       await loadAll()
       await loadExcess()
-      alert('✓ Producto reasignado correctamente')
+      alert('✓ Excedente reasignado correctamente')
     } catch(err) {
       alert('Error: ' + (err.message || 'No se pudo reasignar'))
     }
