@@ -586,7 +586,7 @@ export async function generateCatalogWithProfitPDF(products) {
 }
 
 /**
- * Genera un PDF de factura para un pedido
+ * Genera un PDF de nota de cobro para un pedido
  */
 export async function generateInvoicePDF(order, items, customer) {
   const doc = new jsPDF({
@@ -653,7 +653,7 @@ export async function generateInvoicePDF(order, items, customer) {
   // Información del pedido
   doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
-  doc.text('DETALLE DE PEDIDO', margin, currentY)
+  doc.text('NOTA DE COBRO', margin, currentY)
 
   currentY += 10
   doc.setFontSize(10)
@@ -799,7 +799,7 @@ export async function generateInvoicePDF(order, items, customer) {
 
   // Descargar
   const customerName = typeof customer === 'object' ? (customer.name || customer.full_name || 'Cliente') : (customer || 'Cliente')
-  const filename = `Factura_${order.title || order.name || order.id}_${customerName}.pdf`.replace(/ /g, '_')
+  const filename = `NotaDeCobro_${order.title || order.name || order.id}_${customerName}.pdf`.replace(/ /g, '_')
   doc.save(filename)
 }
 

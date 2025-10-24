@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { listProducts, createProduct, updateProduct } from '../api/products'
 import { listVariants, createVariant, updateVariant, deleteVariant, listVariantTiers, createVariantTier } from '../api/variants'
 import ImageUploader from '../components/ImageUploader'
-import { generateCatalogWithProfitPDF } from '../utils/pdfGenerator'
+import { generateCatalogPDF } from '../utils/pdfGenerator'
 import '../styles/globals.css'
 
 export default function Productos() {
@@ -96,12 +96,12 @@ export default function Productos() {
               return
             }
             try {
-              // Cargar productos con costos
-              const productsWithCost = await listProducts(true)
+              // Cargar productos con precios oficiales (sin costos)
+              const productsData = await listProducts(false)
               
               // Cargar variantes y tiers para cada producto
               const productsWithVariants = await Promise.all(
-                productsWithCost.map(async (product) => {
+                productsData.map(async (product) => {
                   try {
                     const variants = await listVariants(product.id)
                     const variantsWithTiers = await Promise.all(
@@ -121,7 +121,8 @@ export default function Productos() {
                 })
               )
               
-              generateCatalogWithProfitPDF(productsWithVariants)
+              // Los vendedores usan el catálogo oficial con los precios establecidos
+              generateCatalogPDF(productsWithVariants)
             } catch (err) {
               alert('Error al generar el catálogo: ' + (err.message || 'Error desconocido'))
             }
@@ -155,10 +156,10 @@ export default function Productos() {
               e.currentTarget.style.boxShadow = '0 4px 12px rgba(231, 76, 60, 0.3)'
             }
           }}
-          title="Descargar catálogo con costos y utilidades (USO INTERNO)"
+          title="Descargar catálogo con precios oficiales"
         >
-          <span>💰</span>
-          Catálogo Vendedores
+          <span>📄</span>
+          Catálogo (Precios Oficiales)
         </button>
       </div>
 
