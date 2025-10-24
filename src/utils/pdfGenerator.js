@@ -370,7 +370,7 @@ export async function generateCatalogWithProfitPDF(products) {
         doc.setFontSize(8)
         doc.setFont('helvetica', 'italic')
         doc.setTextColor(150, 150, 150)
-        doc.text('Vendedores ganan 75% de la utilidad', pageWidth / 2, 12 + logoHeight + 12, { align: 'center' })
+        doc.text('3 opciones de precio según margen de utilidad', pageWidth / 2, 12 + logoHeight + 12, { align: 'center' })
         
         return 12 + logoHeight + 18
       } catch (e) {
@@ -391,7 +391,7 @@ export async function generateCatalogWithProfitPDF(products) {
     doc.setFontSize(8)
     doc.setFont('helvetica', 'italic')
     doc.setTextColor(150, 150, 150)
-    doc.text('Vendedores ganan 75% de la utilidad', pageWidth / 2, 34, { align: 'center' })
+    doc.text('3 opciones de precio según margen de utilidad', pageWidth / 2, 34, { align: 'center' })
     
     return 40
   }
@@ -470,13 +470,6 @@ export async function generateCatalogWithProfitPDF(products) {
         const salePrice = price.sale_price || 0
         const unit = price.unit === 'unit' ? 'U.' : price.unit
         
-        // Precio de venta
-        doc.setFontSize(11)
-        doc.setFont('helvetica', 'bold')
-        doc.setTextColor(COLORS.textDark)
-        doc.text(`Precio: $${salePrice.toLocaleString('es-CL')}/${unit}`, xPos, varY)
-        varY += 5
-        
         // Determinar si hay costo registrado o usar estimado
         const hasCost = cost && product.latest_cost_unit === price.unit
         const actualCost = hasCost ? cost : (salePrice * 0.8) // 20% de margen = costo es 80% del precio
@@ -491,40 +484,55 @@ export async function generateCatalogWithProfitPDF(products) {
         } else {
           doc.text(`Costo: $${actualCost.toLocaleString('es-CL')}`, xPos, varY)
         }
-        varY += 4
+        varY += 5
         
-        // Calcular utilidades
-        const totalProfit = salePrice - actualCost
-        const vendorProfit = totalProfit * 0.75
-        const kiviProfit = totalProfit * 0.25
-        const profitPct = actualCost > 0 ? ((totalProfit / salePrice) * 100).toFixed(1) : 0
-        
-        // Utilidad total
-        doc.setTextColor(40, 167, 69)
-        doc.setFont('helvetica', 'bold')
-        doc.text(`Utilidad: $${Math.round(totalProfit).toLocaleString('es-CL')} (${profitPct}%)`, xPos, varY)
-        varY += 4
-        
-        // Ganancia del vendedor (75%)
+        // Título: 3 opciones de ganancia
         doc.setFontSize(9)
-        doc.setTextColor(0, 123, 255)
         doc.setFont('helvetica', 'bold')
-        doc.text(`Tu ganancia (75%): $${Math.round(vendorProfit).toLocaleString('es-CL')}`, xPos, varY)
-        varY += 4
+        doc.setTextColor(COLORS.textDark)
+        doc.text(`3 OPCIONES DE PRECIO:`, xPos, varY)
+        varY += 5
         
-        // Ganancia de Kivi (25%)
-        doc.setFontSize(7)
-        doc.setTextColor(120, 120, 120)
-        doc.setFont('helvetica', 'normal')
-        doc.text(`(Kivi 25%: $${Math.round(kiviProfit).toLocaleString('es-CL')})`, xPos, varY)
-        varY += 3
+        // Calcular las 3 opciones: 50%, 70%, 80% de utilidad
+        const margins = [
+          { label: '50%', percent: 0.50, color: [76, 175, 80] },   // Verde
+          { label: '70%', percent: 0.70, color: [0, 123, 255] },   // Azul
+          { label: '80%', percent: 0.80, color: [156, 39, 176] }   // Morado
+        ]
+        
+        margins.forEach((margin, idx) => {
+          // Precio de venta = costo / (1 - margen)
+          const suggestedPrice = Math.round(actualCost / (1 - margin.percent))
+          const profit = suggestedPrice - actualCost
+          const profitPct = ((profit / suggestedPrice) * 100).toFixed(0)
+          
+          // Nombre de la opción
+          doc.setFontSize(8)
+          doc.setFont('helvetica', 'bold')
+          doc.setTextColor(...margin.color)
+          doc.text(`${margin.label} utilidad:`, xPos, varY)
+          
+          // Precio sugerido
+          doc.setFontSize(9)
+          doc.setFont('helvetica', 'bold')
+          doc.text(`$${suggestedPrice.toLocaleString('es-CL')}/${unit}`, xPos + 28, varY)
+          
+          // Ganancia
+          doc.setFontSize(7)
+          doc.setFont('helvetica', 'normal')
+          doc.text(`(Ganas $${Math.round(profit).toLocaleString('es-CL')})`, xPos + 52, varY)
+          
+          varY += 4
+        })
+        
+        varY += 1
         
         // Si es estimado, agregar nota
         if (isEstimated) {
           doc.setFontSize(7)
           doc.setFont('helvetica', 'italic')
           doc.setTextColor(180, 100, 0)
-          doc.text(`*Costo estimado (20% margen)`, xPos, varY)
+          doc.text(`*Costo estimado (sin registro de compra)`, xPos, varY)
           varY += 2
         }
       }
