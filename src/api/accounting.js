@@ -51,7 +51,7 @@ export function changeChargeOrder(chargeId, orderId) {
 
 // Excedentes (calculados correctamente)
 export function listExcess() {
-  return apiFetch('/accounting/excess')
+  return apiFetch('/accounting/excess/simple')
 }
 
 // Excedentes (Lots) - deprecated
