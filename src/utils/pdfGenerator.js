@@ -691,7 +691,14 @@ export async function generateInvoicePDF(order, items, customer) {
   currentY += 14
   let total = 0
 
-  items.forEach(item => {
+  // Filtrar items con cantidad o precio 0
+  const filteredItems = items.filter(item => {
+    const qty = item.qty || 0
+    const unitPrice = item.sale_unit_price || 0
+    return qty > 0 && unitPrice > 0
+  })
+
+  filteredItems.forEach(item => {
     // Verificar si necesitamos una nueva página
     if (currentY > doc.internal.pageSize.getHeight() - 40) {
       doc.addPage()

@@ -62,7 +62,7 @@ export default function Compras() {
       const m={}; 
       (d.group_by_product||[]).forEach(g=>{m[g.product_id]=(g.totals?.kg||0)>0?'kg':'unit'}); 
       setRowChargeType(m) 
-    }).catch(()=>{})
+    }).catch(()=>{}) 
     // Cargar compras del pedido
     apiFetch(`/purchases?order_id=${selectedOrder}`).then(purchases => {
       setOrderPurchases(purchases || [])
@@ -134,13 +134,13 @@ export default function Compras() {
     setIsSavingPurchase(true)
     
     try {
-      await apiFetch('/purchases',{method:'POST',body:payload}); 
-      await refreshOrderDetail()
+    await apiFetch('/purchases',{method:'POST',body:payload}); 
+    await refreshOrderDetail()
       
       // Mantener el loading por 3 segundos para evitar duplicados
       setTimeout(() => {
         setIsSavingPurchase(false)
-        setModalOpen(false)
+    setModalOpen(false)
       }, 3000)
     } catch (err) {
       alert('Error al guardar compra: ' + (err.message || 'Error desconocido'))
@@ -148,10 +148,10 @@ export default function Compras() {
     }
   }
 
-  // Función para guardar compra de excedente (productos sin pedido)
+  // Función para guardar compra de excedente (productos sin pedido pero asociados al pedido actual)
   async function saveExcessPurchase() {
-    if (!excessProduct.product_id || !excessProduct.qty_kg && !excessProduct.qty_unit || isSavingPurchase) {
-      alert('⚠️ Debes seleccionar un producto y especificar cantidad')
+    if (!selectedOrder || !excessProduct.product_id || !excessProduct.qty_kg && !excessProduct.qty_unit || isSavingPurchase) {
+      alert('⚠️ Debes seleccionar un pedido y un producto, y especificar cantidad')
       return
     }
     
@@ -165,6 +165,7 @@ export default function Compras() {
     if (!price_total && price_per_unit && chargeQty>0){ price_total = price_per_unit * chargeQty }
     
     const payload = {
+      order_id: selectedOrder,  // Asociar al pedido actual
       product_id: Number(excessProduct.product_id),
       qty_kg: excessProduct.qty_kg ? Number(excessProduct.qty_kg) : null,
       qty_unit: excessProduct.qty_unit ? Number(excessProduct.qty_unit) : null,
@@ -181,6 +182,7 @@ export default function Compras() {
     
     try {
       await apiFetch('/purchases', { method: 'POST', body: payload })
+      await refreshOrderDetail()
       setShowExcessPurchaseModal(false)
       setExcessProduct({ product_id: '', qty_kg: '', qty_unit: '', charged_unit: 'kg', price_total: '', price_per_unit: '', vendor: '', notes: '', units_kg_total: '', kg_units_total: '' })
       alert('✓ Compra de excedente registrada')
@@ -268,12 +270,27 @@ export default function Compras() {
 
   // Funciones de estado y formato - mejorado para considerar compras por cliente
   function getProductStatus(g){
-    const purchased=(detail?.purchased_by_product||{})[g.product_id]||{}
-    const needKg=g.totals?.kg||0, needUnit=g.totals?.unit||0
-    const gotKg=purchased.kg||0, gotUnit=purchased.unit||0
-    const hasKg=needKg>0, hasUnit=needUnit>0
+    // Calcular cantidades REALES compradas desde orderPurchases (sin conversiones)
+    const productPurchases = orderPurchases.filter(p => p.product_id === g.product_id)
+    
+    let totalKgComprado = 0
+    let totalUnidComprado = 0
+    
+    productPurchases.forEach(p => {
+      if (p.qty_kg) totalKgComprado += parseFloat(p.qty_kg)
+      if (p.qty_unit) totalUnidComprado += parseFloat(p.qty_unit)
+    })
+    
+    const needKg=g.totals?.kg||0
+    const needUnit=g.totals?.unit||0
+    const gotKg=totalKgComprado
+    const gotUnit=totalUnidComprado
+    
+    const hasKg=needKg>0
+    const hasUnit=needUnit>0
     const over=(hasKg&&gotKg>needKg)||(hasUnit&&gotUnit>needUnit)
     const complete=(!hasKg||gotKg>=needKg)&&(!hasUnit||gotUnit>=needUnit)
+    
     if(over) return 'excess'
     if(complete) return 'complete'
     return 'incomplete'
@@ -289,25 +306,25 @@ export default function Compras() {
       return { status: 'incomplete', got: '0', need: `${customer.qty} ${customer.unit}` }
     }
     
-    // Convertir la compra a la unidad del cliente para comparar
+    // Sumar cantidades REALES compradas (sin conversiones para la visualización)
+    let totalKgComprado = 0
+    let totalUnidComprado = 0
+    
+    productPurchases.forEach(p => {
+      if (p.qty_kg) totalKgComprado += parseFloat(p.qty_kg)
+      if (p.qty_unit) totalUnidComprado += parseFloat(p.qty_unit)
+    })
+    
+    // Determinar si la compra es suficiente según lo que pidió el cliente
     const chargedUnit = customer.unit
-    let purchasedQty = 0
-    
-    for (const purchase of productPurchases) {
-      if (purchase.charged_unit === chargedUnit) {
-        // Misma unidad, sumar directamente
-        purchasedQty += chargedUnit === 'kg' ? (purchase.qty_kg || 0) : (purchase.qty_unit || 0)
-      } else {
-        // Conversión necesaria
-        if (chargedUnit === 'kg' && purchase.charged_unit === 'unit' && purchase.eq_qty_kg) {
-          purchasedQty += purchase.eq_qty_kg
-        } else if (chargedUnit === 'unit' && purchase.charged_unit === 'kg' && purchase.eq_qty_unit) {
-          purchasedQty += purchase.eq_qty_unit
-        }
-      }
-    }
-    
     const needQty = parseFloat(customer.qty) || 0
+    
+    let purchasedQty = 0
+    if (chargedUnit === 'kg') {
+      purchasedQty = totalKgComprado
+    } else {
+      purchasedQty = totalUnidComprado
+    }
     
     if (purchasedQty >= needQty) {
       return { status: 'complete', got: purchasedQty.toFixed(1), need: `${needQty} ${chargedUnit}` }
@@ -325,28 +342,27 @@ export default function Compras() {
   }
 
   function qtySegments(g){ 
-    const purchased=(detail?.purchased_by_product||{})[g.product_id]||{}
-    const needKg=(g.totals?.kg||0); const needUnit=(g.totals?.unit||0)
-    const gotKg=(purchased.kg||0); const gotUnit=(purchased.unit||0)
-    
-    // Para el módulo de compras, mostrar lo que realmente se compró en la unidad original
-    // Si compramos en unidades pero se transformó a kg, mostrar "X unid → Y kg" 
-    const segments = []
-    
-    // Obtener información de compras reales para mostrar conversiones visibles
+    // Calcular cantidades REALES compradas desde orderPurchases (sin conversiones)
     const productPurchases = orderPurchases.filter(p => p.product_id === g.product_id)
     
-    if (needKg > 0 && needUnit > 0) {
-      // Se pidió en ambas unidades: mostrar ambas
-      segments.push(`${gotKg}/${needKg} kg`)
-      segments.push(`${gotUnit}/${needUnit} unid`)
-    } else if (needKg > 0) {
-      // Solo se pidió en kg: mostrar kg
-      segments.push(`${gotKg}/${needKg} kg`)
-    } else if (needUnit > 0) {
-      // Solo se pidió en unidades: mostrar unidades
-      segments.push(`${gotUnit}/${needUnit} unid`)
-    }
+    // Sumar cantidades reales compradas
+    let totalKgComprado = 0
+    let totalUnidComprado = 0
+    
+    productPurchases.forEach(p => {
+      if (p.qty_kg) totalKgComprado += parseFloat(p.qty_kg)
+      if (p.qty_unit) totalUnidComprado += parseFloat(p.qty_unit)
+    })
+    
+    const needKg=(g.totals?.kg||0)
+    const needUnit=(g.totals?.unit||0)
+    
+    const segments = []
+    
+    // SIEMPRE mostrar kg y unidades compradas (aunque sea 0)
+    // Formato: "X/Y kg" donde X es lo comprado y Y es lo pedido
+    segments.push(`${totalKgComprado}/${needKg} kg`)
+    segments.push(`${totalUnidComprado}/${needUnit} unid`)
     
     return segments
   }
@@ -603,36 +619,36 @@ export default function Compras() {
                       
                       {/* Productos de esta categoría */}
                       {byCategory[category].map(g => {
-                        const product = products.find(p => p.id === g.product_id)
-                        return (
-                          <div 
-                            key={g.product_id} 
-                            style={{ 
-                              background:'white', 
+                const product = products.find(p => p.id === g.product_id)
+                return (
+                  <div 
+                    key={g.product_id} 
+                    style={{ 
+                      background:'white', 
                               borderRadius:12, 
                               padding:12, 
-                              border:'1px solid #e0e0e0',
-                              display:'flex',
-                              justifyContent:'space-between',
-                              alignItems:'center',
+                      border:'1px solid #e0e0e0',
+                      display:'flex',
+                      justifyContent:'space-between',
+                      alignItems:'center',
                               gap:8,
                               marginBottom: 8
-                            }}
-                          >
+                    }}
+                  >
                             <div style={{ flex:1, minWidth:120 }}>
                               <div style={{ fontSize:15, fontWeight:700, marginBottom:4 }}>
-                                {g.product_name}
-                              </div>
+                        {g.product_name}
+                </div>
                               <div style={{ display:'flex', gap:6, alignItems:'center', fontSize:12, opacity:0.7 }}>
-                                {qtySegments(g).map((t,i)=>(
-                                  <span key={i} style={{ fontWeight:600 }}>{t}</span>
-                                ))}
-                                {stateBadge(g)}
+                        {qtySegments(g).map((t,i)=>(
+                          <span key={i} style={{ fontWeight:600 }}>{t}</span>
+            ))}
+                      {stateBadge(g)}
                               </div>
-                            </div>
+                    </div>
 
                     <div style={{ position:'relative' }}>
-                      <button
+                      <button 
                         onClick={(e) => {
                           e.stopPropagation()
                           setExpandedMenuFor(expandedMenuFor === g.product_id ? null : g.product_id)
@@ -685,14 +701,14 @@ export default function Compras() {
                               textAlign:'left',
                               marginBottom:4
                             }}
-                          >
-                            📝 Anotar compra
-                          </button>
+                      >
+                        📝 Anotar compra
+                      </button>
                           {(() => {
                             const productPurchases = orderPurchases.filter(p => p.product_id === g.product_id)
                             if (productPurchases.length > 0) {
                               return (
-                                <button
+                      <button
                                   onClick={() => {
                                     if (productPurchases.length === 1) {
                                       setEditingPurchase(productPurchases[0])
@@ -742,37 +758,37 @@ export default function Compras() {
                           </button>
                           <button
                             onClick={() => {
-                              const product = products.find(p => p.id === g.product_id)
-                              setInfoModalProduct({ ...g, product })
-                              setShowInfoModal(true)
+                          const product = products.find(p => p.id === g.product_id)
+                          setInfoModalProduct({ ...g, product })
+                          setShowInfoModal(true)
                               setExpandedMenuFor(null)
-                            }}
-                            style={{
+                        }}
+                        style={{
                               width:'100%',
                               padding:'10px 12px',
                               borderRadius:6,
                               background:'#667eea',
-                              color:'white',
-                              border:'none',
-                              cursor:'pointer',
+                          color:'white',
+                          border:'none',
+                          cursor:'pointer',
                               fontSize:13,
-                              fontWeight:600,
+                          fontWeight:600,
                               textAlign:'left'
-                            }}
-                          >
-                            💡 Info
-                          </button>
+                        }}
+                      >
+                        💡 Info
+                      </button>
                         </div>
                       )}
                     </div>
-                          </div>
-                        )
-                      })}
+                  </div>
+                )
+              })}
                     </div>
                   )
                 })
               })()}
-            </div>
+        </div>
           )}
         </>
       )}
