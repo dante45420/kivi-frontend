@@ -38,6 +38,7 @@ export default function Compras() {
   const [isSavingPurchase, setIsSavingPurchase] = useState(false)
   const [showExcessPurchaseModal, setShowExcessPurchaseModal] = useState(false)
   const [excessProduct, setExcessProduct] = useState({ product_id: '', qty_kg: '', qty_unit: '', charged_unit: 'kg', price_total: '', price_per_unit: '', vendor: '', notes: '', units_kg_total: '', kg_units_total: '' })
+  const [expandedMenuFor, setExpandedMenuFor] = useState(null)
 
   // Estados de filtros
   const [filterStatus, setFilterStatus] = useState('all') // all, complete, incomplete
@@ -327,7 +328,27 @@ export default function Compras() {
     const purchased=(detail?.purchased_by_product||{})[g.product_id]||{}
     const needKg=(g.totals?.kg||0); const needUnit=(g.totals?.unit||0)
     const gotKg=(purchased.kg||0); const gotUnit=(purchased.unit||0)
-    return [`${gotKg}/${needKg} kg`, `${gotUnit}/${needUnit} unit`] 
+    
+    // Para el módulo de compras, mostrar lo que realmente se compró en la unidad original
+    // Si compramos en unidades pero se transformó a kg, mostrar "X unid → Y kg" 
+    const segments = []
+    
+    // Obtener información de compras reales para mostrar conversiones visibles
+    const productPurchases = orderPurchases.filter(p => p.product_id === g.product_id)
+    
+    if (needKg > 0 && needUnit > 0) {
+      // Se pidió en ambas unidades: mostrar ambas
+      segments.push(`${gotKg}/${needKg} kg`)
+      segments.push(`${gotUnit}/${needUnit} unid`)
+    } else if (needKg > 0) {
+      // Solo se pidió en kg: mostrar kg
+      segments.push(`${gotKg}/${needKg} kg`)
+    } else if (needUnit > 0) {
+      // Solo se pidió en unidades: mostrar unidades
+      segments.push(`${gotUnit}/${needUnit} unid`)
+    }
+    
+    return segments
   }
 
   function missingSegments(g){ 
@@ -610,96 +631,139 @@ export default function Compras() {
                               </div>
                             </div>
 
-                    <div style={{ display:'flex', gap:4, alignItems:'center', flexWrap:'wrap' }}>
-                      <button 
-                        onClick={()=>openModalFor(g)} 
-                        className="button" 
-                        style={{ padding:'6px 12px', borderRadius:8, fontWeight:600, background:'#88C4A8', color:'white', border:'none', fontSize:13 }}
-                      >
-                        📝
-                      </button>
-                      {(() => {
-                        // Buscar compras de este producto
-                        const productPurchases = orderPurchases.filter(p => p.product_id === g.product_id)
-                        if (productPurchases.length > 0) {
-                          return (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                // Si hay solo una compra, editarla directamente
-                                if (productPurchases.length === 1) {
-                                  setEditingPurchase(productPurchases[0])
-                                } else {
-                                  // Si hay varias, mostrar la más reciente
-                                  const latest = productPurchases.sort((a, b) => b.id - a.id)[0]
-                                  setEditingPurchase(latest)
-                                }
-                              }}
-                              style={{
-                                padding:'6px 12px',
-                                borderRadius:8,
-                                background:'#ff69b4',
-                                color:'white',
-                                border:'none',
-                                cursor:'pointer',
-                                fontSize:13,
-                                fontWeight:600,
-                                transition:'all 0.2s',
-                                boxShadow:'0 2px 4px rgba(255, 105, 180, 0.3)'
-                              }}
-                              title="Editar compra registrada"
-                            >
-                              🛍️ ({productPurchases.length})
-                            </button>
-                          )
-                        }
-                        return null
-                      })()}
+                    <div style={{ position:'relative' }}>
                       <button
                         onClick={(e) => {
                           e.stopPropagation()
-                          setEditingItem(g)
-                          setShowEditItemModal(true)
+                          setExpandedMenuFor(expandedMenuFor === g.product_id ? null : g.product_id)
                         }}
                         style={{
-                          padding:'6px 12px',
-                          borderRadius:8,
-                          background:'#ffb347',
-                          color:'white',
+                          padding:'6px 8px',
+                          borderRadius:6,
+                          background:'#f0f0f0',
                           border:'none',
                           cursor:'pointer',
-                          fontSize:13,
-                          fontWeight:600,
-                          transition:'all 0.2s',
-                          boxShadow:'0 2px 4px rgba(255, 179, 71, 0.3)'
+                          fontSize:18,
+                          display:'flex',
+                          flexDirection:'column',
+                          gap:3,
+                          width:28,
+                          height:28,
+                          justifyContent:'center'
                         }}
-                        title="Editar producto del pedido"
                       >
-                        ✏️
+                        <div style={{ width:'100%', height:2, background:'#666', borderRadius:1 }}></div>
+                        <div style={{ width:'100%', height:2, background:'#666', borderRadius:1 }}></div>
+                        <div style={{ width:'100%', height:2, background:'#666', borderRadius:1 }}></div>
                       </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          const product = products.find(p => p.id === g.product_id)
-                          setInfoModalProduct({ ...g, product })
-                          setShowInfoModal(true)
-                        }}
-                        style={{
-                          padding:'6px 12px',
+                      
+                      {expandedMenuFor === g.product_id && (
+                        <div style={{
+                          position:'absolute',
+                          right:0,
+                          top:32,
+                          background:'white',
                           borderRadius:8,
-                          background:'#667eea',
-                          color:'white',
-                          border:'none',
-                          cursor:'pointer',
-                          fontSize:13,
-                          fontWeight:600,
-                          transition:'all 0.2s',
-                          boxShadow:'0 2px 4px rgba(102, 126, 234, 0.3)'
-                        }}
-                        title="Ver información del producto y clientes"
-                      >
-                        💡
-                      </button>
+                          border:'1px solid #e0e0e0',
+                          boxShadow:'0 4px 12px rgba(0,0,0,0.15)',
+                          zIndex:1000,
+                          minWidth:150,
+                          padding:4
+                        }}>
+                          <button
+                            onClick={() => { openModalFor(g); setExpandedMenuFor(null) }}
+                            style={{
+                              width:'100%',
+                              padding:'10px 12px',
+                              borderRadius:6,
+                              background:'#88C4A8',
+                              color:'white',
+                              border:'none',
+                              cursor:'pointer',
+                              fontSize:13,
+                              fontWeight:600,
+                              textAlign:'left',
+                              marginBottom:4
+                            }}
+                          >
+                            📝 Anotar compra
+                          </button>
+                          {(() => {
+                            const productPurchases = orderPurchases.filter(p => p.product_id === g.product_id)
+                            if (productPurchases.length > 0) {
+                              return (
+                                <button
+                                  onClick={() => {
+                                    if (productPurchases.length === 1) {
+                                      setEditingPurchase(productPurchases[0])
+                                    } else {
+                                      const latest = productPurchases.sort((a, b) => b.id - a.id)[0]
+                                      setEditingPurchase(latest)
+                                    }
+                                    setExpandedMenuFor(null)
+                                  }}
+                                  style={{
+                                    width:'100%',
+                                    padding:'10px 12px',
+                                    borderRadius:6,
+                                    background:'#ff69b4',
+                                    color:'white',
+                                    border:'none',
+                                    cursor:'pointer',
+                                    fontSize:13,
+                                    fontWeight:600,
+                                    textAlign:'left',
+                                    marginBottom:4
+                                  }}
+                                >
+                                  🛍️ Ver compras ({productPurchases.length})
+                                </button>
+                              )
+                            }
+                            return null
+                          })()}
+                          <button
+                            onClick={() => { setEditingItem(g); setShowEditItemModal(true); setExpandedMenuFor(null) }}
+                            style={{
+                              width:'100%',
+                              padding:'10px 12px',
+                              borderRadius:6,
+                              background:'#ffb347',
+                              color:'white',
+                              border:'none',
+                              cursor:'pointer',
+                              fontSize:13,
+                              fontWeight:600,
+                              textAlign:'left',
+                              marginBottom:4
+                            }}
+                          >
+                            ✏️ Editar pedido
+                          </button>
+                          <button
+                            onClick={() => {
+                              const product = products.find(p => p.id === g.product_id)
+                              setInfoModalProduct({ ...g, product })
+                              setShowInfoModal(true)
+                              setExpandedMenuFor(null)
+                            }}
+                            style={{
+                              width:'100%',
+                              padding:'10px 12px',
+                              borderRadius:6,
+                              background:'#667eea',
+                              color:'white',
+                              border:'none',
+                              cursor:'pointer',
+                              fontSize:13,
+                              fontWeight:600,
+                              textAlign:'left'
+                            }}
+                          >
+                            💡 Info
+                          </button>
+                        </div>
+                      )}
                     </div>
                           </div>
                         )
