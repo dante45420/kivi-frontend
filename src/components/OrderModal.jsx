@@ -100,31 +100,6 @@ export default function OrderModal({ orderData, onClose, editingCharge, setEditi
             </div>
           </div>
           <div style={{ display:'flex', gap:12, alignItems:'center' }}>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                handleDownloadInvoice()
-              }}
-              style={{
-                padding:'10px 20px',
-                borderRadius:999,
-                border:'none',
-                background:'var(--kivi-green)',
-                color:'white',
-                fontWeight:700,
-                fontSize:14,
-                cursor:'pointer',
-                display:'flex',
-                alignItems:'center',
-                gap:8,
-                transition:'all 0.2s'
-              }}
-              onMouseOver={e=> e.target.style.transform='scale(1.05)'}
-              onMouseOut={e=> e.target.style.transform='scale(1)'}
-            >
-              <span>📄</span>
-              Descargar Factura
-            </button>
             <button 
               onClick={onClose}
               style={{ 

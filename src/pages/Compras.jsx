@@ -643,7 +643,6 @@ export default function Compras() {
                         {qtySegments(g).map((t,i)=>(
                           <span key={i} style={{ fontWeight:600 }}>{t}</span>
             ))}
-                      {stateBadge(g)}
                               </div>
                     </div>
 
