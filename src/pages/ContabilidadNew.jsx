@@ -27,7 +27,7 @@ export default function ContabilidadNew(){
   const [customerFilter, setCustomerFilter] = useState('')
   
   // Módulo de pagos
-  const [showPayments, setShowPayments] = useState(true)
+  const [showPayments, setShowPayments] = useState(false)
   const [paymentForm, setPaymentForm] = useState({ customer_id:'', order_id:'', amount:'', date:'' })
   
   // Módulo de reasignación
@@ -186,29 +186,35 @@ export default function ContabilidadNew(){
           onClick={() => setShowPayments(!showPayments)}
           style={{
             width:'100%',
-            padding:'20px',
-            background:'#88C4A8',
+            padding:'14px 20px',
+            background:'linear-gradient(135deg, #ffccd3 0%, #ffa8b0 100%)',
             border:'none',
-            borderRadius:20,
-            color:'white',
-            fontSize:20,
-            fontWeight:700,
+            borderRadius:16,
+            color:'#8e4d57',
+            fontSize:16,
+            fontWeight:600,
             cursor:'pointer',
             display:'flex',
             justifyContent:'space-between',
             alignItems:'center',
-            boxShadow:'0 4px 12px rgba(136, 196, 168, 0.3)',
+            boxShadow:'0 2px 6px rgba(255, 168, 176, 0.3)',
             transition:'all 0.2s'
           }}
+          onMouseOver={e=> e.currentTarget.style.transform='translateY(-2px)'}
+          onMouseOut={e=> e.currentTarget.style.transform='translateY(0)'}
         >
-          <span>💰 Registrar Pago</span>
+          <span style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <span style={{ fontSize:18 }}>💰</span>
+            Registrar Pago
+          </span>
           <span style={{
-            padding: '6px 12px',
-            background: 'rgba(255,255,255,0.2)',
-            borderRadius: '10px',
-            fontSize: '14px'
+            padding: '4px 10px',
+            background: 'rgba(255,255,255,0.4)',
+            borderRadius: '8px',
+            fontSize: '12px',
+            fontWeight:600
           }}>
-            {showPayments ? 'Ocultar' : 'Mostrar'}
+            {showPayments ? '▼' : '▶'}
           </span>
         </button>
 
@@ -620,20 +626,8 @@ export default function ContabilidadNew(){
             >
               <div style={{ padding:'24px' }}>
                 <div style={{ marginBottom:16 }}>
-                  <div style={{ fontSize:20, fontWeight:700, marginBottom:12 }}>
+                  <div style={{ fontSize:20, fontWeight:700 }}>
                     {o.order.title || `Pedido #${o.order.id}`}
-                  </div>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <span style={{ 
-                      padding:'6px 14px', 
-                      borderRadius:12, 
-                      fontSize:13, 
-                      fontWeight:600,
-                      background: o.purchase_status==='complete'?'#e8f5e9':(o.purchase_status==='over'?'#fff3e0':'#ffebee'),
-                      color: o.purchase_status==='complete'?'#2e7d32':(o.purchase_status==='over'?'#f57c00':'#d32f2f')
-                    }}>
-                      {o.purchase_status==='complete'?'✓ Completo':(o.purchase_status==='over'?'⚠ Exceso':'⏳ Incompleto')}
-                    </span>
                   </div>
                 </div>
 
@@ -748,7 +742,7 @@ export default function ContabilidadNew(){
         onUpdate={loadAll}
       />
       
-      <CustomerModal 
+          <CustomerModal 
         customerData={customerModal}
         onClose={() => setCustomerModal(null)}
         editingCharge={editingCharge}
@@ -757,6 +751,117 @@ export default function ContabilidadNew(){
         orders={orders}
         onUpdate={loadAll}
       />
+
+      {/* Resumen General */}
+      <div style={{ marginBottom:40 }}>
+        <h3 style={{ fontSize:24, fontWeight:700, marginBottom:16 }}>📋 Resumen General</h3>
+        
+        <div style={{ 
+          background:'white', 
+          borderRadius:20, 
+          padding:24, 
+          border:'1px solid #e0e0e0',
+          boxShadow:'0 2px 8px rgba(0,0,0,0.08)'
+        }}>
+          <div style={{ display:'grid', gap:16 }}>
+            {/* Totales */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:16 }}>
+              <div style={{ 
+                background:'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)', 
+                borderRadius:12, 
+                padding:16,
+                textAlign:'center'
+              }}>
+                <div style={{ fontSize:13, opacity:0.7, marginBottom:6 }}>Total Facturado</div>
+                <div style={{ fontSize:24, fontWeight:700, color:'#2e7d32' }}>
+                  ${orderCards.reduce((s,o)=> s + o.billed, 0).toLocaleString('es-CL')}
+                </div>
+              </div>
+              
+              <div style={{ 
+                background:'linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%)', 
+                borderRadius:12, 
+                padding:16,
+                textAlign:'center'
+              }}>
+                <div style={{ fontSize:13, opacity:0.7, marginBottom:6 }}>Total Costos</div>
+                <div style={{ fontSize:24, fontWeight:700, color:'#f57c00' }}>
+                  ${orderCards.reduce((s,o)=> s + o.cost, 0).toLocaleString('es-CL')}
+                </div>
+              </div>
+              
+              <div style={{ 
+                background:'linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%)', 
+                borderRadius:12, 
+                padding:16,
+                textAlign:'center'
+              }}>
+                <div style={{ fontSize:13, opacity:0.7, marginBottom:6 }}>Utilidad Total</div>
+                <div style={{ fontSize:24, fontWeight:700, color:'#1976d2' }}>
+                  ${orderCards.reduce((s,o)=> s + o.profit_amount, 0).toLocaleString('es-CL')}
+                </div>
+              </div>
+              
+              <div style={{ 
+                background:'linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%)', 
+                borderRadius:12, 
+                padding:16,
+                textAlign:'center'
+              }}>
+                <div style={{ fontSize:13, opacity:0.7, marginBottom:6 }}>Total Deuda</div>
+                <div style={{ fontSize:24, fontWeight:700, color:'#d32f2f' }}>
+                  ${customerCards.reduce((s,c)=> s + c.due, 0).toLocaleString('es-CL')}
+                </div>
+              </div>
+            </div>
+
+            {/* Tabla de pedidos resumida */}
+            <div style={{ borderTop:'1px solid #f0f0f0', paddingTop:16, marginTop:16 }}>
+              <div style={{ fontSize:15, fontWeight:600, marginBottom:12 }}>Pedidos ({orderCards.length})</div>
+              <div style={{ overflowX:'auto' }}>
+                <table style={{ width:'100%', borderCollapse:'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom:'2px solid #e0e0e0' }}>
+                      <th style={{ padding:'10px 8px', textAlign:'left', fontSize:13, fontWeight:700 }}>Pedido</th>
+                      <th style={{ padding:'10px 8px', textAlign:'right', fontSize:13, fontWeight:700 }}>Facturado</th>
+                      <th style={{ padding:'10px 8px', textAlign:'right', fontSize:13, fontWeight:700 }}>Costo</th>
+                      <th style={{ padding:'10px 8px', textAlign:'right', fontSize:13, fontWeight:700 }}>Utilidad</th>
+                      <th style={{ padding:'10px 8px', textAlign:'right', fontSize:13, fontWeight:700 }}>Deuda</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orderCards.map((o,idx)=> (
+                      <tr 
+                        key={o.order.id}
+                        style={{ 
+                          borderBottom:'1px solid #f0f0f0',
+                          background: idx % 2 === 0 ? 'white' : '#fafafa'
+                        }}
+                      >
+                        <td style={{ padding:'10px 8px', fontSize:14, fontWeight:600 }}>
+                          {o.order.title || `Pedido #${o.order.id}`}
+                        </td>
+                        <td style={{ padding:'10px 8px', fontSize:14, textAlign:'right' }}>
+                          ${o.billed.toLocaleString('es-CL')}
+                        </td>
+                        <td style={{ padding:'10px 8px', fontSize:14, textAlign:'right' }}>
+                          ${o.cost.toLocaleString('es-CL')}
+                        </td>
+                        <td style={{ padding:'10px 8px', fontSize:14, textAlign:'right', fontWeight:600, color: o.profit_amount >= 0 ? '#2e7d32' : '#d32f2f' }}>
+                          ${o.profit_amount.toLocaleString('es-CL')}
+                        </td>
+                        <td style={{ padding:'10px 8px', fontSize:14, textAlign:'right', fontWeight:600, color:'#d32f2f' }}>
+                          ${o.due.toLocaleString('es-CL')}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
