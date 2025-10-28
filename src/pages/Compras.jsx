@@ -36,6 +36,8 @@ export default function Compras() {
   const [showEditItemModal, setShowEditItemModal] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
   const [isSavingPurchase, setIsSavingPurchase] = useState(false)
+  const [showExcessPurchaseModal, setShowExcessPurchaseModal] = useState(false)
+  const [excessProduct, setExcessProduct] = useState({ product_id: '', qty_kg: '', qty_unit: '', charged_unit: 'kg', price_total: '', price_per_unit: '', vendor: '', notes: '', units_kg_total: '', kg_units_total: '' })
 
   // Estados de filtros
   const [filterStatus, setFilterStatus] = useState('all') // all, complete, incomplete
@@ -145,6 +147,49 @@ export default function Compras() {
     }
   }
 
+  // Función para guardar compra de excedente (productos sin pedido)
+  async function saveExcessPurchase() {
+    if (!excessProduct.product_id || !excessProduct.qty_kg && !excessProduct.qty_unit || isSavingPurchase) {
+      alert('⚠️ Debes seleccionar un producto y especificar cantidad')
+      return
+    }
+    
+    const chargeQty = excessProduct.charged_unit === 'kg' 
+      ? (Number(excessProduct.qty_kg) || 0)
+      : (Number(excessProduct.qty_unit) || 0)
+    
+    let price_per_unit = excessProduct.price_per_unit ? Number(excessProduct.price_per_unit) : 0
+    let price_total = excessProduct.price_total ? Number(excessProduct.price_total) : 0
+    if (!price_per_unit && chargeQty>0 && price_total){ price_per_unit = price_total / chargeQty }
+    if (!price_total && price_per_unit && chargeQty>0){ price_total = price_per_unit * chargeQty }
+    
+    const payload = {
+      product_id: Number(excessProduct.product_id),
+      qty_kg: excessProduct.qty_kg ? Number(excessProduct.qty_kg) : null,
+      qty_unit: excessProduct.qty_unit ? Number(excessProduct.qty_unit) : null,
+      charged_unit: excessProduct.charged_unit,
+      price_total: price_total || null,
+      price_per_unit: price_per_unit || null,
+      vendor: excessProduct.vendor || null,
+      notes: excessProduct.notes || null,
+      eq_qty_kg: excessProduct.charged_unit==='kg' && excessProduct.kg_units_total ? Number(excessProduct.kg_units_total) : null,
+      eq_qty_unit: excessProduct.charged_unit==='unit' && excessProduct.units_kg_total ? Number(excessProduct.units_kg_total) : null
+    }
+    
+    setIsSavingPurchase(true)
+    
+    try {
+      await apiFetch('/purchases', { method: 'POST', body: payload })
+      setShowExcessPurchaseModal(false)
+      setExcessProduct({ product_id: '', qty_kg: '', qty_unit: '', charged_unit: 'kg', price_total: '', price_per_unit: '', vendor: '', notes: '', units_kg_total: '', kg_units_total: '' })
+      alert('✓ Compra de excedente registrada')
+    } catch (err) {
+      alert('Error al guardar compra: ' + (err.message || 'Error desconocido'))
+    } finally {
+      setIsSavingPurchase(false)
+    }
+  }
+
   async function refreshOrderDetail() {
     if (!selectedOrder) return
     try {
@@ -166,21 +211,43 @@ export default function Compras() {
     }
     
     try {
+      // Obtener el nombre del cliente
+      const selectedCustomer = customers.find(c => c.id === Number(newItem.customer_id))
+      const customer_name = selectedCustomer?.name || ''
+      
+      if (!customer_name) {
+        alert('⚠️ Cliente no encontrado')
+        return
+      }
+      
+      // Obtener el producto para determinar charged_unit y charged_qty
+      const product = products.find(p => p.id === Number(newItem.product_id))
+      const qty = parseFloat(newItem.qty)
+      const unit = newItem.unit
+      
+      // charged_unit es la unidad por defecto del producto, o la especificada
+      const charged_unit = product?.default_unit || unit
+      // charged_qty es la cantidad a cobrar (misma que qty si las unidades coinciden)
+      const charged_qty = charged_unit === unit ? qty : qty
+      
       const items = [{
         product_id: Number(newItem.product_id),
-        customer_id: Number(newItem.customer_id),
-        qty: parseFloat(newItem.qty),
-        unit: newItem.unit,
-        price: newItem.price ? parseFloat(newItem.price) : null
+        customer: customer_name,  // El backend espera 'customer' (string)
+        qty: qty,
+        unit: unit,
+        charged_unit: charged_unit,
+        charged_qty: charged_qty,
+        sale_unit_price: newItem.price ? parseFloat(newItem.price) : null
       }]
       
       await addItemsToOrder(selectedOrder, items)
       await refreshOrderDetail()
       setShowAddItemModal(false)
       setNewItem({ product_id: '', customer_id: '', qty: '', unit: 'kg', price: '' })
-      alert('✓ Producto agregado al pedido')
+      alert('✓ Producto agregado al pedido correctamente')
     } catch (err) {
       alert('Error al agregar producto: ' + (err.message || 'Error desconocido'))
+      console.error('Error completo:', err)
     }
   }
 
@@ -198,17 +265,54 @@ export default function Compras() {
     }
   }
 
-  // Funciones de estado y formato
+  // Funciones de estado y formato - mejorado para considerar compras por cliente
   function getProductStatus(g){
     const purchased=(detail?.purchased_by_product||{})[g.product_id]||{}
     const needKg=g.totals?.kg||0, needUnit=g.totals?.unit||0
     const gotKg=purchased.kg||0, gotUnit=purchased.unit||0
     const hasKg=needKg>0, hasUnit=needUnit>0
     const over=(hasKg&&gotKg>needKg)||(hasUnit&&gotUnit>needUnit)
-    const complete=(!hasKg||gotKg===needKg)&&(!hasUnit||gotUnit===needUnit)
+    const complete=(!hasKg||gotKg>=needKg)&&(!hasUnit||gotUnit>=needUnit)
     if(over) return 'excess'
     if(complete) return 'complete'
     return 'incomplete'
+  }
+  
+  // Función para obtener estado detallado por cliente
+  function getCustomerStatus(customer) {
+    // Obtener todas las compras de este producto
+    const productPurchases = orderPurchases.filter(p => p.product_id === customer.product_id)
+    
+    // Si no hay compras, está incompleto
+    if (productPurchases.length === 0) {
+      return { status: 'incomplete', got: '0', need: `${customer.qty} ${customer.unit}` }
+    }
+    
+    // Convertir la compra a la unidad del cliente para comparar
+    const chargedUnit = customer.unit
+    let purchasedQty = 0
+    
+    for (const purchase of productPurchases) {
+      if (purchase.charged_unit === chargedUnit) {
+        // Misma unidad, sumar directamente
+        purchasedQty += chargedUnit === 'kg' ? (purchase.qty_kg || 0) : (purchase.qty_unit || 0)
+      } else {
+        // Conversión necesaria
+        if (chargedUnit === 'kg' && purchase.charged_unit === 'unit' && purchase.eq_qty_kg) {
+          purchasedQty += purchase.eq_qty_kg
+        } else if (chargedUnit === 'unit' && purchase.charged_unit === 'kg' && purchase.eq_qty_unit) {
+          purchasedQty += purchase.eq_qty_unit
+        }
+      }
+    }
+    
+    const needQty = parseFloat(customer.qty) || 0
+    
+    if (purchasedQty >= needQty) {
+      return { status: 'complete', got: purchasedQty.toFixed(1), need: `${needQty} ${chargedUnit}` }
+    }
+    
+    return { status: 'incomplete', got: purchasedQty.toFixed(1), need: `${needQty} ${chargedUnit}` }
   }
 
   function stateBadge(g){ 
@@ -333,8 +437,8 @@ export default function Compras() {
         <div style={{ textAlign:'center', marginTop:40 }}>Cargando...</div>
       ) : (
         <>
-          {/* Botón para agregar producto al pedido */}
-          <div style={{ marginBottom:20, display:'flex', justifyContent:'center' }}>
+          {/* Botones de acción */}
+          <div style={{ marginBottom:20, display:'flex', justifyContent:'center', gap:12, flexWrap:'wrap' }}>
             <button
               onClick={() => setShowAddItemModal(true)}
               style={{
@@ -356,6 +460,28 @@ export default function Compras() {
               onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
             >
               ➕ Agregar producto al pedido
+            </button>
+            <button
+              onClick={() => setShowExcessPurchaseModal(true)}
+              style={{
+                padding:'14px 28px',
+                borderRadius:16,
+                background:'linear-gradient(135deg, #ffa8e4 0%, #ff69b4 100%)',
+                color:'white',
+                border:'none',
+                cursor:'pointer',
+                fontSize:16,
+                fontWeight:700,
+                boxShadow:'0 4px 12px rgba(255, 105, 180, 0.4)',
+                transition:'all 0.2s',
+                display:'flex',
+                alignItems:'center',
+                gap:8
+              }}
+              onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+            >
+              💰 Comprar excedente
             </button>
           </div>
 
@@ -443,13 +569,13 @@ export default function Compras() {
                       {/* Header de categoría */}
                       <div style={{
                         background: categoryColors[category],
-                        padding: '12px 20px',
-                        borderRadius: 12,
-                        marginBottom: 12,
+                        padding: '8px 12px',
+                        borderRadius: 8,
+                        marginBottom: 8,
                         fontWeight: 700,
-                        fontSize: 16,
+                        fontSize: 14,
                         color: '#333',
-                        borderLeft: '4px solid ' + (category === 'fruta' ? '#f44336' : category === 'verdura' ? '#4caf50' : '#9c27b0')
+                        borderLeft: '3px solid ' + (category === 'fruta' ? '#f44336' : category === 'verdura' ? '#4caf50' : '#9c27b0')
                       }}>
                         {categoryLabels[category]}
                       </div>
@@ -462,46 +588,35 @@ export default function Compras() {
                             key={g.product_id} 
                             style={{ 
                               background:'white', 
-                              borderRadius:16, 
-                              padding:20, 
+                              borderRadius:12, 
+                              padding:12, 
                               border:'1px solid #e0e0e0',
                               display:'flex',
                               justifyContent:'space-between',
                               alignItems:'center',
-                              gap:16,
-                              flexWrap:'wrap',
-                              marginBottom: 12
+                              gap:8,
+                              marginBottom: 8
                             }}
                           >
-                            <div style={{ flex:1, minWidth:180 }}>
-                              <div style={{ fontSize:18, fontWeight:700, marginBottom:8 }}>
+                            <div style={{ flex:1, minWidth:120 }}>
+                              <div style={{ fontSize:15, fontWeight:700, marginBottom:4 }}>
                                 {g.product_name}
                               </div>
-                              <div style={{ display:'flex', gap:8, flexWrap:'wrap', alignItems:'center', fontSize:14, opacity:0.7 }}>
-                                {product?.purchase_type && (
-                                  <span style={{ background:'#f0f0f0', padding:'4px 10px', borderRadius:6, fontSize:12 }}>
-                                    {product.purchase_type === 'cajon' ? '📦 Cajón' : '🛒 Detalle'}
-                                  </span>
-                                )}
+                              <div style={{ display:'flex', gap:6, alignItems:'center', fontSize:12, opacity:0.7 }}>
+                                {qtySegments(g).map((t,i)=>(
+                                  <span key={i} style={{ fontWeight:600 }}>{t}</span>
+                                ))}
+                                {stateBadge(g)}
                               </div>
                             </div>
 
-                    <div style={{ display:'flex', flexDirection:'column', gap:8, alignItems:'center' }}>
-                      <div style={{ display:'flex', gap:12, fontSize:15 }}>
-                        {qtySegments(g).map((t,i)=>(
-                          <span key={i} style={{ fontWeight:600 }}>{t}</span>
-            ))}
-          </div>
-                      {stateBadge(g)}
-                    </div>
-
-                    <div style={{ display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' }}>
+                    <div style={{ display:'flex', gap:4, alignItems:'center', flexWrap:'wrap' }}>
                       <button 
                         onClick={()=>openModalFor(g)} 
                         className="button" 
-                        style={{ padding:'10px 20px', borderRadius:12, fontWeight:600, background:'#88C4A8', color:'white', border:'none' }}
+                        style={{ padding:'6px 12px', borderRadius:8, fontWeight:600, background:'#88C4A8', color:'white', border:'none', fontSize:13 }}
                       >
-                        📝 Anotar compra
+                        📝
                       </button>
                       {(() => {
                         // Buscar compras de este producto
@@ -521,20 +636,20 @@ export default function Compras() {
                                 }
                               }}
                               style={{
-                                padding:'10px 18px',
-                                borderRadius:12,
-                                background:'linear-gradient(135deg, #ffa8e4 0%, #ff69b4 100%)',
+                                padding:'6px 12px',
+                                borderRadius:8,
+                                background:'#ff69b4',
                                 color:'white',
                                 border:'none',
                                 cursor:'pointer',
-                                fontSize:15,
+                                fontSize:13,
                                 fontWeight:600,
                                 transition:'all 0.2s',
-                                boxShadow:'0 2px 8px rgba(255, 105, 180, 0.3)'
+                                boxShadow:'0 2px 4px rgba(255, 105, 180, 0.3)'
                               }}
                               title="Editar compra registrada"
                             >
-                              🛍️ Ver compras ({productPurchases.length})
+                              🛍️ ({productPurchases.length})
                             </button>
                           )
                         }
@@ -547,20 +662,20 @@ export default function Compras() {
                           setShowEditItemModal(true)
                         }}
                         style={{
-                          padding:'10px 18px',
-                          borderRadius:12,
-                          background:'linear-gradient(135deg, #ffd89b 0%, #ffb347 100%)',
+                          padding:'6px 12px',
+                          borderRadius:8,
+                          background:'#ffb347',
                           color:'white',
                           border:'none',
                           cursor:'pointer',
-                          fontSize:15,
+                          fontSize:13,
                           fontWeight:600,
                           transition:'all 0.2s',
-                          boxShadow:'0 2px 8px rgba(255, 179, 71, 0.3)'
+                          boxShadow:'0 2px 4px rgba(255, 179, 71, 0.3)'
                         }}
                         title="Editar producto del pedido"
                       >
-                        ✏️ Editar
+                        ✏️
                       </button>
                       <button
                         onClick={(e) => {
@@ -570,20 +685,20 @@ export default function Compras() {
                           setShowInfoModal(true)
                         }}
                         style={{
-                          padding:'10px 18px',
-                          borderRadius:12,
-                          background:'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          padding:'6px 12px',
+                          borderRadius:8,
+                          background:'#667eea',
                           color:'white',
                           border:'none',
                           cursor:'pointer',
-                          fontSize:15,
+                          fontSize:13,
                           fontWeight:600,
                           transition:'all 0.2s',
-                          boxShadow:'0 2px 8px rgba(102, 126, 234, 0.3)'
+                          boxShadow:'0 2px 4px rgba(102, 126, 234, 0.3)'
                         }}
                         title="Ver información del producto y clientes"
                       >
-                        💡 Info
+                        💡
                       </button>
                     </div>
                           </div>
@@ -1223,6 +1338,171 @@ export default function Compras() {
                 }}
               >
                 Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para comprar excedente (productos sin pedido) */}
+      {showExcessPurchaseModal && (
+        <div className="modal-backdrop" onClick={() => setShowExcessPurchaseModal(false)}>
+          <div 
+            className="modal" 
+            onClick={e => e.stopPropagation()}
+            style={{ 
+              maxWidth: 500, 
+              borderRadius: 20, 
+              maxHeight: '90vh', 
+              overflow: 'auto'
+            }}
+          >
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              marginBottom: 20,
+              paddingBottom: 16,
+              borderBottom: '2px solid #f0f0f0'
+            }}>
+              <h3 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>💰 Comprar Excedente</h3>
+              <button 
+                onClick={() => setShowExcessPurchaseModal(false)} 
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  fontSize: 24, 
+                  cursor: 'pointer', 
+                  opacity: 0.6 
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 13, marginBottom: 6, fontWeight: 600 }}>
+                Producto
+              </label>
+              <select
+                className="input"
+                value={excessProduct.product_id}
+                onChange={e => setExcessProduct({ ...excessProduct, product_id: e.target.value })}
+                style={{ width: '100%', padding: '12px', borderRadius: 12, fontSize: 15 }}
+              >
+                <option value="">Seleccionar producto...</option>
+                {products.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Resto del modal similar al de compra normal pero sin referencia a order_id */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, marginBottom: 6, fontWeight: 600 }}>
+                  Cantidad (kg)
+                </label>
+                <input 
+                  className="input" 
+                  type="number" 
+                  value={excessProduct.qty_kg} 
+                  onChange={e => setExcessProduct({ ...excessProduct, qty_kg: e.target.value })}
+                  placeholder="0"
+                  style={{ width: '100%', padding: '12px', borderRadius: 10, fontSize: 15 }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, marginBottom: 6, fontWeight: 600 }}>
+                  Cantidad (unidades)
+                </label>
+                <input 
+                  className="input" 
+                  type="number" 
+                  value={excessProduct.qty_unit} 
+                  onChange={e => setExcessProduct({ ...excessProduct, qty_unit: e.target.value })}
+                  placeholder="0"
+                  style={{ width: '100%', padding: '12px', borderRadius: 10, fontSize: 15 }}
+                />
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', fontSize: 13, marginBottom: 6, fontWeight: 600 }}>
+                Unidad de cobro
+              </label>
+              <select 
+                className="input" 
+                value={excessProduct.charged_unit} 
+                onChange={e => setExcessProduct({ ...excessProduct, charged_unit: e.target.value })}
+                style={{ width: '100%', padding: '12px', borderRadius: 10, fontSize: 15 }}
+              >
+                <option value="kg">Kilogramo</option>
+                <option value="unit">Unidad</option>
+              </select>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, marginBottom: 6, fontWeight: 600 }}>
+                  Precio por unidad
+                </label>
+                <input 
+                  className="input" 
+                  type="number" 
+                  value={excessProduct.price_per_unit} 
+                  onChange={e => setExcessProduct({ ...excessProduct, price_per_unit: e.target.value })}
+                  placeholder="0"
+                  style={{ width: '100%', padding: '12px', borderRadius: 10, fontSize: 15 }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 13, marginBottom: 6, fontWeight: 600 }}>
+                  Precio total
+                </label>
+                <input 
+                  className="input" 
+                  type="text" 
+                  value={toCLP(excessProduct.price_total)} 
+                  onChange={e => setExcessProduct({ ...excessProduct, price_total: parseCLP(e.target.value) })}
+                  placeholder="$0"
+                  style={{ width: '100%', padding: '12px', borderRadius: 10, fontSize: 15 }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12 }}>
+              <button 
+                className="button ghost" 
+                onClick={() => setShowExcessPurchaseModal(false)}
+                disabled={isSavingPurchase}
+                style={{ 
+                  padding: 14, 
+                  borderRadius: 12, 
+                  fontWeight: 600, 
+                  fontSize: 15, 
+                  opacity: isSavingPurchase ? 0.5 : 1 
+                }}
+              >
+                Cancelar
+              </button>
+              <button 
+                className="button" 
+                onClick={saveExcessPurchase}
+                disabled={isSavingPurchase}
+                style={{ 
+                  padding: 14, 
+                  borderRadius: 12, 
+                  fontWeight: 700, 
+                  fontSize: 15, 
+                  background: isSavingPurchase ? '#ccc' : '#ff69b4',
+                  opacity: isSavingPurchase ? 0.6 : 1,
+                  cursor: isSavingPurchase ? 'not-allowed' : 'pointer',
+                  transition: 'all 0.3s',
+                  color: 'white'
+                }}
+              >
+                {isSavingPurchase ? '⏳ Guardando...' : '✓ Guardar compra'}
               </button>
             </div>
           </div>
