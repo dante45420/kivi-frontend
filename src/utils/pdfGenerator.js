@@ -87,20 +87,22 @@ export async function generateCatalogPDF(products) {
     
     // En jsPDF:
     // - addImage: Y es la esquina superior. Para centrar: iconY = centerY - iconSize/2
-    // - text: Y es la línea base. El centro visual del texto está aproximadamente a 0.4x del tamaño de fuente desde la base
-    //   Convertir pt a mm: 1pt ≈ 0.3528mm
+    // - text: Y es la línea base. El centro visual del texto Helvetica está aproximadamente 
+    //   a 0.35x del tamaño de fuente (en mm) desde la base para mejor alineación visual
     const ptToMm = 0.3528
     
-    // Todos los elementos centrados en centerY
+    // Todos los elementos centrados perfectamente en centerY
     const iconY = centerY - iconSize / 2 // Iconos: esquina superior para que centro esté en centerY
     
-    // Texto: base del texto debe estar abajo del centro visual
-    // En jsPDF, las unidades son mm. El centro visual del texto Helvetica está aproximadamente
-    // a 0.38 * tamaño_pt convertido a mm desde la base (basado en x-height de Helvetica)
-    const textCenterOffset = (fontSize * ptToMm) * 0.38
+    // Texto: calcular posición de la línea base para que el centro visual quede en centerY
+    // Para Helvetica bold con números y texto mixto, el centro visual está a aproximadamente 0.43x 
+    // del tamaño de fuente (en mm) desde la base hacia arriba
+    // Convertir puntos a mm: 1pt = 0.3528mm
+    const textCenterOffset = (fontSize * ptToMm) * 0.43
     const textY = centerY - textCenterOffset // Base del texto (centro visual en centerY)
     
-    const pageTextCenterOffset = (pageFontSize * ptToMm) * 0.38
+    // Número de página: mismo cálculo pero con su tamaño de fuente
+    const pageTextCenterOffset = (pageFontSize * ptToMm) * 0.43
     const pageTextY = centerY - pageTextCenterOffset // Base del número de página (centro visual en centerY)
     
     // Calcular ancho total para centrar
