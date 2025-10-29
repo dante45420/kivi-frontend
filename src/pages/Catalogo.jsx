@@ -595,15 +595,20 @@ function ProductCard({ product }) {
           width: '100%',
           height: 200,
           background: '#F5F5F5',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           overflow: 'hidden'
         }}>
           <img 
             src={product.quality_photo_url} 
             alt={product.name}
             style={{
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover'
+              maxWidth: '100%',
+              maxHeight: '100%',
+              width: 'auto',
+              height: 'auto',
+              objectFit: 'contain'
             }}
             onError={(e) => {
               e.target.style.display = 'none'

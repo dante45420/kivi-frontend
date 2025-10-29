@@ -51,15 +51,18 @@ export async function generateCatalogPDF(products) {
     console.log('No se pudo cargar icono Instagram')
   }
 
-  // Cargar ofertas semanales
+  // Cargar ofertas semanales - usar baseUrl correcto
   let weeklyOffers = { fruta: null, verdura: null, especial: null }
   try {
-    const response = await fetch('/api/weekly-offers')
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
+    const response = await fetch(`${baseUrl}/weekly-offers`)
     if (response.ok) {
       weeklyOffers = await response.json()
+    } else {
+      console.log('Error al cargar ofertas:', response.status)
     }
   } catch (e) {
-    console.log('No se pudieron cargar las ofertas semanales')
+    console.log('No se pudieron cargar las ofertas semanales:', e)
   }
 
   // Función para agregar pie de página
