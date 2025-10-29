@@ -88,15 +88,15 @@ export async function generateCatalogPDF(products) {
     // Ajustes manuales para alineación perfecta:
     // - Subir los logos: disminuir iconY (mover hacia arriba = Y más pequeño)
     // - Bajar el texto: aumentar textY (mover hacia abajo = Y más grande)
-    const iconY = centerY - iconSize / 2 - 0.8 // Subir logos 0.8mm
+    const iconY = centerY - iconSize / 2 - 1.1 // Subir logos 1.5mm
     
-    // Texto: posición ajustada manualmente (bajar un poco)
+    // Texto: posición ajustada manualmente (bajar más)
     const textCenterOffset = (fontSize * 0.3528) * 0.40
-    const textY = centerY - textCenterOffset + 0.6 // Bajar texto 0.6mm
+    const textY = centerY - textCenterOffset + 1.0 // Bajar texto 1.3mm
     
-    // Número de página: mismo ajuste
+    // Número de página: ajuste más sutil (ya está centrado)
     const pageTextCenterOffset = (pageFontSize * 0.3528) * 0.40
-    const pageTextY = centerY - pageTextCenterOffset + 0.6 // Bajar texto 0.6mm
+    const pageTextY = centerY - pageTextCenterOffset + 0.8 // Bajar texto 0.8mm
     
     // Calcular ancho total para centrar
     const gap = 15 // Espacio entre los dos elementos
