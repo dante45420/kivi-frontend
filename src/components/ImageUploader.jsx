@@ -23,19 +23,22 @@ export default function ImageUploader({ value, onChange }) {
       return
     }
 
-    // Validar tamaño (max 5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      setError('La imagen no debe superar 5MB')
+    // Validar tamaño (max 2MB para base64 - se comprimirá)
+    if (file.size > 2 * 1024 * 1024) {
+      setError('La imagen no debe superar 2MB. Se recomienda comprimirla.')
       return
     }
 
     setError('')
     
-    // Mostrar preview local
+    // Convertir a base64 (data URL) - esto se guarda directamente en la BD
     const reader = new FileReader()
     reader.onload = (event) => {
-      setPreview(event.target.result)
-      onChange(event.target.result)
+      // event.target.result ya es un data URL (base64)
+      // Formato: "data:image/png;base64,iVBORw0KGgo..."
+      const dataUrl = event.target.result
+      setPreview(dataUrl)
+      onChange(dataUrl) // Esto se guardará directamente en quality_photo_url
     }
     reader.readAsDataURL(file)
   }
@@ -83,7 +86,7 @@ export default function ImageUploader({ value, onChange }) {
         — o —
       </div>
 
-      {/* Subir desde dispositivo (solo para preview local) */}
+      {/* Subir desde dispositivo - se guarda como base64 en la BD */}
       <div style={{ marginBottom: 12 }}>
         <label 
           htmlFor="file-upload"
@@ -112,7 +115,7 @@ export default function ImageUploader({ value, onChange }) {
           style={{ display: 'none' }}
         />
         <div style={{ fontSize: 11, color: '#999', marginTop: 6, textAlign: 'center' }}>
-          ⚠️ Nota: Esto guardará la imagen en la base de datos (puede ser pesado). Recomendamos usar URLs de servicios como Imgur o Google Drive.
+          ✓ La imagen se guardará directamente en la base de datos (recomendado: imágenes sin fondo, máximo 2MB)
         </div>
       </div>
 
@@ -139,22 +142,18 @@ export default function ImageUploader({ value, onChange }) {
         fontSize: 12,
         opacity: 0.8
       }}>
-        💡 <strong>Cómo obtener URL de imagen:</strong>
+        💡 <strong>Opciones para agregar imagen:</strong>
         <ul style={{ margin: '8px 0 0 0', paddingLeft: 20, lineHeight: 1.6 }}>
           <li>
-            <a href="https://imgur.com/upload" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--kivi-green-dark)', fontWeight: 600 }}>
-              Imgur
-            </a> - Sube gratis, clic derecho → "Copiar enlace de imagen"
+            <strong>📤 Subir archivo:</strong> Se guarda directamente en la base de datos (recomendado para imágenes sin fondo)
           </li>
           <li>
-            <a href="https://imgbb.com/" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--kivi-green-dark)', fontWeight: 600 }}>
-              ImgBB
-            </a> - Sube gratis, copia la URL directa
-          </li>
-          <li>
-            <strong>Google Drive</strong> - Sube imagen, clic derecho → "Obtener enlace" (asegúrate que sea público)
+            <strong>🔗 Pegar URL:</strong> Si prefieres usar un servicio externo como Imgur, ImgBB o Google Drive
           </li>
         </ul>
+        <p style={{ margin: '8px 0 0 0', fontSize: 11, fontStyle: 'italic' }}>
+          Tip: Las imágenes sin fondo (PNG transparente) funcionan mejor para el catálogo
+        </p>
       </div>
     </div>
   )

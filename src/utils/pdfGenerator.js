@@ -51,39 +51,15 @@ export async function generateCatalogPDF(products) {
     console.log('No se pudo cargar icono Instagram')
   }
 
-  // Función para agregar encabezado
-  const addHeader = () => {
-    // Logo
-    if (logoImg) {
-      try {
-        const logoWidth = 50
-        const logoHeight = (logoImg.height * logoWidth) / logoImg.width
-        doc.addImage(logoImg, 'PNG', (pageWidth - logoWidth) / 2, 15, logoWidth, logoHeight)
-        
-        // Slogan debajo del logo
-        doc.setFontSize(9)
-        doc.setFont('helvetica', 'italic')
-        doc.setTextColor(COLORS.text)
-        doc.text('*Todo pedido es personalizable a tu manera*', pageWidth / 2, 15 + logoHeight + 6, { align: 'center' })
-        
-        return 15 + logoHeight + 12
-      } catch (e) {
-        console.log('Error agregando logo:', e)
-      }
+  // Cargar ofertas semanales
+  let weeklyOffers = { fruta: null, verdura: null, especial: null }
+  try {
+    const response = await fetch('/api/weekly-offers')
+    if (response.ok) {
+      weeklyOffers = await response.json()
     }
-    
-    // Fallback si no hay logo
-    doc.setFontSize(24)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(COLORS.textDark)
-    doc.text('Kivi', pageWidth / 2, 25, { align: 'center' })
-    
-    doc.setFontSize(10)
-    doc.setFont('helvetica', 'italic')
-    doc.setTextColor(COLORS.text)
-    doc.text('*Todo pedido es personalizable a tu manera*', pageWidth / 2, 33, { align: 'center' })
-    
-    return 40
+  } catch (e) {
+    console.log('No se pudieron cargar las ofertas semanales')
   }
 
   // Función para agregar pie de página
@@ -154,13 +130,191 @@ export async function generateCatalogPDF(products) {
     doc.text(`Página ${pageNum}`, pageWidth / 2, pageHeight - 5, { align: 'center' })
   }
 
+  // Función para agregar página de ofertas semanales
+  const addWeeklyOffersPage = async () => {
+    let currentY = 18
+    
+    // Logo centrado arriba - estilizado como en las imágenes
+    if (logoImg) {
+      try {
+        const logoWidth = 50
+        const logoHeight = (logoImg.height * logoWidth) / logoImg.width
+        doc.addImage(logoImg, 'PNG', (pageWidth - logoWidth) / 2, currentY, logoWidth, logoHeight)
+        currentY += logoHeight + 6
+      } catch (e) {
+        console.log('Error agregando logo en ofertas')
+      }
+    }
+    
+    // Slogan debajo del logo
+    doc.setFontSize(9)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(80, 100, 80)
+    doc.text('FRUTAS Y VERDURAS FRESCAS', pageWidth / 2, currentY, { align: 'center' })
+    currentY += 18
+    
+    // Ofertas - diseño minimalista similar a las imágenes
+    const offers = [
+      { type: 'fruta', label: '¡Fruta de la semana!', offer: weeklyOffers.fruta, color: [255, 152, 0] },
+      { type: 'verdura', label: '¡Verdura de la semana!', offer: weeklyOffers.verdura, color: [76, 175, 80] },
+      { type: 'especial', label: weeklyOffers.especial?.product_name?.toLowerCase().includes('huevo') ? '¡Fruta Especial de la semana!' : '¡Especial de la semana!', offer: weeklyOffers.especial, color: [255, 152, 0] }
+    ]
+    
+    for (const item of offers) {
+      if (!item.offer) continue
+      
+      // Espaciado entre ofertas
+      if (currentY > 30) currentY += 8
+      
+      // Verificar si necesitamos nueva página
+      if (currentY + 80 > pageHeight - 40) {
+        addFooter(1)
+        doc.addPage()
+        currentY = 20
+        // Re-agregar logo y slogan en nueva página si es necesario
+        if (logoImg && currentY === 20) {
+          try {
+            const logoWidth = 45
+            const logoHeight = (logoImg.height * logoWidth) / logoImg.width
+            doc.addImage(logoImg, 'PNG', (pageWidth - logoWidth) / 2, currentY, logoWidth, logoHeight)
+            currentY += logoHeight + 10
+            doc.setFontSize(9)
+            doc.setFont('helvetica', 'bold')
+            doc.setTextColor(80, 100, 80)
+            doc.text('FRUTAS Y VERDURAS FRESCAS', pageWidth / 2, currentY, { align: 'center' })
+            currentY += 15
+          } catch (e) {}
+        }
+      }
+      
+      // Título de la oferta - centrado y destacado
+      doc.setFontSize(14)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(60, 60, 60)
+      const titleText = item.label
+      doc.text(titleText, pageWidth / 2, currentY, { align: 'center' })
+      
+      // Línea subrayada bajo el título
+      doc.setDrawColor(...item.color)
+      doc.setLineWidth(0.5)
+      const titleWidth = doc.getTextWidth(titleText)
+      doc.line((pageWidth - titleWidth) / 2, currentY + 2, (pageWidth + titleWidth) / 2, currentY + 2)
+      currentY += 10
+      
+      // Nombre del producto y precio - centrado
+      doc.setFontSize(13)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(60, 60, 60)
+      const productName = item.offer.product?.name || 'Producto'
+      const priceText = `${productName}: ${item.offer.price || ''}`
+      doc.text(priceText, pageWidth / 2, currentY, { align: 'center' })
+      currentY += 7
+      
+      // Precio de referencia - más pequeño y centrado
+      if (item.offer.reference_price) {
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'italic')
+        doc.setTextColor(100, 100, 100)
+        doc.text(`(Precio referencia: ${item.offer.reference_price})`, pageWidth / 2, currentY, { align: 'center' })
+        currentY += 10
+      }
+      
+      // Imagen del producto (si existe) - centrada y más grande
+      // Usar quality_photo_url del producto asociado
+      const productImageUrl = item.offer.product?.quality_photo_url || null
+      if (productImageUrl) {
+        try {
+          const offerImg = await loadImage(productImageUrl)
+          const imgWidth = 60 // Más grande para que se destaque
+          const imgHeight = Math.min((offerImg.height * imgWidth) / offerImg.width, 50)
+          
+          if (currentY + imgHeight < pageHeight - 50) {
+            doc.addImage(offerImg, 'PNG', (pageWidth - imgWidth) / 2, currentY, imgWidth, imgHeight)
+            currentY += imgHeight + 8
+          }
+        } catch (e) {
+          console.log('No se pudo cargar imagen de oferta:', productImageUrl)
+        }
+      }
+      
+      currentY += 5
+    }
+    
+    // Pie de página con WhatsApp
+    const footerY = pageHeight - 25
+    if (whatsappImg) {
+      try {
+        const iconSize = 6
+        doc.addImage(whatsappImg, 'PNG', (pageWidth - 35) / 2, footerY, iconSize, iconSize)
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(60, 100, 60)
+        doc.text('+56 9 6917 2764', pageWidth / 2 + 4, footerY + 4)
+      } catch (e) {
+        doc.setFontSize(10)
+        doc.setFont('helvetica', 'bold')
+        doc.setTextColor(60, 100, 60)
+        doc.text('+56 9 6917 2764', pageWidth / 2, footerY + 4, { align: 'center' })
+      }
+    }
+    
+    addFooter(1)
+  }
+
+
+  // Función para agregar encabezado
+  const addHeader = () => {
+    // Logo
+    if (logoImg) {
+      try {
+        const logoWidth = 50
+        const logoHeight = (logoImg.height * logoWidth) / logoImg.width
+        doc.addImage(logoImg, 'PNG', (pageWidth - logoWidth) / 2, 15, logoWidth, logoHeight)
+        
+        // Slogan debajo del logo
+        doc.setFontSize(9)
+        doc.setFont('helvetica', 'italic')
+        doc.setTextColor(COLORS.text)
+        doc.text('*Todo pedido es personalizable a tu manera*', pageWidth / 2, 15 + logoHeight + 6, { align: 'center' })
+        
+        return 15 + logoHeight + 12
+      } catch (e) {
+        console.log('Error agregando logo:', e)
+      }
+    }
+    
+    // Fallback si no hay logo
+    doc.setFontSize(24)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.textDark)
+    doc.text('Kivi', pageWidth / 2, 25, { align: 'center' })
+    
+    doc.setFontSize(10)
+    doc.setFont('helvetica', 'italic')
+    doc.setTextColor(COLORS.text)
+    doc.text('*Todo pedido es personalizable a tu manera*', pageWidth / 2, 33, { align: 'center' })
+    
+    return 40
+  }
+
+  // Agregar página de ofertas semanales primero (si hay ofertas)
+  let pageNum = 1
+  const hasAnyOffer = weeklyOffers.fruta || weeklyOffers.verdura || weeklyOffers.especial
+  if (hasAnyOffer) {
+    await addWeeklyOffersPage()
+    doc.addPage()
+    pageNum = 2
+  } else {
+    // Si no hay ofertas, empezar con página normal
+    pageNum = 1
+  }
+
+  let currentY = addHeader()
+
   // Separar productos por categoría
   const frutas = products.filter(p => p.category === 'fruta').sort((a, b) => a.name.localeCompare(b.name))
   const verduras = products.filter(p => p.category === 'verdura').sort((a, b) => a.name.localeCompare(b.name))
   const otros = products.filter(p => !p.category || (p.category !== 'fruta' && p.category !== 'verdura')).sort((a, b) => a.name.localeCompare(b.name))
-
-  let currentY = addHeader()
-  let pageNum = 1
 
   // Función para agregar una categoría
   const addCategory = (title, items, isFirst = false) => {

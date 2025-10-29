@@ -7,6 +7,7 @@ import Compras from './pages/Compras'
 import Kpis from './pages/Kpis'
 import Contabilidad from './pages/ContabilidadNew'
 import Clientes from './pages/Clientes'
+import OfertasSemanales from './pages/OfertasSemanales'
 import Login from './pages/Login'
 import Catalogo from './pages/Catalogo'
 import About from './pages/About'
@@ -100,6 +101,7 @@ export default function App() {
         <Route path="/kpis" element={<ProtectedRoute><Kpis /></ProtectedRoute>} />
         <Route path="/contabilidad" element={<ProtectedRoute><Contabilidad /></ProtectedRoute>} />
         <Route path="/clientes" element={<ProtectedRoute><Clientes /></ProtectedRoute>} />
+        <Route path="/ofertas" element={<ProtectedRoute><OfertasSemanales /></ProtectedRoute>} />
         
         {/* Redirección por defecto */}
         <Route path="*" element={<Navigate to={isAuthenticated ? getDefaultRoute() : "/"} replace />} />
