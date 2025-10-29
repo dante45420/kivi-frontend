@@ -85,25 +85,18 @@ export async function generateCatalogPDF(products) {
     const fontSize = 10
     const pageFontSize = 8
     
-    // En jsPDF:
-    // - addImage: Y es la esquina superior. Para centrar: iconY = centerY - iconSize/2
-    // - text: Y es la línea base. El centro visual del texto Helvetica está aproximadamente 
-    //   a 0.35x del tamaño de fuente (en mm) desde la base para mejor alineación visual
-    const ptToMm = 0.3528
+    // Ajustes manuales para alineación perfecta:
+    // - Subir los logos: disminuir iconY (mover hacia arriba = Y más pequeño)
+    // - Bajar el texto: aumentar textY (mover hacia abajo = Y más grande)
+    const iconY = centerY - iconSize / 2 - 0.8 // Subir logos 0.8mm
     
-    // Todos los elementos centrados perfectamente en centerY
-    const iconY = centerY - iconSize / 2 // Iconos: esquina superior para que centro esté en centerY
+    // Texto: posición ajustada manualmente (bajar un poco)
+    const textCenterOffset = (fontSize * 0.3528) * 0.40
+    const textY = centerY - textCenterOffset + 0.6 // Bajar texto 0.6mm
     
-    // Texto: calcular posición de la línea base para que el centro visual quede en centerY
-    // Para Helvetica bold con números y texto mixto, el centro visual está a aproximadamente 0.43x 
-    // del tamaño de fuente (en mm) desde la base hacia arriba
-    // Convertir puntos a mm: 1pt = 0.3528mm
-    const textCenterOffset = (fontSize * ptToMm) * 0.43
-    const textY = centerY - textCenterOffset // Base del texto (centro visual en centerY)
-    
-    // Número de página: mismo cálculo pero con su tamaño de fuente
-    const pageTextCenterOffset = (pageFontSize * ptToMm) * 0.43
-    const pageTextY = centerY - pageTextCenterOffset // Base del número de página (centro visual en centerY)
+    // Número de página: mismo ajuste
+    const pageTextCenterOffset = (pageFontSize * 0.3528) * 0.40
+    const pageTextY = centerY - pageTextCenterOffset + 0.6 // Bajar texto 0.6mm
     
     // Calcular ancho total para centrar
     const gap = 15 // Espacio entre los dos elementos
