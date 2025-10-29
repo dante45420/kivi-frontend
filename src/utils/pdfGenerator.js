@@ -67,7 +67,7 @@ export async function generateCatalogPDF(products) {
 
   // Función para agregar pie de página
   const addFooter = (pageNum) => {
-    const footerY = pageHeight - 28 // Más espacio desde abajo
+    const footerY = pageHeight - 15 // Mismo margen que el título (15mm desde abajo)
 
     doc.setFontSize(8)
     doc.setFont('helvetica', 'italic')
@@ -81,7 +81,7 @@ export async function generateCatalogPDF(products) {
 
     // Iconos y texto - centrados y más grandes, con más espacio
     const iconSize = 7
-    const iconY = footerY + 10 // Más espacio entre texto e iconos (era 6, ahora 10)
+    const iconY = footerY + 8 // Espacio entre texto e iconos
     const fontSize = 10
     
     // Calcular ancho total para centrar
@@ -169,27 +169,27 @@ export async function generateCatalogPDF(products) {
     doc.line(margin, currentY, pageWidth - margin, currentY)
     currentY += 15 // Más espacio entre título y ofertas
     
-    // Función helper para renderizar una oferta
+    // Función helper para renderizar una oferta (agrandada y centrada)
     const renderOffer = async (offer, label, color, xPos, maxWidth, startY) => {
       if (!offer) return startY
       
       let y = startY
       
-      // Título de la oferta
-      doc.setFontSize(12)
+      // Título de la oferta - más grande
+      doc.setFontSize(14)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(60, 60, 60)
       doc.text(label, xPos + maxWidth / 2, y, { align: 'center' })
       
       // Línea subrayada
       doc.setDrawColor(...color)
-      doc.setLineWidth(0.4)
+      doc.setLineWidth(0.5)
       const titleWidth = doc.getTextWidth(label)
       doc.line(xPos + (maxWidth - titleWidth) / 2, y + 2, xPos + (maxWidth + titleWidth) / 2, y + 2)
-      y += 8
+      y += 10
       
-      // Nombre del producto y precio
-      doc.setFontSize(11)
+      // Nombre del producto y precio - más grande
+      doc.setFontSize(13)
       doc.setFont('helvetica', 'bold')
       doc.setTextColor(60, 60, 60)
       const productName = offer.product?.name || 'Producto'
@@ -198,39 +198,40 @@ export async function generateCatalogPDF(products) {
       const maxTextWidth = maxWidth - 10
       const priceTextWidth = doc.getTextWidth(priceText)
       if (priceTextWidth > maxTextWidth) {
-        doc.setFontSize(10)
+        doc.setFontSize(12)
       }
       doc.text(priceText, xPos + maxWidth / 2, y, { align: 'center', maxWidth: maxTextWidth })
-      y += 6
+      y += 8
       
-      // Precio de referencia
+      // Precio de referencia - más grande
       if (offer.reference_price) {
-        doc.setFontSize(8)
+        doc.setFontSize(9)
         doc.setFont('helvetica', 'italic')
         doc.setTextColor(100, 100, 100)
         const refText = `(${offer.reference_price})`
         const refWidth = doc.getTextWidth(refText)
         if (refWidth > maxTextWidth) {
-          doc.setFontSize(7)
+          doc.setFontSize(8)
         }
         doc.text(refText, xPos + maxWidth / 2, y, { align: 'center', maxWidth: maxTextWidth })
-        y += 7
+        y += 9
       } else {
-        y += 4
+        y += 6
       }
       
-      // Imagen del producto
+      // Imagen del producto - más grande
       const productImageUrl = offer.product?.quality_photo_url || null
       let maxImgY = y
       if (productImageUrl) {
         try {
           const offerImg = await loadImage(productImageUrl)
-          const imgWidth = Math.min(45, maxWidth - 10)
-          const imgHeight = Math.min((offerImg.height * imgWidth) / offerImg.width, 40)
+          // Imágenes más grandes: 70mm para columnas, 80mm para especial completo
+          const imgWidth = Math.min(70, maxWidth - 15)
+          const imgHeight = Math.min((offerImg.height * imgWidth) / offerImg.width, 60)
           
-          if (y + imgHeight < pageHeight - 50) {
+          if (y + imgHeight < pageHeight - 25) {
             doc.addImage(offerImg, 'PNG', xPos + (maxWidth - imgWidth) / 2, y, imgWidth, imgHeight)
-            maxImgY = y + imgHeight + 5
+            maxImgY = y + imgHeight + 8
           }
         } catch (e) {
           console.log('No se pudo cargar imagen de oferta:', productImageUrl)
@@ -240,14 +241,14 @@ export async function generateCatalogPDF(products) {
       return Math.max(y, maxImgY)
     }
     
-    // FRUTA Y VERDURA EN MISMA FILA
-    const columnWidth = (pageWidth - margin * 2 - 10) / 2 // 10mm de espacio entre columnas
+    // FRUTA Y VERDURA EN MISMA FILA (centradas y más grandes)
+    const columnWidth = (pageWidth - margin * 2 - 15) / 2 // 15mm de espacio entre columnas
     const columnStartY = currentY
     
     let frutaY = columnStartY
     let verduraY = columnStartY
     
-    // Renderizar fruta (columna izquierda)
+    // Renderizar fruta (columna izquierda) - centrado
     if (weeklyOffers.fruta) {
       frutaY = await renderOffer(
         weeklyOffers.fruta,
@@ -259,34 +260,37 @@ export async function generateCatalogPDF(products) {
       )
     }
     
-    // Renderizar verdura (columna derecha)
+    // Renderizar verdura (columna derecha) - centrado
     if (weeklyOffers.verdura) {
       verduraY = await renderOffer(
         weeklyOffers.verdura,
         '¡Verdura de la semana!',
         [76, 175, 80],
-        margin + columnWidth + 10,
+        margin + columnWidth + 15,
         columnWidth,
         columnStartY
       )
     }
     
     // Avanzar Y al máximo de ambas columnas
-    currentY = Math.max(frutaY, verduraY) + 12
+    currentY = Math.max(frutaY, verduraY) + 15
     
-    // ESPECIAL ABAJO (centrado, ancho completo o parcial)
+    // ESPECIAL ABAJO (centrado, ancho completo pero contenido centrado)
     if (weeklyOffers.especial) {
       const especialLabel = '¡Especial de la semana!'
+      // Centrar el especial: usar menos ancho pero centrado
+      const especialWidth = Math.min(140, pageWidth - margin * 2) // Ancho máximo centrado
+      const especialX = (pageWidth - especialWidth) / 2 // Centrar en la página
       
       currentY = await renderOffer(
         weeklyOffers.especial,
         especialLabel,
         [255, 152, 0],
-        margin,
-        pageWidth - margin * 2,
+        especialX,
+        especialWidth,
         currentY
       )
-      currentY += 8
+      currentY += 10
     }
     
     // Pie de página - ajustar para evitar sobreposición
