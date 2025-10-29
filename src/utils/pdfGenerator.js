@@ -154,7 +154,20 @@ export async function generateCatalogPDF(products) {
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(80, 100, 80)
     doc.text('FRUTAS Y VERDURAS FRESCAS', pageWidth / 2, currentY, { align: 'center' })
-    currentY += 18
+    currentY += 20
+    
+    // Título "Ofertas de la Semana" - mismo estilo que categorías
+    doc.setFontSize(18)
+    doc.setFont('helvetica', 'bold')
+    doc.setTextColor(COLORS.textDark)
+    doc.text('Ofertas de la Semana', margin, currentY)
+    currentY += 3
+    
+    // Línea divisoria - mismo estilo que categorías
+    doc.setDrawColor(168, 213, 186) // Color verde pastel
+    doc.setLineWidth(0.5)
+    doc.line(margin, currentY, pageWidth - margin, currentY)
+    currentY += 8
     
     // Función helper para renderizar una oferta
     const renderOffer = async (offer, label, color, xPos, maxWidth, startY) => {
