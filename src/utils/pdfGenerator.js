@@ -79,10 +79,22 @@ export async function generateCatalogPDF(products) {
       { align: 'center' }
     )
 
-    // Iconos, texto y número de página - todos a la misma altura Y
-    const pageNumberY = pageHeight - 5 // Posición Y del número de página
+    // Iconos, texto y número de página - todos centrados verticalmente a la misma altura
+    const centerY = pageHeight - 5 // Posición Y base (5mm desde abajo)
     const iconSize = 7
     const fontSize = 10
+    const pageFontSize = 8
+    
+    // Calcular altura del texto (aproximadamente 70% del tamaño de fuente)
+    const textHeight = fontSize * 0.7
+    const pageTextHeight = pageFontSize * 0.7
+    const iconCenterY = centerY // Centro del icono coincide con centerY
+    
+    // Para centrar texto: la posición Y en jsPDF es la base del texto
+    // El centro del texto está a textHeight/2 desde la base
+    // Para que el centro esté en centerY: y = centerY - textHeight/2
+    const textY = centerY - textHeight / 2
+    const pageTextY = centerY - pageTextHeight / 2
     
     // Calcular ancho total para centrar
     const gap = 15 // Espacio entre los dos elementos
@@ -91,46 +103,46 @@ export async function generateCatalogPDF(products) {
     const totalWidth = iconSize + 2 + whatsappTextWidth + gap + iconSize + 2 + instagramTextWidth
     const startX = (pageWidth - totalWidth) / 2
     
-    // WhatsApp - alineado con el número de página verticalmente
+    // WhatsApp - icono y texto centrados verticalmente
     if (whatsappImg) {
       try {
-        doc.addImage(whatsappImg, 'PNG', startX, pageNumberY - iconSize / 2, iconSize, iconSize)
+        doc.addImage(whatsappImg, 'PNG', startX, iconCenterY - iconSize / 2, iconSize, iconSize)
         doc.setFontSize(fontSize)
         doc.setFont('helvetica', 'bold')
-        doc.text('+56 9 6917 2764', startX + iconSize + 2, pageNumberY + 2)
+        doc.text('+56 9 6917 2764', startX + iconSize + 2, textY)
       } catch (e) {
         doc.setFontSize(fontSize)
         doc.setFont('helvetica', 'bold')
-        doc.text('WhatsApp: +56 9 6917 2764', startX, pageNumberY + 2)
+        doc.text('WhatsApp: +56 9 6917 2764', startX, textY)
       }
     } else {
       doc.setFontSize(fontSize)
       doc.setFont('helvetica', 'bold')
-      doc.text('WhatsApp: +56 9 6917 2764', startX, pageNumberY + 2)
+      doc.text('WhatsApp: +56 9 6917 2764', startX, textY)
     }
     
-    // Instagram - alineado con el número de página verticalmente
+    // Instagram - icono y texto centrados verticalmente
     const instaX = startX + iconSize + 2 + whatsappTextWidth + gap
     if (instagramImg) {
       try {
-        doc.addImage(instagramImg, 'PNG', instaX, pageNumberY - iconSize / 2, iconSize, iconSize)
+        doc.addImage(instagramImg, 'PNG', instaX, iconCenterY - iconSize / 2, iconSize, iconSize)
         doc.setFontSize(fontSize)
         doc.setFont('helvetica', 'bold')
-        doc.text('@kivi.chile', instaX + iconSize + 2, pageNumberY + 2)
+        doc.text('@kivi.chile', instaX + iconSize + 2, textY)
       } catch (e) {
         doc.setFontSize(fontSize)
         doc.setFont('helvetica', 'bold')
-        doc.text('Instagram: @kivi.chile', instaX, pageNumberY + 2)
+        doc.text('Instagram: @kivi.chile', instaX, textY)
       }
     } else {
       doc.setFontSize(fontSize)
       doc.setFont('helvetica', 'bold')
-      doc.text('Instagram: @kivi.chile', instaX, pageNumberY + 2)
+      doc.text('Instagram: @kivi.chile', instaX, textY)
     }
 
-    // Número de página - mantiene su posición (centrado horizontalmente, 5mm desde abajo)
-    doc.setFontSize(8)
-    doc.text(`Página ${pageNum}`, pageWidth / 2, pageNumberY, { align: 'center' })
+    // Número de página - centrado verticalmente y horizontalmente
+    doc.setFontSize(pageFontSize)
+    doc.text(`Página ${pageNum}`, pageWidth / 2, pageTextY, { align: 'center' })
   }
 
   // Función para agregar página de ofertas semanales
@@ -508,8 +520,86 @@ export async function generateCatalogPDF(products) {
   // Agregar pie de página final
   addFooter(pageNum)
 
-  // Descargar el PDF
-  doc.save('Catalogo_Kivi.pdf')
+  // Calcular semana del mes: semana 1 siempre empieza el día 1, resto empiezan en lunes
+  function getWeekOfMonth() {
+    const now = new Date()
+    const currentDay = now.getDate()
+    const currentMonth = now.getMonth()
+    const currentYear = now.getFullYear()
+    
+    // Primer día del mes
+    const firstDay = new Date(currentYear, currentMonth, 1)
+    const firstDayOfWeek = firstDay.getDay() // 0 = domingo, 1 = lunes, ..., 6 = sábado
+    
+    // Último día del mes
+    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate()
+    
+    // Semana 1: siempre empieza el día 1 y termina el domingo siguiente
+    // Calcular el domingo de la semana 1
+    let endOfWeek1
+    if (firstDayOfWeek === 0) {
+      // Empezó en domingo, semana 1 es solo el día 1
+      endOfWeek1 = 1
+    } else {
+      // Días desde el 1 hasta el domingo (0 = domingo)
+      // Si empezó en lunes (1), el domingo es el día 7: 1 + (0 - 1 + 7) % 7 = 1 + 6 = 7
+      // Si empezó en martes (2), el domingo es el día 6: 1 + (0 - 2 + 7) % 7 = 1 + 5 = 6
+      endOfWeek1 = 1 + (7 - firstDayOfWeek) % 7
+    }
+    
+    // Calcular qué semana del mes es
+    let weekNumber
+    if (currentDay <= endOfWeek1) {
+      // Estamos en la semana 1 (día 1 hasta el domingo)
+      weekNumber = 1
+    } else {
+      // Semanas 2+ empiezan en lunes y terminan en domingo
+      // El primer lunes después de la semana 1
+      const firstMondayAfterWeek1 = endOfWeek1 + 1
+      
+      // Si el día siguiente a la semana 1 no es lunes, encontrar el lunes
+      const dayAfterWeek1 = new Date(currentYear, currentMonth, endOfWeek1 + 1)
+      const dayAfterWeek1DayOfWeek = dayAfterWeek1.getDay()
+      
+      let firstMondayOfWeek2
+      if (dayAfterWeek1DayOfWeek === 1) {
+        // Ya es lunes
+        firstMondayOfWeek2 = endOfWeek1 + 1
+      } else {
+        // Calcular días hasta el lunes
+        const daysToMonday = (8 - dayAfterWeek1DayOfWeek) % 7
+        firstMondayOfWeek2 = endOfWeek1 + 1 + daysToMonday
+      }
+      
+      if (currentDay < firstMondayOfWeek2) {
+        // Estamos entre semana 1 y semana 2 (días del domingo al lunes de la semana 2)
+        // Esto no debería pasar normalmente, pero por si acaso, semana 1
+        weekNumber = 1
+      } else {
+        // Calcular semanas desde el primer lunes de semana 2
+        const daysSinceFirstMonday = currentDay - firstMondayOfWeek2
+        weekNumber = 2 + Math.floor(daysSinceFirstMonday / 7)
+      }
+    }
+    
+    // Limitar a 5 semanas máximo
+    weekNumber = Math.max(1, Math.min(5, weekNumber))
+    
+    const semanas = ['1ra', '2da', '3ra', '4ta', '5ta']
+    const meses = [
+      'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+      'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+    ]
+    
+    const semanaStr = semanas[weekNumber - 1] || '5ta'
+    const mesStr = meses[currentMonth]
+    
+    return `${semanaStr} Semana ${mesStr}`
+  }
+
+  // Descargar el PDF con nombre que incluye semana del mes
+  const weekInfo = getWeekOfMonth()
+  doc.save(`Catalogo_Kivi (${weekInfo}).pdf`)
 }
 
 /**
