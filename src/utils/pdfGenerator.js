@@ -79,24 +79,29 @@ export async function generateCatalogPDF(products) {
       { align: 'center' }
     )
 
-    // Iconos, texto y número de página - todos centrados verticalmente a la misma altura
+    // Iconos, texto y número de página - todos centrados verticalmente en la misma línea
     const centerY = pageHeight - 5 // Posición Y del centro (5mm desde abajo)
     const iconSize = 7
     const fontSize = 10
     const pageFontSize = 8
     
     // En jsPDF:
-    // - addImage: Y es la esquina superior izquierda. Para centrar verticalmente en centerY:
-    //   iconY = centerY - iconSize/2
-    // - text: Y es la línea base del texto. El centro visual del texto está aproximadamente
-    //   a mitad de altura del tamaño de fuente desde la base. Para centrar en centerY:
-    //   textY = centerY + fontSize/2 (aproximado, considerando que el centro está arriba de la base)
-    //   Pero mejor usar un factor de ajuste más preciso
+    // - addImage: Y es la esquina superior. Para centrar: iconY = centerY - iconSize/2
+    // - text: Y es la línea base. El centro visual del texto está aproximadamente a 0.4x del tamaño de fuente desde la base
+    //   Convertir pt a mm: 1pt ≈ 0.3528mm
+    const ptToMm = 0.3528
     
-    const iconY = centerY - iconSize / 2 // Iconos centrados
-    // El texto se alinea mejor poniendo la base ligeramente arriba del centro
-    const textY = centerY - (fontSize * 0.15) // Ajuste fino para alinear centro visual
-    const pageTextY = centerY - (pageFontSize * 0.15) // Mismo ajuste para número de página
+    // Todos los elementos centrados en centerY
+    const iconY = centerY - iconSize / 2 // Iconos: esquina superior para que centro esté en centerY
+    
+    // Texto: base del texto debe estar abajo del centro visual
+    // En jsPDF, las unidades son mm. El centro visual del texto Helvetica está aproximadamente
+    // a 0.38 * tamaño_pt convertido a mm desde la base (basado en x-height de Helvetica)
+    const textCenterOffset = (fontSize * ptToMm) * 0.38
+    const textY = centerY - textCenterOffset // Base del texto (centro visual en centerY)
+    
+    const pageTextCenterOffset = (pageFontSize * ptToMm) * 0.38
+    const pageTextY = centerY - pageTextCenterOffset // Base del número de página (centro visual en centerY)
     
     // Calcular ancho total para centrar
     const gap = 15 // Espacio entre los dos elementos
