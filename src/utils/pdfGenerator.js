@@ -61,7 +61,7 @@ export async function generateCatalogPDF(products) {
     } else {
       console.log('Error al cargar ofertas:', response.status)
     }
-  } catch (e) {
+      } catch (e) {
     console.log('No se pudieron cargar las ofertas semanales:', e)
   }
 
@@ -79,9 +79,9 @@ export async function generateCatalogPDF(products) {
       { align: 'center' }
     )
 
-    // Iconos y texto - centrados y más grandes, con más espacio
+    // Iconos, texto y número de página - todos a la misma altura Y
+    const pageNumberY = pageHeight - 5 // Posición Y del número de página
     const iconSize = 7
-    const iconY = footerY + 8 // Espacio entre texto e iconos
     const fontSize = 10
     
     // Calcular ancho total para centrar
@@ -91,46 +91,46 @@ export async function generateCatalogPDF(products) {
     const totalWidth = iconSize + 2 + whatsappTextWidth + gap + iconSize + 2 + instagramTextWidth
     const startX = (pageWidth - totalWidth) / 2
     
-    // WhatsApp
+    // WhatsApp - alineado con el número de página verticalmente
     if (whatsappImg) {
       try {
-        doc.addImage(whatsappImg, 'PNG', startX, iconY, iconSize, iconSize)
+        doc.addImage(whatsappImg, 'PNG', startX, pageNumberY - iconSize / 2, iconSize, iconSize)
         doc.setFontSize(fontSize)
         doc.setFont('helvetica', 'bold')
-        doc.text('+56 9 6917 2764', startX + iconSize + 2, iconY + 5)
+        doc.text('+56 9 6917 2764', startX + iconSize + 2, pageNumberY + 2)
       } catch (e) {
         doc.setFontSize(fontSize)
         doc.setFont('helvetica', 'bold')
-        doc.text('WhatsApp: +56 9 6917 2764', startX, iconY + 5)
+        doc.text('WhatsApp: +56 9 6917 2764', startX, pageNumberY + 2)
       }
     } else {
       doc.setFontSize(fontSize)
       doc.setFont('helvetica', 'bold')
-      doc.text('WhatsApp: +56 9 6917 2764', startX, iconY + 5)
+      doc.text('WhatsApp: +56 9 6917 2764', startX, pageNumberY + 2)
     }
     
-    // Instagram
+    // Instagram - alineado con el número de página verticalmente
     const instaX = startX + iconSize + 2 + whatsappTextWidth + gap
     if (instagramImg) {
       try {
-        doc.addImage(instagramImg, 'PNG', instaX, iconY, iconSize, iconSize)
+        doc.addImage(instagramImg, 'PNG', instaX, pageNumberY - iconSize / 2, iconSize, iconSize)
         doc.setFontSize(fontSize)
         doc.setFont('helvetica', 'bold')
-        doc.text('@kivi.chile', instaX + iconSize + 2, iconY + 5)
+        doc.text('@kivi.chile', instaX + iconSize + 2, pageNumberY + 2)
       } catch (e) {
         doc.setFontSize(fontSize)
         doc.setFont('helvetica', 'bold')
-        doc.text('Instagram: @kivi.chile', instaX, iconY + 5)
+        doc.text('Instagram: @kivi.chile', instaX, pageNumberY + 2)
       }
     } else {
       doc.setFontSize(fontSize)
       doc.setFont('helvetica', 'bold')
-      doc.text('Instagram: @kivi.chile', instaX, iconY + 5)
+      doc.text('Instagram: @kivi.chile', instaX, pageNumberY + 2)
     }
 
-    // Número de página
+    // Número de página - mantiene su posición (centrado horizontalmente, 5mm desde abajo)
     doc.setFontSize(8)
-    doc.text(`Página ${pageNum}`, pageWidth / 2, pageHeight - 5, { align: 'center' })
+    doc.text(`Página ${pageNum}`, pageWidth / 2, pageNumberY, { align: 'center' })
   }
 
   // Función para agregar página de ofertas semanales
