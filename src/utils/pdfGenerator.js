@@ -80,21 +80,23 @@ export async function generateCatalogPDF(products) {
     )
 
     // Iconos, texto y número de página - todos centrados verticalmente a la misma altura
-    const centerY = pageHeight - 5 // Posición Y base (5mm desde abajo)
+    const centerY = pageHeight - 5 // Posición Y del centro (5mm desde abajo)
     const iconSize = 7
     const fontSize = 10
     const pageFontSize = 8
     
-    // Calcular altura del texto (aproximadamente 70% del tamaño de fuente)
-    const textHeight = fontSize * 0.7
-    const pageTextHeight = pageFontSize * 0.7
-    const iconCenterY = centerY // Centro del icono coincide con centerY
+    // En jsPDF:
+    // - addImage: Y es la esquina superior izquierda. Para centrar verticalmente en centerY:
+    //   iconY = centerY - iconSize/2
+    // - text: Y es la línea base del texto. El centro visual del texto está aproximadamente
+    //   a mitad de altura del tamaño de fuente desde la base. Para centrar en centerY:
+    //   textY = centerY + fontSize/2 (aproximado, considerando que el centro está arriba de la base)
+    //   Pero mejor usar un factor de ajuste más preciso
     
-    // Para centrar texto: la posición Y en jsPDF es la base del texto
-    // El centro del texto está a textHeight/2 desde la base
-    // Para que el centro esté en centerY: y = centerY - textHeight/2
-    const textY = centerY - textHeight / 2
-    const pageTextY = centerY - pageTextHeight / 2
+    const iconY = centerY - iconSize / 2 // Iconos centrados
+    // El texto se alinea mejor poniendo la base ligeramente arriba del centro
+    const textY = centerY - (fontSize * 0.15) // Ajuste fino para alinear centro visual
+    const pageTextY = centerY - (pageFontSize * 0.15) // Mismo ajuste para número de página
     
     // Calcular ancho total para centrar
     const gap = 15 // Espacio entre los dos elementos
@@ -103,10 +105,10 @@ export async function generateCatalogPDF(products) {
     const totalWidth = iconSize + 2 + whatsappTextWidth + gap + iconSize + 2 + instagramTextWidth
     const startX = (pageWidth - totalWidth) / 2
     
-    // WhatsApp - icono y texto centrados verticalmente
+    // WhatsApp - icono y texto alineados en centerY
     if (whatsappImg) {
       try {
-        doc.addImage(whatsappImg, 'PNG', startX, iconCenterY - iconSize / 2, iconSize, iconSize)
+        doc.addImage(whatsappImg, 'PNG', startX, iconY, iconSize, iconSize)
         doc.setFontSize(fontSize)
         doc.setFont('helvetica', 'bold')
         doc.text('+56 9 6917 2764', startX + iconSize + 2, textY)
@@ -121,11 +123,11 @@ export async function generateCatalogPDF(products) {
       doc.text('WhatsApp: +56 9 6917 2764', startX, textY)
     }
     
-    // Instagram - icono y texto centrados verticalmente
+    // Instagram - icono y texto alineados en centerY
     const instaX = startX + iconSize + 2 + whatsappTextWidth + gap
     if (instagramImg) {
       try {
-        doc.addImage(instagramImg, 'PNG', instaX, iconCenterY - iconSize / 2, iconSize, iconSize)
+        doc.addImage(instagramImg, 'PNG', instaX, iconY, iconSize, iconSize)
         doc.setFontSize(fontSize)
         doc.setFont('helvetica', 'bold')
         doc.text('@kivi.chile', instaX + iconSize + 2, textY)
@@ -140,7 +142,7 @@ export async function generateCatalogPDF(products) {
       doc.text('Instagram: @kivi.chile', instaX, textY)
     }
 
-    // Número de página - centrado verticalmente y horizontalmente
+    // Número de página - alineado en centerY
     doc.setFontSize(pageFontSize)
     doc.text(`Página ${pageNum}`, pageWidth / 2, pageTextY, { align: 'center' })
   }
