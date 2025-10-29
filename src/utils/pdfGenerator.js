@@ -156,91 +156,126 @@ export async function generateCatalogPDF(products) {
     doc.text('FRUTAS Y VERDURAS FRESCAS', pageWidth / 2, currentY, { align: 'center' })
     currentY += 18
     
-    // Ofertas - diseño minimalista similar a las imágenes
-    const offers = [
-      { type: 'fruta', label: '¡Fruta de la semana!', offer: weeklyOffers.fruta, color: [255, 152, 0] },
-      { type: 'verdura', label: '¡Verdura de la semana!', offer: weeklyOffers.verdura, color: [76, 175, 80] },
-      { type: 'especial', label: weeklyOffers.especial?.product_name?.toLowerCase().includes('huevo') ? '¡Fruta Especial de la semana!' : '¡Especial de la semana!', offer: weeklyOffers.especial, color: [255, 152, 0] }
-    ]
-    
-    for (const item of offers) {
-      if (!item.offer) continue
+    // Función helper para renderizar una oferta
+    const renderOffer = async (offer, label, color, xPos, maxWidth, startY) => {
+      if (!offer) return startY
       
-      // Espaciado entre ofertas
-      if (currentY > 30) currentY += 8
+      let y = startY
       
-      // Verificar si necesitamos nueva página
-      if (currentY + 80 > pageHeight - 40) {
-        addFooter(1)
-        doc.addPage()
-        currentY = 20
-        // Re-agregar logo y slogan en nueva página si es necesario
-        if (logoImg && currentY === 20) {
-          try {
-            const logoWidth = 45
-            const logoHeight = (logoImg.height * logoWidth) / logoImg.width
-            doc.addImage(logoImg, 'PNG', (pageWidth - logoWidth) / 2, currentY, logoWidth, logoHeight)
-            currentY += logoHeight + 10
-            doc.setFontSize(9)
-            doc.setFont('helvetica', 'bold')
-            doc.setTextColor(80, 100, 80)
-            doc.text('FRUTAS Y VERDURAS FRESCAS', pageWidth / 2, currentY, { align: 'center' })
-            currentY += 15
-          } catch (e) {}
-        }
+      // Título de la oferta
+      doc.setFontSize(12)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(60, 60, 60)
+      doc.text(label, xPos + maxWidth / 2, y, { align: 'center' })
+      
+      // Línea subrayada
+      doc.setDrawColor(...color)
+      doc.setLineWidth(0.4)
+      const titleWidth = doc.getTextWidth(label)
+      doc.line(xPos + (maxWidth - titleWidth) / 2, y + 2, xPos + (maxWidth + titleWidth) / 2, y + 2)
+      y += 8
+      
+      // Nombre del producto y precio
+      doc.setFontSize(11)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(60, 60, 60)
+      const productName = offer.product?.name || 'Producto'
+      const priceText = `${productName}: ${offer.price || ''}`
+      // Ajustar texto si es muy largo
+      const maxTextWidth = maxWidth - 10
+      const priceTextWidth = doc.getTextWidth(priceText)
+      if (priceTextWidth > maxTextWidth) {
+        doc.setFontSize(10)
       }
+      doc.text(priceText, xPos + maxWidth / 2, y, { align: 'center', maxWidth: maxTextWidth })
+      y += 6
       
-      // Título de la oferta - centrado y destacado
-      doc.setFontSize(14)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(60, 60, 60)
-      const titleText = item.label
-      doc.text(titleText, pageWidth / 2, currentY, { align: 'center' })
-      
-      // Línea subrayada bajo el título
-      doc.setDrawColor(...item.color)
-      doc.setLineWidth(0.5)
-      const titleWidth = doc.getTextWidth(titleText)
-      doc.line((pageWidth - titleWidth) / 2, currentY + 2, (pageWidth + titleWidth) / 2, currentY + 2)
-      currentY += 10
-      
-      // Nombre del producto y precio - centrado
-      doc.setFontSize(13)
-      doc.setFont('helvetica', 'bold')
-      doc.setTextColor(60, 60, 60)
-      const productName = item.offer.product?.name || 'Producto'
-      const priceText = `${productName}: ${item.offer.price || ''}`
-      doc.text(priceText, pageWidth / 2, currentY, { align: 'center' })
-      currentY += 7
-      
-      // Precio de referencia - más pequeño y centrado
-      if (item.offer.reference_price) {
-        doc.setFontSize(9)
+      // Precio de referencia
+      if (offer.reference_price) {
+        doc.setFontSize(8)
         doc.setFont('helvetica', 'italic')
         doc.setTextColor(100, 100, 100)
-        doc.text(`(Precio referencia: ${item.offer.reference_price})`, pageWidth / 2, currentY, { align: 'center' })
-        currentY += 10
+        const refText = `(${offer.reference_price})`
+        const refWidth = doc.getTextWidth(refText)
+        if (refWidth > maxTextWidth) {
+          doc.setFontSize(7)
+        }
+        doc.text(refText, xPos + maxWidth / 2, y, { align: 'center', maxWidth: maxTextWidth })
+        y += 7
+      } else {
+        y += 4
       }
       
-      // Imagen del producto (si existe) - centrada y más grande
-      // Usar quality_photo_url del producto asociado
-      const productImageUrl = item.offer.product?.quality_photo_url || null
+      // Imagen del producto
+      const productImageUrl = offer.product?.quality_photo_url || null
+      let maxImgY = y
       if (productImageUrl) {
         try {
           const offerImg = await loadImage(productImageUrl)
-          const imgWidth = 60 // Más grande para que se destaque
-          const imgHeight = Math.min((offerImg.height * imgWidth) / offerImg.width, 50)
+          const imgWidth = Math.min(45, maxWidth - 10)
+          const imgHeight = Math.min((offerImg.height * imgWidth) / offerImg.width, 40)
           
-          if (currentY + imgHeight < pageHeight - 50) {
-            doc.addImage(offerImg, 'PNG', (pageWidth - imgWidth) / 2, currentY, imgWidth, imgHeight)
-            currentY += imgHeight + 8
+          if (y + imgHeight < pageHeight - 50) {
+            doc.addImage(offerImg, 'PNG', xPos + (maxWidth - imgWidth) / 2, y, imgWidth, imgHeight)
+            maxImgY = y + imgHeight + 5
           }
         } catch (e) {
           console.log('No se pudo cargar imagen de oferta:', productImageUrl)
         }
       }
       
-      currentY += 5
+      return Math.max(y, maxImgY)
+    }
+    
+    // FRUTA Y VERDURA EN MISMA FILA
+    const columnWidth = (pageWidth - margin * 2 - 10) / 2 // 10mm de espacio entre columnas
+    const columnStartY = currentY
+    
+    let frutaY = columnStartY
+    let verduraY = columnStartY
+    
+    // Renderizar fruta (columna izquierda)
+    if (weeklyOffers.fruta) {
+      frutaY = await renderOffer(
+        weeklyOffers.fruta,
+        '¡Fruta de la semana!',
+        [255, 152, 0],
+        margin,
+        columnWidth,
+        columnStartY
+      )
+    }
+    
+    // Renderizar verdura (columna derecha)
+    if (weeklyOffers.verdura) {
+      verduraY = await renderOffer(
+        weeklyOffers.verdura,
+        '¡Verdura de la semana!',
+        [76, 175, 80],
+        margin + columnWidth + 10,
+        columnWidth,
+        columnStartY
+      )
+    }
+    
+    // Avanzar Y al máximo de ambas columnas
+    currentY = Math.max(frutaY, verduraY) + 12
+    
+    // ESPECIAL ABAJO (centrado, ancho completo o parcial)
+    if (weeklyOffers.especial) {
+      const especialLabel = weeklyOffers.especial.product?.name?.toLowerCase().includes('huevo') 
+        ? '¡Fruta Especial de la semana!' 
+        : '¡Especial de la semana!'
+      
+      currentY = await renderOffer(
+        weeklyOffers.especial,
+        especialLabel,
+        [255, 152, 0],
+        margin,
+        pageWidth - margin * 2,
+        currentY
+      )
+      currentY += 8
     }
     
     // Pie de página con WhatsApp
