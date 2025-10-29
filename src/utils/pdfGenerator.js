@@ -67,7 +67,7 @@ export async function generateCatalogPDF(products) {
 
   // Función para agregar pie de página
   const addFooter = (pageNum) => {
-    const footerY = pageHeight - 22
+    const footerY = pageHeight - 28 // Más espacio desde abajo
 
     doc.setFontSize(8)
     doc.setFont('helvetica', 'italic')
@@ -79,9 +79,9 @@ export async function generateCatalogPDF(products) {
       { align: 'center' }
     )
 
-    // Iconos y texto - centrados y más grandes
+    // Iconos y texto - centrados y más grandes, con más espacio
     const iconSize = 7
-    const iconY = footerY + 6
+    const iconY = footerY + 10 // Más espacio entre texto e iconos (era 6, ahora 10)
     const fontSize = 10
     
     // Calcular ancho total para centrar
@@ -167,7 +167,7 @@ export async function generateCatalogPDF(products) {
     doc.setDrawColor(168, 213, 186) // Color verde pastel
     doc.setLineWidth(0.5)
     doc.line(margin, currentY, pageWidth - margin, currentY)
-    currentY += 8
+    currentY += 15 // Más espacio entre título y ofertas
     
     // Función helper para renderizar una oferta
     const renderOffer = async (offer, label, color, xPos, maxWidth, startY) => {
@@ -276,9 +276,7 @@ export async function generateCatalogPDF(products) {
     
     // ESPECIAL ABAJO (centrado, ancho completo o parcial)
     if (weeklyOffers.especial) {
-      const especialLabel = weeklyOffers.especial.product?.name?.toLowerCase().includes('huevo') 
-        ? '¡Fruta Especial de la semana!' 
-        : '¡Especial de la semana!'
+      const especialLabel = '¡Especial de la semana!'
       
       currentY = await renderOffer(
         weeklyOffers.especial,
@@ -291,24 +289,8 @@ export async function generateCatalogPDF(products) {
       currentY += 8
     }
     
-    // Pie de página con WhatsApp
-    const footerY = pageHeight - 25
-    if (whatsappImg) {
-      try {
-        const iconSize = 6
-        doc.addImage(whatsappImg, 'PNG', (pageWidth - 35) / 2, footerY, iconSize, iconSize)
-        doc.setFontSize(10)
-        doc.setFont('helvetica', 'bold')
-        doc.setTextColor(60, 100, 60)
-        doc.text('+56 9 6917 2764', pageWidth / 2 + 4, footerY + 4)
-      } catch (e) {
-        doc.setFontSize(10)
-        doc.setFont('helvetica', 'bold')
-        doc.setTextColor(60, 100, 60)
-        doc.text('+56 9 6917 2764', pageWidth / 2, footerY + 4, { align: 'center' })
-      }
-    }
-    
+    // Pie de página - ajustar para evitar sobreposición
+    // Usar addFooter normal que maneja mejor el espaciado
     addFooter(1)
   }
 
