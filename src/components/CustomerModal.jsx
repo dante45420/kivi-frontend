@@ -127,10 +127,64 @@ export default function CustomerModal({
           </div>
 
           {/* Pedidos */}
-          <div style={{ fontSize:18, fontWeight:700, marginBottom:16 }}>📦 Pedidos</div>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+            <div style={{ fontSize:18, fontWeight:700 }}>📦 Pedidos</div>
+            {(() => {
+              const ordersWithDebt = customerData.orders?.filter(ord => {
+                const due = ord.billed - ord.paid
+                return due > 0
+              }) || []
+              if (ordersWithDebt.length > 1) {
+                return (
+                  <button
+                    onClick={() => {
+                      // Generar factura acumulada de todos los pedidos con deuda
+                      const ordersInfo = ordersWithDebt.map(ord => {
+                        const orderInfo = orders?.find(o => o.id === ord.order_id) || { id: ord.order_id, name: `Pedido #${ord.order_id}` }
+                        const items = []
+                        if (ord.products) {
+                          ord.products.forEach(prod => {
+                            items.push({
+                              product_name: prod.product_name,
+                              qty: prod.charged_qty ?? prod.qty ?? 0,
+                              unit: prod.unit || 'kg',
+                              sale_unit_price: prod.unit_price || 0,
+                              notes: prod.notes
+                            })
+                          })
+                        }
+                        return { order: orderInfo, items }
+                      })
+                      generateInvoicePDF(ordersInfo, null, customerData.customer)
+                    }}
+                    style={{
+                      padding:'12px 20px',
+                      background:'linear-gradient(135deg, #88C4A8 0%, #6ba889 100%)',
+                      border:'none',
+                      borderRadius:12,
+                      cursor:'pointer',
+                      fontSize:14,
+                      fontWeight:600,
+                      color:'white',
+                      whiteSpace:'nowrap',
+                      transition:'all 0.2s',
+                      boxShadow:'0 2px 8px rgba(136, 196, 168, 0.3)'
+                    }}
+                    onMouseOver={e=> e.target.style.transform='translateY(-2px)'}
+                    onMouseOut={e=> e.target.style.transform='translateY(0)'}
+                  >
+                    📄 Factura Acumulada ({ordersWithDebt.length} pedidos)
+                  </button>
+                )
+              }
+              return null
+            })()}
+          </div>
           {customerData.orders && customerData.orders.map((ord)=> {
             const ordKey = `${customerId}-${ord.order_id}`
             const isOrdExpanded = expandedOrders[ordKey]
+            const due = ord.billed - ord.paid
+            const hasDebt = due > 0
             
             return (
               <div key={ord.order_id} style={{ marginBottom:16 }}>
@@ -140,8 +194,8 @@ export default function CustomerModal({
                     style={{ 
                       flex:1,
                       padding:'16px 20px', 
-                      background:'#f8f9fa', 
-                      border:'none', 
+                      background: hasDebt ? '#fff3e0' : '#f8f9fa', 
+                      border: hasDebt ? '2px solid #ff9800' : 'none', 
                       borderRadius:16,
                       textAlign:'left',
                       cursor:'pointer',
@@ -151,11 +205,12 @@ export default function CustomerModal({
                       fontSize:16,
                       transition:'all 0.2s'
                     }}
-                    onMouseOver={e=> e.target.style.background='#e8eaed'}
-                    onMouseOut={e=> e.target.style.background='#f8f9fa'}
+                    onMouseOver={e=> e.target.style.background= hasDebt ? '#ffe0b2' : '#e8eaed'}
+                    onMouseOut={e=> e.target.style.background= hasDebt ? '#fff3e0' : '#f8f9fa'}
                   >
                     <span style={{ fontWeight:600, fontSize:17 }}>
                       Pedido #{ord.order_id}
+                      {hasDebt && <span style={{ marginLeft:8, fontSize:12, color:'#f57c00', fontWeight:700 }}>⚠️ Deuda: ${due.toLocaleString('es-CL')}</span>}
                     </span>
                     <div style={{ display:'flex', alignItems:'center', gap:12 }}>
                       <span style={{ fontWeight:700, fontSize:18 }}>

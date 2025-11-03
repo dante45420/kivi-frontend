@@ -25,10 +25,12 @@ export default function ContabilidadNew(){
   const [orderFilter, setOrderFilter] = useState('')
   const [orderStatusFilter, setOrderStatusFilter] = useState('all')
   const [customerFilter, setCustomerFilter] = useState('')
+  const [customerDebtFilter, setCustomerDebtFilter] = useState('all') // all, with_debt
   
   // Módulo de pagos
   const [showPayments, setShowPayments] = useState(false)
-  const [paymentForm, setPaymentForm] = useState({ customer_id:'', order_id:'', amount:'', date:'' })
+  const [paymentForm, setPaymentForm] = useState({ customer_id:'', order_id:'', amount:'', date:'', distribution:{} }) // distribution: { order_id: amount }
+  const [paymentDistribution, setPaymentDistribution] = useState({})
   
   // Módulo de reasignación
   const [showReassign, setShowReassign] = useState(false)
@@ -65,18 +67,22 @@ export default function ContabilidadNew(){
   }
 
   // Funciones de filtrado
-  const filteredOrderCards = orderCards.filter(o => {
-    const matchesText = !orderFilter || 
-      (o.order.title && o.order.title.toLowerCase().includes(orderFilter.toLowerCase())) ||
-      o.order.id.toString().includes(orderFilter)
-    const matchesStatus = orderStatusFilter === 'all' || o.purchase_status === orderStatusFilter
-    return matchesText && matchesStatus
-  })
+  const filteredOrderCards = orderCards
+    .filter(o => {
+      const matchesText = !orderFilter || 
+        (o.order.title && o.order.title.toLowerCase().includes(orderFilter.toLowerCase())) ||
+        o.order.id.toString().includes(orderFilter)
+      const matchesStatus = orderStatusFilter === 'all' || o.purchase_status === orderStatusFilter
+      return matchesText && matchesStatus
+    })
+    .sort((a, b) => (b.order.id || 0) - (a.order.id || 0)) // Ordenar por número de pedido descendente
 
   const filteredCustomerCards = customerCards.filter(c => {
-    return !customerFilter || 
+    const matchesText = !customerFilter || 
       (c.customer.name && c.customer.name.toLowerCase().includes(customerFilter.toLowerCase())) ||
       c.customer.id.toString().includes(customerFilter)
+    const matchesDebt = customerDebtFilter === 'all' || (customerDebtFilter === 'with_debt' && c.due > 0)
+    return matchesText && matchesDebt
   })
 
   async function saveChargeEdit() {
@@ -93,23 +99,63 @@ export default function ContabilidadNew(){
   }
 
   async function handleRegisterPayment() {
-    if (!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount) {
-      alert('Falta completar: cliente, pedido y monto')
+    if (!paymentForm.customer_id || !paymentForm.amount) {
+      alert('Falta completar: cliente y monto')
       return
     }
-    try {
-      await createPayment({
-        customer_id: Number(paymentForm.customer_id),
-        order_id: Number(paymentForm.order_id),
-        amount: Number(paymentForm.amount),
-        method: 'efectivo',
-        date: paymentForm.date || new Date().toISOString()
-      })
-      setPaymentForm({ customer_id:'', order_id:'', amount:'', date:'' })
-      await loadAll()
-      alert('✓ Pago registrado correctamente')
-    } catch(err) {
-      alert('Error: ' + (err.message || 'No se pudo registrar el pago'))
+    
+    // Si hay distribución manual, crear pagos separados
+    const hasDistribution = Object.keys(paymentDistribution).length > 0 && 
+      Object.values(paymentDistribution).some(amt => amt > 0)
+    
+    if (hasDistribution) {
+      // Distribución manual: crear un pago por cada pedido con monto asignado
+      const totalDistributed = Object.values(paymentDistribution).reduce((sum, amt) => sum + (Number(amt) || 0), 0)
+      if (Math.abs(totalDistributed - Number(paymentForm.amount)) > 0.01) {
+        alert(`⚠️ La distribución (${totalDistributed.toLocaleString('es-CL')}) no coincide con el monto total (${Number(paymentForm.amount).toLocaleString('es-CL')})`)
+        return
+      }
+      
+      try {
+        for (const [orderId, amount] of Object.entries(paymentDistribution)) {
+          if (Number(amount) > 0) {
+            await createPayment({
+              customer_id: Number(paymentForm.customer_id),
+              order_id: Number(orderId),
+              amount: Number(amount),
+              method: 'efectivo',
+              date: paymentForm.date || new Date().toISOString()
+            })
+          }
+        }
+        setPaymentForm({ customer_id:'', order_id:'', amount:'', date:'', distribution:{} })
+        setPaymentDistribution({})
+        await loadAll()
+        alert('✓ Pagos distribuidos y registrados correctamente')
+      } catch(err) {
+        alert('Error: ' + (err.message || 'No se pudo registrar los pagos'))
+      }
+    } else {
+      // Distribución automática: usar el pedido seleccionado o distribuir automáticamente
+      if (!paymentForm.order_id) {
+        alert('Selecciona un pedido o distribuye el pago manualmente')
+        return
+      }
+      try {
+        await createPayment({
+          customer_id: Number(paymentForm.customer_id),
+          order_id: Number(paymentForm.order_id),
+          amount: Number(paymentForm.amount),
+          method: 'efectivo',
+          date: paymentForm.date || new Date().toISOString()
+        })
+        setPaymentForm({ customer_id:'', order_id:'', amount:'', date:'', distribution:{} })
+        setPaymentDistribution({})
+        await loadAll()
+        alert('✓ Pago registrado correctamente')
+      } catch(err) {
+        alert('Error: ' + (err.message || 'No se pudo registrar el pago'))
+      }
     }
   }
 
@@ -124,6 +170,15 @@ export default function ContabilidadNew(){
     if (!customerId) return []
     const customer = customerCards.find(c=> c.customer.id === Number(customerId))
     return customer?.orders || []
+  }
+
+  function getCustomerOrdersWithDebt(customerId) {
+    if (!customerId) return []
+    const orders = getCustomerOrders(customerId)
+    return orders.filter(ord => {
+      const due = ord.billed - ord.paid
+      return due > 0
+    })
   }
 
   async function loadChargesForOrder(orderId) {
@@ -237,7 +292,8 @@ export default function ContabilidadNew(){
                   className="input"
                   value={paymentForm.customer_id}
                   onChange={e=> {
-                    setPaymentForm(f=> ({ ...f, customer_id: e.target.value, order_id:'', amount:'' }))
+                    setPaymentForm(f=> ({ ...f, customer_id: e.target.value, order_id:'', amount:'', distribution:{} }))
+                    setPaymentDistribution({})
                   }}
                   style={{ width:'100%', padding:'12px 16px', borderRadius:12, fontSize:15 }}
                 >
@@ -250,27 +306,91 @@ export default function ContabilidadNew(){
                 </select>
               </div>
 
-              {/* Pedido */}
-              {paymentForm.customer_id && (
-                <div>
-                  <label style={{ display:'block', marginBottom:8, fontSize:14, fontWeight:600 }}>
-                    Pedido
-                  </label>
-                  <select
-                    className="input"
-                    value={paymentForm.order_id}
-                    onChange={e=> setPaymentForm(f=> ({ ...f, order_id: e.target.value }))}
-                    style={{ width:'100%', padding:'12px 16px', borderRadius:12, fontSize:15 }}
-                  >
-                    <option value="">Seleccionar pedido...</option>
-                    {getCustomerOrders(paymentForm.customer_id).map(ord=> (
-                      <option key={ord.order_id} value={ord.order_id}>
-                        Pedido #{ord.order_id} — ${ord.billed.toLocaleString('es-CL')}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              {/* Pedidos con deuda */}
+              {paymentForm.customer_id && (() => {
+                const ordersWithDebt = getCustomerOrdersWithDebt(paymentForm.customer_id)
+                const hasMultipleDebts = ordersWithDebt.length > 1
+                
+                return (
+                  <div>
+                    <label style={{ display:'block', marginBottom:8, fontSize:14, fontWeight:600 }}>
+                      {hasMultipleDebts ? 'Pedidos con deuda (distribuir pago)' : 'Pedido'}
+                    </label>
+                    {hasMultipleDebts ? (
+                      <div style={{ display:'grid', gap:12 }}>
+                        {ordersWithDebt.map(ord => {
+                          const due = ord.billed - ord.paid
+                          const distKey = String(ord.order_id)
+                          const distAmount = paymentDistribution[distKey] || ''
+                          return (
+                            <div key={ord.order_id} style={{ 
+                              padding:12, 
+                              background:'#fff3e0', 
+                              borderRadius:12, 
+                              border:'1px solid #ff9800'
+                            }}>
+                              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+                                <div>
+                                  <div style={{ fontWeight:600, fontSize:15 }}>Pedido #{ord.order_id}</div>
+                                  <div style={{ fontSize:13, opacity:0.7 }}>
+                                    Deuda: ${due.toLocaleString('es-CL')} | Facturado: ${ord.billed.toLocaleString('es-CL')}
+                                  </div>
+                                </div>
+                              </div>
+                              <input
+                                type="number"
+                                className="input"
+                                placeholder="Monto a asignar"
+                                value={distAmount}
+                                onChange={e=> {
+                                  const val = e.target.value
+                                  setPaymentDistribution(prev => ({ ...prev, [distKey]: val }))
+                                }}
+                                style={{ width:'100%', padding:'10px 14px', borderRadius:10, fontSize:14 }}
+                              />
+                            </div>
+                          )
+                        })}
+                        <div style={{ 
+                          padding:12, 
+                          background:'#f0f9f5', 
+                          borderRadius:12, 
+                          fontSize:14,
+                          fontWeight:600,
+                          color:'#2e7d32'
+                        }}>
+                          Total distribuido: ${Object.values(paymentDistribution).reduce((sum, amt) => sum + (Number(amt) || 0), 0).toLocaleString('es-CL')}
+                        </div>
+                      </div>
+                    ) : ordersWithDebt.length === 1 ? (
+                      <select
+                        className="input"
+                        value={paymentForm.order_id || ordersWithDebt[0].order_id}
+                        onChange={e=> setPaymentForm(f=> ({ ...f, order_id: e.target.value }))}
+                        style={{ width:'100%', padding:'12px 16px', borderRadius:12, fontSize:15 }}
+                      >
+                        <option value={ordersWithDebt[0].order_id}>
+                          Pedido #{ordersWithDebt[0].order_id} — Deuda: ${(ordersWithDebt[0].billed - ordersWithDebt[0].paid).toLocaleString('es-CL')}
+                        </option>
+                      </select>
+                    ) : (
+                      <select
+                        className="input"
+                        value={paymentForm.order_id}
+                        onChange={e=> setPaymentForm(f=> ({ ...f, order_id: e.target.value }))}
+                        style={{ width:'100%', padding:'12px 16px', borderRadius:12, fontSize:15 }}
+                      >
+                        <option value="">Seleccionar pedido...</option>
+                        {getCustomerOrders(paymentForm.customer_id).map(ord=> (
+                          <option key={ord.order_id} value={ord.order_id}>
+                            Pedido #{ord.order_id} — ${ord.billed.toLocaleString('es-CL')}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )
+              })()}
 
               {/* Monto */}
               <div>
@@ -319,18 +439,18 @@ export default function ContabilidadNew(){
               <button
                 onClick={handleRegisterPayment}
                 className="button"
-                disabled={!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount}
+                disabled={!paymentForm.customer_id || !paymentForm.amount}
                 style={{
                   width:'100%',
                   padding:'14px',
                   borderRadius:12,
-                  background: (!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount) ? '#e0e0e0' : '#88C4A8',
+                  background: (!paymentForm.customer_id || !paymentForm.amount) ? '#e0e0e0' : '#88C4A8',
                   color:'white',
                   border:'none',
                   fontSize:16,
                   fontWeight:700,
-                  cursor: (!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount) ? 'not-allowed' : 'pointer',
-                  boxShadow: (!paymentForm.customer_id || !paymentForm.order_id || !paymentForm.amount) ? 'none' : '0 4px 12px rgba(136, 196, 168, 0.3)'
+                  cursor: (!paymentForm.customer_id || !paymentForm.amount) ? 'not-allowed' : 'pointer',
+                  boxShadow: (!paymentForm.customer_id || !paymentForm.amount) ? 'none' : '0 4px 12px rgba(136, 196, 168, 0.3)'
                 }}
               >
                 ✓ Registrar Pago
@@ -668,15 +788,26 @@ export default function ContabilidadNew(){
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:12 }}>
           <h3 style={{ fontSize:24, fontWeight:700, margin:0 }}>👤 Por Cliente</h3>
           
-          {/* Filtro */}
-          <input 
-            type="text"
-            className="input"
-            placeholder="Buscar cliente..."
-            value={customerFilter}
-            onChange={e=> setCustomerFilter(e.target.value)}
-            style={{ width:200, padding:'8px 14px', borderRadius:10 }}
-          />
+          {/* Filtros */}
+          <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
+            <input 
+              type="text"
+              className="input"
+              placeholder="Buscar cliente..."
+              value={customerFilter}
+              onChange={e=> setCustomerFilter(e.target.value)}
+              style={{ width:200, padding:'8px 14px', borderRadius:10 }}
+            />
+            <select 
+              className="input"
+              value={customerDebtFilter}
+              onChange={e=> setCustomerDebtFilter(e.target.value)}
+              style={{ width:150, padding:'8px 14px', borderRadius:10 }}
+            >
+              <option value="all">Todos</option>
+              <option value="with_debt">Con deuda</option>
+            </select>
+          </div>
         </div>
         
         {/* Cards con scroll horizontal */}

@@ -869,7 +869,10 @@ export async function generateCatalogWithProfitPDF(products) {
 }
 
 /**
- * Genera un PDF de nota de cobro para un pedido
+ * Genera un PDF de nota de cobro para un pedido o múltiples pedidos
+ * @param {Object|Array} order - Puede ser un objeto de pedido o un array de objetos { order, items }
+ * @param {Array} items - Items del pedido (solo si order es un objeto)
+ * @param {Object} customer - Cliente
  */
 export async function generateInvoicePDF(order, items, customer) {
   const doc = new jsPDF({
@@ -910,6 +913,10 @@ export async function generateInvoicePDF(order, items, customer) {
     console.log('No se pudo cargar icono Instagram')
   }
 
+  // Determinar si es factura acumulada (múltiples pedidos)
+  const isAccumulated = Array.isArray(order)
+  const ordersData = isAccumulated ? order : [{ order, items: items || [] }]
+
   // Encabezado - Logo
   let currentY = 20
   if (logoImg) {
@@ -936,20 +943,32 @@ export async function generateInvoicePDF(order, items, customer) {
   // Información del pedido
   doc.setFontSize(12)
   doc.setFont('helvetica', 'bold')
-  doc.text('NOTA DE COBRO', margin, currentY)
+  doc.text(isAccumulated ? 'NOTA DE COBRO ACUMULADA' : 'NOTA DE COBRO', margin, currentY)
 
   currentY += 10
   doc.setFontSize(10)
   doc.setFont('helvetica', 'normal')
-  doc.text(`Pedido: ${order.title || order.name || `#${order.id}`}`, margin, currentY)
-  currentY += 7
-  const orderDate = order.created_at || order.date
-  doc.text(`Fecha: ${new Date(orderDate).toLocaleDateString('es-CL')}`, margin, currentY)
+  
+  if (isAccumulated) {
+    // Mostrar todos los pedidos
+    ordersData.forEach(({ order: ord }) => {
+      doc.text(`Pedido: ${ord.title || ord.name || `#${ord.id}`}`, margin, currentY)
+      currentY += 7
+    })
+  } else {
+    doc.text(`Pedido: ${order.title || order.name || `#${order.id}`}`, margin, currentY)
+    currentY += 7
+    const orderDate = order.created_at || order.date
+    if (orderDate) {
+      doc.text(`Fecha: ${new Date(orderDate).toLocaleDateString('es-CL')}`, margin, currentY)
+      currentY += 7
+    }
+  }
 
   if (customer) {
-    currentY += 7
     const customerName = typeof customer === 'object' ? (customer.name || customer.full_name || 'Cliente') : customer
     doc.text(`Cliente: ${customerName}`, margin, currentY)
+    currentY += 7
   }
 
   // Línea divisoria
@@ -974,41 +993,60 @@ export async function generateInvoicePDF(order, items, customer) {
   currentY += 14
   let total = 0
 
-  // Filtrar items con cantidad o precio 0
-  const filteredItems = items.filter(item => {
-    const qty = item.qty || 0
-    const unitPrice = item.sale_unit_price || 0
-    return qty > 0 && unitPrice > 0
-  })
+  // Procesar items de todos los pedidos
+  ordersData.forEach(({ order: ord, items: ordItems }, ordIdx) => {
+    // Filtrar items con cantidad o precio 0
+    const filteredItems = (ordItems || []).filter(item => {
+      const qty = item.qty || 0
+      const unitPrice = item.sale_unit_price || 0
+      return qty > 0 && unitPrice > 0
+    })
 
-  filteredItems.forEach(item => {
-    // Verificar si necesitamos una nueva página
-    if (currentY > doc.internal.pageSize.getHeight() - 40) {
-      doc.addPage()
-      currentY = 30
+    if (filteredItems.length === 0) return
+
+    // Si es factura acumulada, agregar encabezado del pedido
+    if (isAccumulated && ordIdx > 0) {
+      currentY += 5
+      doc.setDrawColor(200, 200, 200)
+      doc.setLineWidth(0.3)
+      doc.line(margin, currentY, pageWidth - margin, currentY)
+      currentY += 8
+      doc.setFontSize(10)
+      doc.setFont('helvetica', 'bold')
+      doc.setTextColor(COLORS.textDark)
+      doc.text(`Pedido #${ord.id || ordIdx + 1}`, margin, currentY)
+      currentY += 10
     }
 
-    doc.setFontSize(9)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(COLORS.textDark)
-    
-    doc.text(item.product_name || 'Producto', margin + 5, currentY)
-    doc.text(`${item.qty || 0} ${item.unit || 'kg'}`, pageWidth - 85, currentY)
-    doc.text(`$${(item.sale_unit_price || 0).toLocaleString('es-CL')}`, pageWidth - 55, currentY)
-    
-    const itemTotal = (item.qty || 0) * (item.sale_unit_price || 0)
-    total += itemTotal
-    doc.text(`$${itemTotal.toLocaleString('es-CL')}`, pageWidth - margin - 5, currentY, { align: 'right' })
-    
-    currentY += 7
-    
-    if (item.notes) {
-      doc.setFontSize(8)
-      doc.setFont('helvetica', 'italic')
-      doc.setTextColor(COLORS.text)
-      doc.text(`  📝 ${item.notes}`, margin + 5, currentY)
-      currentY += 6
-    }
+    filteredItems.forEach(item => {
+      // Verificar si necesitamos una nueva página
+      if (currentY > doc.internal.pageSize.getHeight() - 40) {
+        doc.addPage()
+        currentY = 30
+      }
+
+      doc.setFontSize(9)
+      doc.setFont('helvetica', 'normal')
+      doc.setTextColor(COLORS.textDark)
+      
+      doc.text(item.product_name || 'Producto', margin + 5, currentY)
+      doc.text(`${item.qty || 0} ${item.unit || 'kg'}`, pageWidth - 85, currentY)
+      doc.text(`$${(item.sale_unit_price || 0).toLocaleString('es-CL')}`, pageWidth - 55, currentY)
+      
+      const itemTotal = (item.qty || 0) * (item.sale_unit_price || 0)
+      total += itemTotal
+      doc.text(`$${itemTotal.toLocaleString('es-CL')}`, pageWidth - margin - 5, currentY, { align: 'right' })
+      
+      currentY += 7
+      
+      if (item.notes) {
+        doc.setFontSize(8)
+        doc.setFont('helvetica', 'italic')
+        doc.setTextColor(COLORS.text)
+        doc.text(`  📝 ${item.notes}`, margin + 5, currentY)
+        currentY += 6
+      }
+    })
   })
 
   // Total
@@ -1089,7 +1127,13 @@ export async function generateInvoicePDF(order, items, customer) {
 
   // Descargar
   const customerName = typeof customer === 'object' ? (customer.name || customer.full_name || 'Cliente') : (customer || 'Cliente')
-  const filename = `NotaDeCobro_${order.title || order.name || order.id}_${customerName}.pdf`.replace(/ /g, '_')
+  let filename
+  if (isAccumulated) {
+    const orderIds = ordersData.map(({ order: ord }) => ord.id || ord.title || '').join('_')
+    filename = `NotaDeCobro_Acumulada_${orderIds}_${customerName}.pdf`.replace(/ /g, '_')
+  } else {
+    filename = `NotaDeCobro_${order.title || order.name || order.id}_${customerName}.pdf`.replace(/ /g, '_')
+  }
   doc.save(filename)
 }
 

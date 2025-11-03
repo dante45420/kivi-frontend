@@ -41,7 +41,7 @@ export default function Compras() {
   const [expandedMenuFor, setExpandedMenuFor] = useState(null)
 
   // Estados de filtros
-  const [filterStatus, setFilterStatus] = useState('all') // all, complete, incomplete
+  const [filterStatus, setFilterStatus] = useState('incomplete') // all, complete, incomplete (default: incomplete)
   const [filterCategory, setFilterCategory] = useState('all') // all, fruta, verdura
   const [filterPurchaseType, setFilterPurchaseType] = useState('all') // all, cajon, detalle
 
@@ -359,10 +359,13 @@ export default function Compras() {
     
     const segments = []
     
-    // SIEMPRE mostrar kg y unidades compradas (aunque sea 0)
-    // Formato: "X/Y kg" donde X es lo comprado y Y es lo pedido
-    segments.push(`${totalKgComprado}/${needKg} kg`)
-    segments.push(`${totalUnidComprado}/${needUnit} unid`)
+    // Solo mostrar si hay necesidad en esa unidad (no mostrar 0/0)
+    if (needKg > 0) {
+      segments.push({ type: 'kg', comprado: totalKgComprado, pedido: needKg })
+    }
+    if (needUnit > 0) {
+      segments.push({ type: 'unit', comprado: totalUnidComprado, pedido: needUnit })
+    }
     
     return segments
   }
@@ -407,9 +410,9 @@ export default function Compras() {
       const product = products.find(p => p.id === g.product_id)
       const status = getProductStatus(g)
       
-      // Filtro de estado
-      if (filterStatus === 'complete' && status !== 'complete') return false
-      if (filterStatus === 'incomplete' && status === 'complete') return false
+    // Filtro de estado
+    if (filterStatus === 'complete' && status !== 'complete') return false
+    if (filterStatus === 'incomplete' && (status === 'complete' || status === 'excess')) return false // Excluir excedentes cuando se filtra por faltantes
       
       // Filtro de categoría
       if (filterCategory !== 'all' && product?.category !== filterCategory) return false
@@ -636,13 +639,44 @@ export default function Compras() {
                     }}
                   >
                             <div style={{ flex:1, minWidth:120 }}>
-                              <div style={{ fontSize:15, fontWeight:700, marginBottom:4 }}>
+                              <div style={{ fontSize:15, fontWeight:700, marginBottom:8 }}>
                         {g.product_name}
                 </div>
-                              <div style={{ display:'flex', gap:6, alignItems:'center', fontSize:12, opacity:0.7 }}>
-                        {qtySegments(g).map((t,i)=>(
-                          <span key={i} style={{ fontWeight:600 }}>{t}</span>
-            ))}
+                              <div style={{ display:'flex', gap:12, alignItems:'center', flexWrap:'wrap' }}>
+                        {(() => {
+                          const status = getProductStatus(g)
+                          const segments = qtySegments(g)
+                          const colorMap = {
+                            'incomplete': { border: '#d32f2f', shadow: '0 0 12px rgba(211, 47, 47, 0.4)' },
+                            'complete': { border: '#2e7d32', shadow: '0 0 12px rgba(46, 125, 50, 0.4)' },
+                            'excess': { border: '#f57c00', shadow: '0 0 12px rgba(245, 124, 0, 0.4)' }
+                          }
+                          const colors = colorMap[status] || colorMap['incomplete']
+                          
+                          return segments.map((seg, i) => {
+                            const displayText = seg.type === 'kg' ? 'kg' : 'unid'
+                            return (
+                              <span 
+                                key={i} 
+                                style={{ 
+                                  fontSize: 28,
+                                  fontWeight: 800,
+                                  padding: '8px 16px',
+                                  borderRadius: 12,
+                                  border: `3px solid ${colors.border}`,
+                                  boxShadow: colors.shadow,
+                                  background: 'white',
+                                  color: colors.border,
+                                  display: 'inline-block',
+                                  minWidth: 100,
+                                  textAlign: 'center'
+                                }}
+                              >
+                                {seg.comprado.toFixed(1)}/{seg.pedido} {displayText}
+                              </span>
+                            )
+                          })
+                        })()}
                               </div>
                     </div>
 
