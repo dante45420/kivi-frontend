@@ -647,9 +647,9 @@ export default function Compras() {
                           const status = getProductStatus(g)
                           const segments = qtySegments(g)
                           const colorMap = {
-                            'incomplete': { border: '#d32f2f', shadow: '0 0 12px rgba(211, 47, 47, 0.4)' },
-                            'complete': { border: '#2e7d32', shadow: '0 0 12px rgba(46, 125, 50, 0.4)' },
-                            'excess': { border: '#f57c00', shadow: '0 0 12px rgba(245, 124, 0, 0.4)' }
+                            'incomplete': { border: '#ffb3ba', bg: '#ffe0e0', text: '#c85a5a' },
+                            'complete': { border: '#b3ffb3', bg: '#e0ffe0', text: '#5a8a5a' },
+                            'excess': { border: '#ffe0b3', bg: '#fff3e0', text: '#b8864a' }
                           }
                           const colors = colorMap[status] || colorMap['incomplete']
                           
@@ -659,16 +659,15 @@ export default function Compras() {
                               <span 
                                 key={i} 
                                 style={{ 
-                                  fontSize: 28,
-                                  fontWeight: 800,
-                                  padding: '8px 16px',
-                                  borderRadius: 12,
-                                  border: `3px solid ${colors.border}`,
-                                  boxShadow: colors.shadow,
-                                  background: 'white',
-                                  color: colors.border,
+                                  fontSize: 20,
+                                  fontWeight: 600,
+                                  padding: '6px 12px',
+                                  borderRadius: 8,
+                                  border: `2px solid ${colors.border}`,
+                                  background: colors.bg,
+                                  color: colors.text,
                                   display: 'inline-block',
-                                  minWidth: 100,
+                                  minWidth: 90,
                                   textAlign: 'center'
                                 }}
                               >
