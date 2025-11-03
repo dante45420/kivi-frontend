@@ -104,58 +104,53 @@ export default function ContabilidadNew(){
       return
     }
     
-    // Si hay distribución manual, crear pagos separados
+    const ordersWithDebt = getCustomerOrdersWithDebt(paymentForm.customer_id)
+    const hasMultipleDebts = ordersWithDebt.length > 1
+    
+    // Si hay distribución manual, validar que sume correctamente
     const hasDistribution = Object.keys(paymentDistribution).length > 0 && 
-      Object.values(paymentDistribution).some(amt => amt > 0)
+      Object.values(paymentDistribution).some(amt => Number(amt) > 0)
     
     if (hasDistribution) {
-      // Distribución manual: crear un pago por cada pedido con monto asignado
       const totalDistributed = Object.values(paymentDistribution).reduce((sum, amt) => sum + (Number(amt) || 0), 0)
       if (Math.abs(totalDistributed - Number(paymentForm.amount)) > 0.01) {
-        alert(`⚠️ La distribución (${totalDistributed.toLocaleString('es-CL')}) no coincide con el monto total (${Number(paymentForm.amount).toLocaleString('es-CL')})`)
+        alert(`⚠️ La distribución ($${totalDistributed.toLocaleString('es-CL')}) no coincide con el monto total ($${Number(paymentForm.amount).toLocaleString('es-CL')})`)
         return
+      }
+    }
+    
+    try {
+      // Determinar el order_id a enviar
+      let orderIdToSend = null
+      if (hasDistribution) {
+        // Si hay distribución manual, no enviar order_id (se distribuirá según la distribución)
+        orderIdToSend = null
+      } else if (ordersWithDebt.length === 1) {
+        // Si hay un solo pedido con deuda, enviarlo automáticamente
+        orderIdToSend = ordersWithDebt[0].order_id
+      } else if (paymentForm.order_id) {
+        // Si hay múltiples pedidos pero se seleccionó uno específico, usar ese
+        orderIdToSend = Number(paymentForm.order_id)
+      } else {
+        // Si hay múltiples pedidos y no se seleccionó ninguno, no enviar order_id (distribución automática)
+        orderIdToSend = null
       }
       
-      try {
-        for (const [orderId, amount] of Object.entries(paymentDistribution)) {
-          if (Number(amount) > 0) {
-            await createPayment({
-              customer_id: Number(paymentForm.customer_id),
-              order_id: Number(orderId),
-              amount: Number(amount),
-              method: 'efectivo',
-              date: paymentForm.date || new Date().toISOString()
-            })
-          }
-        }
-        setPaymentForm({ customer_id:'', order_id:'', amount:'', date:'', distribution:{} })
-        setPaymentDistribution({})
-        await loadAll()
-        alert('✓ Pagos distribuidos y registrados correctamente')
-      } catch(err) {
-        alert('Error: ' + (err.message || 'No se pudo registrar los pagos'))
-      }
-    } else {
-      // Distribución automática: usar el pedido seleccionado o distribuir automáticamente
-      if (!paymentForm.order_id) {
-        alert('Selecciona un pedido o distribuye el pago manualmente')
-        return
-      }
-      try {
-        await createPayment({
-          customer_id: Number(paymentForm.customer_id),
-          order_id: Number(paymentForm.order_id),
-          amount: Number(paymentForm.amount),
-          method: 'efectivo',
-          date: paymentForm.date || new Date().toISOString()
-        })
-        setPaymentForm({ customer_id:'', order_id:'', amount:'', date:'', distribution:{} })
-        setPaymentDistribution({})
-        await loadAll()
-        alert('✓ Pago registrado correctamente')
-      } catch(err) {
-        alert('Error: ' + (err.message || 'No se pudo registrar el pago'))
-      }
+      // Crear un solo pago con distribución automática o manual
+      await createPayment({
+        customer_id: Number(paymentForm.customer_id),
+        order_id: orderIdToSend,
+        amount: Number(paymentForm.amount),
+        method: 'efectivo',
+        date: paymentForm.date || new Date().toISOString(),
+        distribution: hasDistribution ? paymentDistribution : {} // Pasar distribución manual si existe
+      })
+      setPaymentForm({ customer_id:'', order_id:'', amount:'', date:'', distribution:{} })
+      setPaymentDistribution({})
+      await loadAll()
+      alert('✓ Pago registrado correctamente')
+    } catch(err) {
+      alert('Error: ' + (err.message || 'No se pudo registrar el pago'))
     }
   }
 
@@ -363,16 +358,17 @@ export default function ContabilidadNew(){
                         </div>
                       </div>
                     ) : ordersWithDebt.length === 1 ? (
-                      <select
-                        className="input"
-                        value={paymentForm.order_id || ordersWithDebt[0].order_id}
-                        onChange={e=> setPaymentForm(f=> ({ ...f, order_id: e.target.value }))}
-                        style={{ width:'100%', padding:'12px 16px', borderRadius:12, fontSize:15 }}
-                      >
-                        <option value={ordersWithDebt[0].order_id}>
-                          Pedido #{ordersWithDebt[0].order_id} — Deuda: ${(ordersWithDebt[0].billed - ordersWithDebt[0].paid).toLocaleString('es-CL')}
-                        </option>
-                      </select>
+                      <div style={{ 
+                        padding:12, 
+                        background:'#e8f5e9', 
+                        borderRadius:12, 
+                        border:'1px solid #4caf50',
+                        fontSize:14,
+                        fontWeight:600,
+                        color:'#2e7d32'
+                      }}>
+                        ✓ Pedido #{ordersWithDebt[0].order_id} — Deuda: ${(ordersWithDebt[0].billed - ordersWithDebt[0].paid).toLocaleString('es-CL')} (se asignará automáticamente)
+                      </div>
                     ) : (
                       <select
                         className="input"
