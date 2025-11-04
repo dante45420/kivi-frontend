@@ -535,20 +535,38 @@ export default function ContenidoSocial() {
                               >
                                 <div style={{ display:'flex', gap:16, alignItems:'flex-start' }}>
                                   <div style={{ flexShrink:0 }}>
-                                    {media.url && (
-                                      <img
-                                        src={media.url}
-                                        alt={`Slide ${idx + 1}`}
-                                        style={{
-                                          width:200,
-                                          height:200,
-                                          objectFit:'cover',
-                                          borderRadius:8,
-                                          border:'1px solid #ddd'
-                                        }}
-                                        onError={(e) => e.target.style.display = 'none'}
-                                      />
-                                    )}
+                                    {(() => {
+                                      // Construir URL completa si es relativa
+                                      const getImageUrl = (url) => {
+                                        if (!url) return null
+                                        if (url.startsWith('http://') || url.startsWith('https://')) {
+                                          return url
+                                        }
+                                        if (url.startsWith('/api/')) {
+                                          const apiUrl = import.meta.env.VITE_API_URL || 'https://kivi-backend.onrender.com'
+                                          return `${apiUrl}${url}`
+                                        }
+                                        return url
+                                      }
+                                      
+                                      const imageUrl = getImageUrl(media.url)
+                                      
+                                      return imageUrl ? (
+                                        <img
+                                          src={imageUrl}
+                                          alt={`Slide ${idx + 1}`}
+                                          style={{
+                                            width:300,
+                                            height:300,
+                                            objectFit:'contain',
+                                            borderRadius:8,
+                                            border:'2px solid #A8D5BA',
+                                            background:'#f9f9f9'
+                                          }}
+                                          onError={(e) => e.target.style.display = 'none'}
+                                        />
+                                      ) : null
+                                    })()}
                                     <div style={{ 
                                       marginTop:8, 
                                       fontSize:12, 
@@ -660,54 +678,119 @@ export default function ContenidoSocial() {
                           }}>
                             Carrusel ({content.media_urls.length} slides):
                           </div>
-                          <div style={{ display:'grid', gap:12 }}>
-                            {content.media_urls.map((media, idx) => (
-                              <div
-                                key={idx}
-                                style={{
-                                  display:'flex',
-                                  gap:16,
-                                  border:'1px solid #ddd',
-                                  borderRadius:8,
-                                  padding:12,
-                                  background:'#fafafa'
-                                }}
-                              >
-                                <div style={{ flexShrink:0 }}>
-                                  {media.url && (
-                                    <img
-                                      src={media.url}
-                                      alt={`Slide ${idx + 1}`}
-                                      style={{
-                                        width:150,
-                                        height:150,
-                                        objectFit:'cover',
-                                        borderRadius:8,
-                                        border:'1px solid #ddd'
-                                      }}
-                                      onError={(e) => e.target.style.display = 'none'}
-                                    />
-                                  )}
-                                </div>
-                                <div style={{ flex:1 }}>
+                          <div style={{ display:'grid', gap:20 }}>
+                            {content.media_urls.map((media, idx) => {
+                              // Construir URL completa si es relativa
+                              const getImageUrl = (url) => {
+                                if (!url) return null
+                                if (url.startsWith('http://') || url.startsWith('https://')) {
+                                  return url
+                                }
+                                if (url.startsWith('/api/')) {
+                                  // Si es una ruta relativa, construir la URL completa
+                                  const apiUrl = import.meta.env.VITE_API_URL || 'https://kivi-backend.onrender.com'
+                                  return `${apiUrl}${url}`
+                                }
+                                return url
+                              }
+                              
+                              const imageUrl = getImageUrl(media.url)
+                              
+                              return (
+                                <div
+                                  key={idx}
+                                  style={{
+                                    border:'2px solid #A8D5BA',
+                                    borderRadius:16,
+                                    padding:20,
+                                    background:'white',
+                                    boxShadow:'0 2px 8px rgba(0,0,0,0.1)'
+                                  }}
+                                >
                                   <div style={{ 
-                                    fontSize:12, 
-                                    opacity:0.7, 
-                                    marginBottom:4,
-                                    fontWeight:600
+                                    fontSize:14, 
+                                    fontWeight:700, 
+                                    marginBottom:12,
+                                    color:'#333',
+                                    textTransform:'capitalize'
                                   }}>
                                     Slide {idx + 1} - {media.offer_type || 'Oferta'}
                                   </div>
+                                  
+                                  {imageUrl && (
+                                    <div style={{ 
+                                      marginBottom:16,
+                                      textAlign:'center',
+                                      background:'#f9f9f9',
+                                      borderRadius:12,
+                                      padding:16,
+                                      border:'2px solid #e0e0e0'
+                                    }}>
+                                      <img
+                                        src={imageUrl}
+                                        alt={`Slide ${idx + 1} - ${media.product_name || 'Oferta'}`}
+                                        style={{
+                                          maxWidth:'100%',
+                                          height:'auto',
+                                          maxHeight:500,
+                                          borderRadius:12,
+                                          boxShadow:'0 4px 12px rgba(0,0,0,0.15)',
+                                          objectFit:'contain'
+                                        }}
+                                        onError={(e) => {
+                                          e.target.style.display = 'none'
+                                          e.target.nextSibling.style.display = 'block'
+                                        }}
+                                      />
+                                      <div style={{ 
+                                        display:'none',
+                                        padding:20,
+                                        color:'#999',
+                                        fontSize:14
+                                      }}>
+                                        No se pudo cargar la imagen
+                                      </div>
+                                    </div>
+                                  )}
+                                  
                                   <div style={{ 
-                                    whiteSpace:'pre-wrap',
-                                    fontSize:14,
-                                    lineHeight:1.5
+                                    background:'#f5f5f5',
+                                    padding:12,
+                                    borderRadius:8,
+                                    marginTop:12
                                   }}>
-                                    {media.caption || 'Sin descripción'}
+                                    <div style={{ 
+                                      fontSize:16,
+                                      fontWeight:600,
+                                      marginBottom:8,
+                                      color:'#333'
+                                    }}>
+                                      {media.product_name || 'Producto'}
+                                    </div>
+                                    {media.price && (
+                                      <div style={{ 
+                                        fontSize:18,
+                                        fontWeight:700,
+                                        color:'#4CAF50',
+                                        marginBottom:4
+                                      }}>
+                                        {media.price}
+                                      </div>
+                                    )}
+                                    {media.reference_price && (
+                                      <div style={{ 
+                                        fontSize:13,
+                                        opacity:0.7,
+                                        fontStyle:'italic',
+                                        marginTop:4
+                                      }}>
+                                        (Precio referencia: {media.reference_price})
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
-                              </div>
-                            ))}
+                              )
+                            })}
                           </div>
                         </div>
                       )}
