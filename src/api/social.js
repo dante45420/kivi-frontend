@@ -64,8 +64,25 @@ export function previewWhatsAppMessage(customerId) {
   return apiFetch(`/social/whatsapp/preview/${customerId}`)
 }
 
-export function generateCatalogBatch() {
-  return apiFetch('/social/whatsapp/generate-catalog-batch', { method: 'POST' })
+export function generateCatalogBatch(baseMessageText) {
+  return apiFetch('/social/whatsapp/generate-catalog-batch', { 
+    method: 'POST',
+    body: baseMessageText ? { base_message_text: baseMessageText } : {}
+  })
+}
+
+export function batchApproveMessages(messageType = 'catalog_offer') {
+  return apiFetch('/social/whatsapp/batch-approve', { 
+    method: 'POST',
+    body: { message_type: messageType }
+  })
+}
+
+export function batchRejectMessages(messageType = 'catalog_offer') {
+  return apiFetch('/social/whatsapp/batch-reject', { 
+    method: 'POST',
+    body: { message_type: messageType }
+  })
 }
 
 export function approveWhatsAppMessage(messageId) {

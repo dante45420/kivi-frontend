@@ -7,11 +7,16 @@ import {
   updateInstagramContent,
   listWhatsAppMessages,
   generateCatalogBatch,
+  batchApproveMessages,
+  batchRejectMessages,
   approveWhatsAppMessage,
   rejectWhatsAppMessage,
   updateWhatsAppMessage,
   previewWhatsAppMessage
 } from '../api/social'
+import { listProducts } from '../api/products'
+import { listVariants, listVariantTiers } from '../api/variants'
+import { generateCatalogPDF } from '../utils/pdfGenerator'
 import '../styles/globals.css'
 
 export default function ContenidoSocial() {
@@ -22,6 +27,9 @@ export default function ContenidoSocial() {
   const [filterStatus, setFilterStatus] = useState('pending_approval')
   const [editingContent, setEditingContent] = useState(null)
   const [editingMessage, setEditingMessage] = useState(null)
+  const [baseMessageText, setBaseMessageText] = useState('')
+  const [showBaseMessageEditor, setShowBaseMessageEditor] = useState(false)
+  const [generatingCatalog, setGeneratingCatalog] = useState(false)
 
   useEffect(() => {
     loadContent()
@@ -65,13 +73,76 @@ export default function ContenidoSocial() {
     
     try {
       setLoading(true)
-      const result = await generateCatalogBatch()
+      const result = await generateCatalogBatch(baseMessageText || undefined)
       alert(`✓ ${result.message}`)
+      setBaseMessageText('')
+      setShowBaseMessageEditor(false)
       await loadContent()
     } catch(err) {
       alert('Error: ' + (err.message || 'No se pudo generar los mensajes'))
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function handleBatchApprove() {
+    if (!confirm('¿Aprobar TODOS los mensajes pendientes de aprobación?')) return
+    
+    try {
+      const result = await batchApproveMessages('catalog_offer')
+      alert(`✓ ${result.message}`)
+      await loadContent()
+    } catch(err) {
+      alert('Error: ' + (err.message || 'No se pudieron aprobar los mensajes'))
+    }
+  }
+
+  async function handleBatchReject() {
+    if (!confirm('¿Rechazar TODOS los mensajes pendientes de aprobación?')) return
+    
+    try {
+      const result = await batchRejectMessages('catalog_offer')
+      alert(`✓ ${result.message}`)
+      await loadContent()
+    } catch(err) {
+      alert('Error: ' + (err.message || 'No se pudieron rechazar los mensajes'))
+    }
+  }
+
+  async function handleDownloadCatalog() {
+    try {
+      setGeneratingCatalog(true)
+      // Cargar productos con precios oficiales
+      const productsData = await listProducts(false)
+      
+      // Cargar variantes y tiers para cada producto
+      const productsWithVariants = await Promise.all(
+        productsData.map(async (product) => {
+          try {
+            const variants = await listVariants(product.id)
+            const variantsWithTiers = await Promise.all(
+              variants.map(async (variant) => {
+                try {
+                  const tiers = await listVariantTiers(product.id, variant.id)
+                  return { ...variant, price_tiers: tiers }
+                } catch {
+                  return { ...variant, price_tiers: [] }
+                }
+              })
+            )
+            return { ...product, variants: variantsWithTiers }
+          } catch {
+            return { ...product, variants: [] }
+          }
+        })
+      )
+      
+      // Generar y descargar el PDF
+      await generateCatalogPDF(productsWithVariants)
+    } catch(err) {
+      alert('Error: ' + (err.message || 'No se pudo generar el catálogo'))
+    } finally {
+      setGeneratingCatalog(false)
     }
   }
 
@@ -218,23 +289,123 @@ export default function ContenidoSocial() {
           <option value="published">Publicados</option>
         </select>
 
-        <button
-          onClick={activeTab === 'instagram' ? handleGenerateInstagram : handleGenerateWhatsApp}
-          disabled={loading}
-          style={{
-            padding:'10px 20px',
-            background:'#A8D5BA',
-            color:'#000',
-            border:'none',
-            borderRadius:8,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            fontWeight:600,
-            opacity: loading ? 0.6 : 1
-          }}
-        >
-          {loading ? '⏳ Generando...' : activeTab === 'instagram' ? '✨ Generar Carrusel' : '📋 Generar Mensajes'}
-        </button>
+        <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+          {activeTab === 'whatsapp' && (
+            <>
+              <button
+                onClick={handleDownloadCatalog}
+                disabled={generatingCatalog}
+                style={{
+                  padding:'10px 20px',
+                  background:'#FF9800',
+                  color:'white',
+                  border:'none',
+                  borderRadius:8,
+                  cursor: generatingCatalog ? 'not-allowed' : 'pointer',
+                  fontWeight:600,
+                  opacity: generatingCatalog ? 0.6 : 1
+                }}
+              >
+                {generatingCatalog ? '⏳ Generando...' : '📄 Ver Catálogo'}
+              </button>
+              {filterStatus === 'pending_approval' && whatsappMessages.length > 0 && (
+                <>
+                  <button
+                    onClick={handleBatchApprove}
+                    style={{
+                      padding:'10px 20px',
+                      background:'#4CAF50',
+                      color:'white',
+                      border:'none',
+                      borderRadius:8,
+                      cursor:'pointer',
+                      fontWeight:600
+                    }}
+                  >
+                    ✓ Aprobar Todos ({whatsappMessages.length})
+                  </button>
+                  <button
+                    onClick={handleBatchReject}
+                    style={{
+                      padding:'10px 20px',
+                      background:'#f44336',
+                      color:'white',
+                      border:'none',
+                      borderRadius:8,
+                      cursor:'pointer',
+                      fontWeight:600
+                    }}
+                  >
+                    ✗ Rechazar Todos ({whatsappMessages.length})
+                  </button>
+                </>
+              )}
+            </>
+          )}
+          <button
+            onClick={activeTab === 'instagram' ? handleGenerateInstagram : handleGenerateWhatsApp}
+            disabled={loading}
+            style={{
+              padding:'10px 20px',
+              background:'#A8D5BA',
+              color:'#000',
+              border:'none',
+              borderRadius:8,
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontWeight:600,
+              opacity: loading ? 0.6 : 1
+            }}
+          >
+            {loading ? '⏳ Generando...' : activeTab === 'instagram' ? '✨ Generar Carrusel' : '📋 Generar Mensajes'}
+          </button>
+        </div>
       </div>
+
+      {/* Editor de mensaje base para WhatsApp */}
+      {activeTab === 'whatsapp' && (
+        <div style={{ 
+          marginBottom:24,
+          padding:16,
+          background:'#f9f9f9',
+          borderRadius:12,
+          border:'1px solid #ddd'
+        }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+            <label style={{ fontWeight:600, fontSize:14 }}>
+              Mensaje Base (opcional - se aplicará a todos los mensajes):
+            </label>
+            <button
+              onClick={() => setShowBaseMessageEditor(!showBaseMessageEditor)}
+              style={{
+                padding:'6px 12px',
+                background:'transparent',
+                border:'1px solid #ddd',
+                borderRadius:6,
+                cursor:'pointer',
+                fontSize:12
+              }}
+            >
+              {showBaseMessageEditor ? 'Ocultar' : 'Editar'}
+            </button>
+          </div>
+          {showBaseMessageEditor && (
+            <textarea
+              value={baseMessageText}
+              onChange={(e) => setBaseMessageText(e.target.value)}
+              placeholder="Deja vacío para usar el mensaje por defecto. Ejemplo: 📋 Catálogo de esta semana con ofertas vigentes\n\n🎉 ¡OFERTA NOVIEMBRE! Pide junto a un familiar o amigo y ambos obtienen 15% de descuento. Válido solo JUEVES y LUNES de noviembre. 🛒"
+              rows={5}
+              style={{
+                width:'100%',
+                padding:12,
+                borderRadius:8,
+                border:'1px solid #ddd',
+                fontSize:14,
+                fontFamily:'inherit'
+              }}
+            />
+          )}
+        </div>
+      )}
 
       {/* Contenido */}
       {loading && (
@@ -598,7 +769,12 @@ export default function ContenidoSocial() {
                   <div style={{ display:'flex', justifyContent:'space-between', marginBottom:16 }}>
                     <div>
                       <div style={{ fontWeight:600, fontSize:18, marginBottom:4 }}>
-                        {message.customer?.name || 'Cliente sin nombre'}
+                        {message.customer?.nickname || message.customer?.name || 'Cliente sin nombre'}
+                        {message.customer?.nickname && message.customer?.name && (
+                          <span style={{ fontSize:14, opacity:0.6, fontWeight:400, marginLeft:8 }}>
+                            ({message.customer.name})
+                          </span>
+                        )}
                       </div>
                       <div style={{ fontSize:14, opacity:0.7 }}>
                         {message.customer?.phone || 'Sin teléfono'}
