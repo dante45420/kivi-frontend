@@ -688,13 +688,26 @@ export default function ContenidoSocial() {
                                 }
                                 if (url.startsWith('/api/')) {
                                   // Si es una ruta relativa, construir la URL completa
-                                  const apiUrl = import.meta.env.VITE_API_URL || 'https://kivi-backend.onrender.com'
+                                  // VITE_API_URL puede incluir /api o no
+                                  let apiUrl = import.meta.env.VITE_API_URL || 'https://kivi-backend.onrender.com'
+                                  // Remover /api al final si existe para evitar duplicación
+                                  apiUrl = apiUrl.replace(/\/api\/?$/, '')
+                                  // La URL ya tiene /api/, así que simplemente concatenamos
                                   return `${apiUrl}${url}`
                                 }
                                 return url
                               }
                               
                               const imageUrl = getImageUrl(media.url)
+                              
+                              // Función para obtener URL de descarga - construye correctamente
+                              const getDownloadUrl = (imgUrl) => {
+                                if (!imgUrl) return null
+                                // Si ya tiene /download, no hacer nada
+                                if (imgUrl.endsWith('/download')) return imgUrl
+                                // Agregar /download al final
+                                return imgUrl + '/download'
+                              }
                               
                               return (
                                 <div
@@ -744,9 +757,9 @@ export default function ContenidoSocial() {
                                         }}
                                       />
                                       {/* Botón de descarga */}
-                                      {imageUrl.includes('/api/social/instagram/generated-image/') && (
+                                      {imageUrl && imageUrl.includes('generated-image') && (
                                         <a
-                                          href={imageUrl + '/download'}
+                                          href={getDownloadUrl(imageUrl)}
                                           download
                                           style={{
                                             display:'inline-block',
@@ -761,7 +774,7 @@ export default function ContenidoSocial() {
                                             cursor:'pointer'
                                           }}
                                         >
-                                          📥 Descargar Imagen
+                                          📥 Descargar Imagen PNG
                                         </a>
                                       )}
                                       <div style={{ 
