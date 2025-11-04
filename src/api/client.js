@@ -20,9 +20,32 @@ export async function apiFetch(path, { method = 'GET', body } = {}) {
   // Si hay error, lanzarlo sin hacer logout automático
   // Cada componente decidirá si debe hacer logout o no
   if (!res.ok) {
-    const errorMsg = typeof data === 'string' ? data : (data.error || 'Error')
+    let errorMsg = 'Error'
+    let errorDetails = null
+    
+    if (typeof data === 'string') {
+      errorMsg = data
+    } else if (typeof data === 'object' && data !== null) {
+      errorMsg = data.error || data.message || 'Error'
+      errorDetails = data.details || data.stack || null
+    }
+    
     const error = new Error(errorMsg)
     error.status = res.status
+    error.details = errorDetails
+    error.url = `${baseUrl}${path}`
+    error.method = method
+    
+    // Log detallado para debugging
+    console.error('API Error:', {
+      url: `${baseUrl}${path}`,
+      method,
+      status: res.status,
+      error: errorMsg,
+      details: errorDetails,
+      response: data
+    })
+    
     throw error
   }
   
