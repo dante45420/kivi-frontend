@@ -5,9 +5,11 @@ import ImageUploader from '../components/ImageUploader'
 import '../styles/globals.css'
 
 export default function OfertasSemanales() {
-  const [offers, setOffers] = useState({ fruta: null, verdura: null, especial: null })
+  const [currentOffers, setCurrentOffers] = useState({ fruta: null, verdura: null, especial: null })
+  const [nextOffers, setNextOffers] = useState({ fruta: null, verdura: null, especial: null })
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [activeWeek, setActiveWeek] = useState('current') // 'current' o 'next'
   const [editingType, setEditingType] = useState(null)
   const [formData, setFormData] = useState({ product_id: null, price: '', reference_price: '', quality_photo_url: '' })
   const [searchTerm, setSearchTerm] = useState('')
@@ -19,8 +21,20 @@ export default function OfertasSemanales() {
 
   async function loadOffers() {
     try {
-      const data = await apiFetch('/weekly-offers')
-      setOffers(data)
+      const currentData = await apiFetch('/weekly-offers')
+      setCurrentOffers(currentData)
+      
+      // Cargar ofertas de próxima semana (requiere autenticación)
+      try {
+        const nextData = await apiFetch('/weekly-offers/next-week')
+        setNextOffers({
+          fruta: nextData.fruta,
+          verdura: nextData.verdura,
+          especial: nextData.especial
+        })
+      } catch(err) {
+        console.warn('No se pudieron cargar ofertas de próxima semana:', err)
+      }
     } catch(err) {
       console.error('Error cargando ofertas:', err)
     } finally {
@@ -38,6 +52,7 @@ export default function OfertasSemanales() {
   }
 
   function startEdit(type) {
+    const offers = activeWeek === 'current' ? currentOffers : nextOffers
     const offer = offers[type]
     setEditingType(type)
     setFormData({
@@ -63,10 +78,11 @@ export default function OfertasSemanales() {
           product_id: formData.product_id,
           price: formData.price,
           reference_price: formData.reference_price,
-          quality_photo_url: formData.quality_photo_url
+          quality_photo_url: formData.quality_photo_url,
+          week_target: activeWeek // 'current' o 'next'
         }
       })
-      alert('✓ Oferta y foto actualizadas correctamente')
+      alert(`✓ Oferta ${activeWeek === 'current' ? 'de esta semana' : 'de próxima semana'} guardada correctamente`)
       setEditingType(null)
       await loadOffers()
       await loadProducts() // Recargar productos para actualizar foto
@@ -102,12 +118,67 @@ export default function OfertasSemanales() {
     }
   }
 
+  const offers = activeWeek === 'current' ? currentOffers : nextOffers
+
   return (
     <div className="center" style={{ padding:'0 16px', maxWidth:1200, margin:'0 auto' }}>
       {/* Header */}
       <div style={{ textAlign:'center', margin:'24px 0' }}>
         <h2 style={{ margin:'0 0 8px 0', fontSize:32, fontWeight:800 }}>⭐ Ofertas Semanales</h2>
         <p style={{ margin:0, opacity:0.7, fontSize:16 }}>Edita las ofertas que aparecen en la primera página del catálogo</p>
+      </div>
+
+      {/* Selector de semana */}
+      <div style={{ 
+        display:'flex', 
+        gap:12, 
+        justifyContent:'center', 
+        marginBottom:24,
+        background:'white',
+        padding:8,
+        borderRadius:12,
+        boxShadow:'0 2px 8px rgba(0,0,0,0.06)'
+      }}>
+        <button
+          onClick={() => {
+            setActiveWeek('current')
+            setEditingType(null)
+          }}
+          style={{
+            padding:'10px 24px',
+            borderRadius:8,
+            border:'2px solid',
+            background: activeWeek === 'current' ? '#88C4A8' : 'white',
+            color: activeWeek === 'current' ? 'white' : '#88C4A8',
+            borderColor: '#88C4A8',
+            cursor:'pointer',
+            fontSize:14,
+            fontWeight:600,
+            transition:'all 0.2s'
+          }}
+        >
+          📅 Esta Semana
+        </button>
+        <button
+          onClick={() => {
+            setActiveWeek('next')
+            setEditingType(null)
+          }}
+          style={{
+            padding:'10px 24px',
+            borderRadius:8,
+            border:'2px solid',
+            background: activeWeek === 'next' ? '#88C4A8' : 'white',
+            color: activeWeek === 'next' ? 'white' : '#88C4A8',
+            borderColor: '#88C4A8',
+            cursor:'pointer',
+            fontSize:14,
+            fontWeight:600,
+            transition:'all 0.2s'
+          }}
+        >
+          📅 Próxima Semana
+        </button>
       </div>
 
       {loading ? (
