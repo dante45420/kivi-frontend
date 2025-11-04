@@ -719,6 +719,23 @@ export default function ContenidoSocial() {
                           {message.message_text}
                         </div>
                       )}
+                      
+                      {message.catalog_url && (
+                        <div style={{
+                          background:'#FFF3E0',
+                          padding:10,
+                          borderRadius:8,
+                          marginBottom:12,
+                          fontSize:13,
+                          borderLeft:'4px solid #FF9800'
+                        }}>
+                          📎 Catálogo: {message.catalog_url}
+                          <div style={{ fontSize:11, opacity:0.7, marginTop:4 }}>
+                            El catálogo se enviará adjunto con el mensaje (con ofertas vigentes de la semana)
+                          </div>
+                        </div>
+                      )}
+                      
                       {message.status === 'pending_approval' && (
                         <button
                           onClick={() => setEditingMessage({
