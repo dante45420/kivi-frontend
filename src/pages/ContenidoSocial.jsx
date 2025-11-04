@@ -724,7 +724,8 @@ export default function ContenidoSocial() {
                                       background:'#f9f9f9',
                                       borderRadius:12,
                                       padding:16,
-                                      border:'2px solid #e0e0e0'
+                                      border:'2px solid #e0e0e0',
+                                      position:'relative'
                                     }}>
                                       <img
                                         src={imageUrl}
@@ -742,6 +743,27 @@ export default function ContenidoSocial() {
                                           e.target.nextSibling.style.display = 'block'
                                         }}
                                       />
+                                      {/* Botón de descarga */}
+                                      {imageUrl.includes('/api/social/instagram/generated-image/') && (
+                                        <a
+                                          href={imageUrl + '/download'}
+                                          download
+                                          style={{
+                                            display:'inline-block',
+                                            marginTop:12,
+                                            padding:'8px 16px',
+                                            background:'#A8D5BA',
+                                            color:'white',
+                                            borderRadius:8,
+                                            textDecoration:'none',
+                                            fontSize:14,
+                                            fontWeight:500,
+                                            cursor:'pointer'
+                                          }}
+                                        >
+                                          📥 Descargar Imagen
+                                        </a>
+                                      )}
                                       <div style={{ 
                                         display:'none',
                                         padding:20,
