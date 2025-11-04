@@ -4,10 +4,12 @@ import {
   generateInstagramContent, 
   approveInstagramContent, 
   rejectInstagramContent,
+  updateInstagramContent,
   listWhatsAppMessages,
   generateCatalogBatch,
   approveWhatsAppMessage,
   rejectWhatsAppMessage,
+  updateWhatsAppMessage,
   previewWhatsAppMessage
 } from '../api/social'
 import '../styles/globals.css'
@@ -18,6 +20,8 @@ export default function ContenidoSocial() {
   const [whatsappMessages, setWhatsappMessages] = useState([])
   const [loading, setLoading] = useState(false)
   const [filterStatus, setFilterStatus] = useState('pending_approval')
+  const [editingContent, setEditingContent] = useState(null)
+  const [editingMessage, setEditingMessage] = useState(null)
 
   useEffect(() => {
     loadContent()
@@ -111,6 +115,33 @@ export default function ContenidoSocial() {
       await loadContent()
     } catch(err) {
       alert('Error: ' + (err.message || 'No se pudo rechazar'))
+    }
+  }
+
+  async function handleSaveInstagramContent(contentId, contentData, mediaUrls) {
+    try {
+      await updateInstagramContent(contentId, {
+        content_data: contentData,
+        media_urls: mediaUrls
+      })
+      alert('✓ Contenido actualizado')
+      setEditingContent(null)
+      await loadContent()
+    } catch(err) {
+      alert('Error: ' + (err.message || 'No se pudo actualizar'))
+    }
+  }
+
+  async function handleSaveWhatsAppMessage(messageId, messageText) {
+    try {
+      await updateWhatsAppMessage(messageId, {
+        message_text: messageText
+      })
+      alert('✓ Mensaje actualizado')
+      setEditingMessage(null)
+      await loadContent()
+    } catch(err) {
+      alert('Error: ' + (err.message || 'No se pudo actualizar'))
     }
   }
 
@@ -284,55 +315,254 @@ export default function ContenidoSocial() {
                     </div>
                   </div>
 
-                  {content.content_data && (
-                    <div style={{ 
-                      background:'#f5f5f5', 
-                      padding:12, 
-                      borderRadius:8,
-                      marginBottom:12,
-                      whiteSpace:'pre-wrap',
-                      fontSize:14
-                    }}>
-                      {content.content_data.description || content.content_data.full_text || 'Sin descripción'}
-                    </div>
-                  )}
+                  {editingContent?.id === content.id ? (
+                    <div style={{ marginBottom:16 }}>
+                      {/* Editar descripción principal */}
+                      <div style={{ marginBottom:16 }}>
+                        <label style={{ display:'block', marginBottom:8, fontWeight:600, fontSize:14 }}>
+                          Descripción Principal:
+                        </label>
+                        <textarea
+                          value={editingContent.content_data.description || ''}
+                          onChange={(e) => {
+                            setEditingContent({
+                              ...editingContent,
+                              content_data: {
+                                ...editingContent.content_data,
+                                description: e.target.value
+                              }
+                            })
+                          }}
+                          rows={4}
+                          style={{
+                            width:'100%',
+                            padding:12,
+                            borderRadius:8,
+                            border:'1px solid #ddd',
+                            fontSize:14,
+                            fontFamily:'inherit'
+                          }}
+                        />
+                      </div>
 
-                  {content.media_urls && content.media_urls.length > 0 && (
-                    <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-                      {content.media_urls.slice(0, 3).map((media, idx) => (
-                        <div key={idx} style={{ position:'relative' }}>
-                          {media.url && (
-                            <img
-                              src={media.url}
-                              alt={`Slide ${idx + 1}`}
-                              style={{
-                                width:150,
-                                height:150,
-                                objectFit:'cover',
-                                borderRadius:8,
-                                border:'1px solid #ddd'
-                              }}
-                              onError={(e) => e.target.style.display = 'none'}
-                            />
-                          )}
-                        </div>
-                      ))}
-                      {content.media_urls.length > 3 && (
-                        <div style={{
-                          width:150,
-                          height:150,
-                          display:'flex',
-                          alignItems:'center',
-                          justifyContent:'center',
-                          background:'#f0f0f0',
-                          borderRadius:8,
-                          fontSize:14,
-                          fontWeight:600
-                        }}>
-                          +{content.media_urls.length - 3} más
+                      {/* Mostrar cada slide del carrusel con edición */}
+                      {editingContent.media_urls && editingContent.media_urls.length > 0 && (
+                        <div style={{ marginBottom:16 }}>
+                          <label style={{ display:'block', marginBottom:12, fontWeight:600, fontSize:14 }}>
+                            Slides del Carrusel ({editingContent.media_urls.length}):
+                          </label>
+                          <div style={{ display:'grid', gap:16 }}>
+                            {editingContent.media_urls.map((media, idx) => (
+                              <div
+                                key={idx}
+                                style={{
+                                  border:'2px solid #A8D5BA',
+                                  borderRadius:12,
+                                  padding:16,
+                                  background:'#fff'
+                                }}
+                              >
+                                <div style={{ display:'flex', gap:16, alignItems:'flex-start' }}>
+                                  <div style={{ flexShrink:0 }}>
+                                    {media.url && (
+                                      <img
+                                        src={media.url}
+                                        alt={`Slide ${idx + 1}`}
+                                        style={{
+                                          width:200,
+                                          height:200,
+                                          objectFit:'cover',
+                                          borderRadius:8,
+                                          border:'1px solid #ddd'
+                                        }}
+                                        onError={(e) => e.target.style.display = 'none'}
+                                      />
+                                    )}
+                                    <div style={{ 
+                                      marginTop:8, 
+                                      fontSize:12, 
+                                      opacity:0.7,
+                                      textAlign:'center'
+                                    }}>
+                                      Slide {idx + 1} - {media.offer_type || 'Oferta'}
+                                    </div>
+                                  </div>
+                                  <div style={{ flex:1 }}>
+                                    <label style={{ display:'block', marginBottom:8, fontWeight:600, fontSize:14 }}>
+                                      Descripción del Slide:
+                                    </label>
+                                    <textarea
+                                      value={media.caption || ''}
+                                      onChange={(e) => {
+                                        const newMediaUrls = [...editingContent.media_urls]
+                                        newMediaUrls[idx] = { ...media, caption: e.target.value }
+                                        setEditingContent({
+                                          ...editingContent,
+                                          media_urls: newMediaUrls
+                                        })
+                                      }}
+                                      rows={6}
+                                      style={{
+                                        width:'100%',
+                                        padding:12,
+                                        borderRadius:8,
+                                        border:'1px solid #ddd',
+                                        fontSize:14,
+                                        fontFamily:'inherit'
+                                      }}
+                                    />
+                                    <div style={{ 
+                                      marginTop:8, 
+                                      fontSize:12, 
+                                      opacity:0.6,
+                                      fontStyle:'italic'
+                                    }}>
+                                      Producto: {media.product_name || 'N/A'} | Precio: {media.price || 'N/A'}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
+
+                      <div style={{ display:'flex', gap:8 }}>
+                        <button
+                          onClick={() => handleSaveInstagramContent(
+                            content.id,
+                            editingContent.content_data,
+                            editingContent.media_urls
+                          )}
+                          style={{
+                            padding:'10px 20px',
+                            background:'#4CAF50',
+                            color:'white',
+                            border:'none',
+                            borderRadius:6,
+                            cursor:'pointer',
+                            fontSize:14,
+                            fontWeight:600
+                          }}
+                        >
+                          💾 Guardar Cambios
+                        </button>
+                        <button
+                          onClick={() => setEditingContent(null)}
+                          style={{
+                            padding:'10px 20px',
+                            background:'#ccc',
+                            color:'#000',
+                            border:'none',
+                            borderRadius:6,
+                            cursor:'pointer',
+                            fontSize:14
+                          }}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      {content.content_data && (
+                        <div style={{ 
+                          background:'#f5f5f5', 
+                          padding:12, 
+                          borderRadius:8,
+                          marginBottom:12,
+                          whiteSpace:'pre-wrap',
+                          fontSize:14
+                        }}>
+                          {content.content_data.description || content.content_data.full_text || 'Sin descripción'}
+                        </div>
+                      )}
+
+                      {/* Mostrar carrusel slide por slide */}
+                      {content.media_urls && content.media_urls.length > 0 && (
+                        <div style={{ marginBottom:12 }}>
+                          <div style={{ 
+                            fontSize:14, 
+                            fontWeight:600, 
+                            marginBottom:12,
+                            color:'#666'
+                          }}>
+                            Carrusel ({content.media_urls.length} slides):
+                          </div>
+                          <div style={{ display:'grid', gap:12 }}>
+                            {content.media_urls.map((media, idx) => (
+                              <div
+                                key={idx}
+                                style={{
+                                  display:'flex',
+                                  gap:16,
+                                  border:'1px solid #ddd',
+                                  borderRadius:8,
+                                  padding:12,
+                                  background:'#fafafa'
+                                }}
+                              >
+                                <div style={{ flexShrink:0 }}>
+                                  {media.url && (
+                                    <img
+                                      src={media.url}
+                                      alt={`Slide ${idx + 1}`}
+                                      style={{
+                                        width:150,
+                                        height:150,
+                                        objectFit:'cover',
+                                        borderRadius:8,
+                                        border:'1px solid #ddd'
+                                      }}
+                                      onError={(e) => e.target.style.display = 'none'}
+                                    />
+                                  )}
+                                </div>
+                                <div style={{ flex:1 }}>
+                                  <div style={{ 
+                                    fontSize:12, 
+                                    opacity:0.7, 
+                                    marginBottom:4,
+                                    fontWeight:600
+                                  }}>
+                                    Slide {idx + 1} - {media.offer_type || 'Oferta'}
+                                  </div>
+                                  <div style={{ 
+                                    whiteSpace:'pre-wrap',
+                                    fontSize:14,
+                                    lineHeight:1.5
+                                  }}>
+                                    {media.caption || 'Sin descripción'}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {content.status === 'pending_approval' && (
+                        <button
+                          onClick={() => setEditingContent({
+                            id: content.id,
+                            content_data: { ...content.content_data },
+                            media_urls: [...(content.media_urls || [])]
+                          })}
+                          style={{
+                            padding:'8px 16px',
+                            background:'#2196F3',
+                            color:'white',
+                            border:'none',
+                            borderRadius:6,
+                            cursor:'pointer',
+                            fontSize:14,
+                            marginBottom:12
+                          }}
+                        >
+                          ✏️ Editar
+                        </button>
+                      )}
+                    </>
                   )}
 
                   {content.scheduled_date && (
@@ -419,18 +649,97 @@ export default function ContenidoSocial() {
                     </div>
                   </div>
 
-                  {message.message_text && (
-                    <div style={{ 
-                      background:'#E8F5E9', 
-                      padding:12, 
-                      borderRadius:8,
-                      marginBottom:12,
-                      whiteSpace:'pre-wrap',
-                      fontSize:14,
-                      borderLeft:'4px solid #4CAF50'
-                    }}>
-                      {message.message_text}
+                  {editingMessage?.id === message.id ? (
+                    <div style={{ marginBottom:16 }}>
+                      <label style={{ display:'block', marginBottom:8, fontWeight:600, fontSize:14 }}>
+                        Mensaje:
+                      </label>
+                      <textarea
+                        value={editingMessage.message_text || ''}
+                        onChange={(e) => {
+                          setEditingMessage({
+                            ...editingMessage,
+                            message_text: e.target.value
+                          })
+                        }}
+                        rows={8}
+                        style={{
+                          width:'100%',
+                          padding:12,
+                          borderRadius:8,
+                          border:'1px solid #ddd',
+                          fontSize:14,
+                          fontFamily:'inherit'
+                        }}
+                      />
+                      <div style={{ display:'flex', gap:8, marginTop:12 }}>
+                        <button
+                          onClick={() => handleSaveWhatsAppMessage(message.id, editingMessage.message_text)}
+                          style={{
+                            padding:'10px 20px',
+                            background:'#4CAF50',
+                            color:'white',
+                            border:'none',
+                            borderRadius:6,
+                            cursor:'pointer',
+                            fontSize:14,
+                            fontWeight:600
+                          }}
+                        >
+                          💾 Guardar Cambios
+                        </button>
+                        <button
+                          onClick={() => setEditingMessage(null)}
+                          style={{
+                            padding:'10px 20px',
+                            background:'#ccc',
+                            color:'#000',
+                            border:'none',
+                            borderRadius:6,
+                            cursor:'pointer',
+                            fontSize:14
+                          }}
+                        >
+                          Cancelar
+                        </button>
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      {message.message_text && (
+                        <div style={{ 
+                          background:'#E8F5E9', 
+                          padding:12, 
+                          borderRadius:8,
+                          marginBottom:12,
+                          whiteSpace:'pre-wrap',
+                          fontSize:14,
+                          borderLeft:'4px solid #4CAF50'
+                        }}>
+                          {message.message_text}
+                        </div>
+                      )}
+                      {message.status === 'pending_approval' && (
+                        <button
+                          onClick={() => setEditingMessage({
+                            id: message.id,
+                            message_text: message.message_text
+                          })}
+                          style={{
+                            padding:'8px 16px',
+                            background:'#2196F3',
+                            color:'white',
+                            border:'none',
+                            borderRadius:6,
+                            cursor:'pointer',
+                            fontSize:14,
+                            marginBottom:12
+                          }}
+                        >
+                          ✏️ Editar Mensaje
+                        </button>
+                      )}
+                    </>
                   )}
 
                   {message.scheduled_date && (

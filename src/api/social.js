@@ -32,6 +32,13 @@ export function rejectInstagramContent(contentId, rejectionReason) {
   })
 }
 
+export function updateInstagramContent(contentId, payload) {
+  return apiFetch(`/social/instagram/content/${contentId}`, { 
+    method: 'PATCH', 
+    body: payload 
+  })
+}
+
 export function listTemplates() {
   return apiFetch('/social/instagram/templates')
 }
@@ -67,6 +74,13 @@ export function approveWhatsAppMessage(messageId) {
 
 export function rejectWhatsAppMessage(messageId) {
   return apiFetch(`/social/whatsapp/message/${messageId}/reject`, { method: 'PATCH' })
+}
+
+export function updateWhatsAppMessage(messageId, payload) {
+  return apiFetch(`/social/whatsapp/message/${messageId}`, { 
+    method: 'PATCH', 
+    body: payload 
+  })
 }
 
 export function sendTestMessage(phone) {
