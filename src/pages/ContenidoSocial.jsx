@@ -17,10 +17,11 @@ import {
 import { listProducts } from '../api/products'
 import { listVariants, listVariantTiers } from '../api/variants'
 import { generateCatalogPDF } from '../utils/pdfGenerator'
+import StoriesTab from '../components/StoriesTab'
 import '../styles/globals.css'
 
 export default function ContenidoSocial() {
-  const [activeTab, setActiveTab] = useState('instagram') // 'instagram' o 'whatsapp'
+  const [activeTab, setActiveTab] = useState('instagram') // 'instagram', 'whatsapp' o 'historias'
   const [instagramContent, setInstagramContent] = useState([])
   const [whatsappMessages, setWhatsappMessages] = useState([])
   const [loading, setLoading] = useState(false)
@@ -260,9 +261,24 @@ export default function ContenidoSocial() {
         >
           💬 WhatsApp
         </button>
+        <button
+          onClick={() => setActiveTab('historias')}
+          style={{
+            padding:'12px 24px',
+            border:'none',
+            background: activeTab === 'historias' ? '#A8D5BA' : 'transparent',
+            color: activeTab === 'historias' ? '#000' : '#666',
+            cursor:'pointer',
+            borderRadius:'8px 8px 0 0',
+            fontWeight: activeTab === 'historias' ? 600 : 400
+          }}
+        >
+          📱 Historias
+        </button>
       </div>
 
-      {/* Filtros y acciones */}
+      {/* Filtros y acciones (solo para Instagram y WhatsApp) */}
+      {activeTab !== 'historias' && (
       <div style={{ 
         display:'flex', 
         justifyContent:'space-between', 
@@ -360,6 +376,7 @@ export default function ContenidoSocial() {
           </button>
         </div>
       </div>
+      )}
 
       {/* Editor de mensaje base para WhatsApp */}
       {activeTab === 'whatsapp' && (
@@ -1063,6 +1080,11 @@ export default function ContenidoSocial() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Tab de Historias */}
+      {activeTab === 'historias' && (
+        <StoriesTab />
       )}
     </div>
   )
